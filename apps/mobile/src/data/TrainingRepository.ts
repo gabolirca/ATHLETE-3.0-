@@ -1,4 +1,5 @@
-import type { BodyMeasurement, Exercise, LocalAthletePreferences, ProgressSummary, Routine, RoutineDraft, TrainingOverview, Workout, WorkoutDetail } from './trainingTypes';
+import type { CardioDraft } from '@/cardio/cardioForm';
+import type { BodyMeasurement, CardioEntry, Exercise, LocalAthletePreferences, ProgressSummary, Routine, RoutineDraft, TrainingOverview, Workout, WorkoutDetail } from './trainingTypes';
 import type { BodyMeasurementInput, LocalAthletePreferencesInput, LoggedSetInput } from './trainingSchemas';
 
 export interface TrainingRepository {
@@ -21,4 +22,9 @@ export interface TrainingRepository {
   tombstoneBodyMeasurement(measurementId: string): Promise<void>;
   getPreferences(): Promise<LocalAthletePreferences>;
   savePreferences(input: LocalAthletePreferencesInput): Promise<void>;
+  logCardio(input: CardioDraft): Promise<string>;
+  /** Más recientes primero. */
+  listCardio(): Promise<CardioEntry[]>;
+  getCardio(id: string): Promise<CardioEntry | null>;
+  tombstoneCardio(id: string): Promise<void>;
 }

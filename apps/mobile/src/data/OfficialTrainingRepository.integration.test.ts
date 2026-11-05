@@ -8,6 +8,8 @@ import { join } from 'node:path';
 import { randomBytes } from 'node:crypto';
 import { createAthleteData, createUuidV7Generator, localOnlyTransport } from '@athlete/data';
 import { openNodeSqlite } from '@athlete/data/node-sqlite';
+import { EMPTY_FORM, parseCardioForm, type CardioFormValues } from '@/cardio/cardioForm';
+import { mergeHistory } from './history';
 import { OfficialTrainingRepository } from './OfficialTrainingRepository';
 
 const USER = '6f1c2d3e-4b5a-4c6d-8e7f-9a0b1c2d3e4f';
@@ -70,5 +72,51 @@ test('una serie nueva tras borrar otra no reutiliza una posición ocupada', asyn
 
   const positions = await persistedPositions(data, sessionId);
   expect(new Set(positions).size).toBe(positions.length);
+  await data.close?.();
+});
+
+function cardioDraft(patch: Partial<CardioFormValues>, now = new Date()) {
+  const result = parseCardioForm({ ...EMPTY_FORM, ...patch }, { now, unitSystem: 'metric', timeZone: 'America/Mexico_City' });
+  if (!result.ok) throw new Error(JSON.stringify(result.errors));
+  return result.draft;
+}
+
+test('cardio de punta a punta: formulario → contrato → base local → lista, detalle y borrado', async () => {
+  const { data, repository } = await setup();
+  const runId = await repository.logCardio(cardioDraft({ activity: 'run', minutes: '30', distance: '5', rpe: 7 }));
+  const swimId = await repository.logCardio(cardioDraft({ activity: 'swim', minutes: '20', laps: '40', poolLength: '25', stroke: 'freestyle' }));
+
+  const list = await repository.listCardio();
+  expect(list.map((c) => c.id).sort()).toEqual([runId, swimId].sort());
+  expect(await repository.getCardio(runId)).toMatchObject({ activity: 'run', durationSeconds: 1800, distanceMeters: 5000, rpe: 7, syncStatus: 'pending' });
+  expect((await repository.getCardio(swimId))?.swim).toEqual({ poolType: 'pool', poolLengthMeters: 25, laps: 40, stroke: 'freestyle' });
+
+  await repository.tombstoneCardio(runId);
+  expect(await repository.getCardio(runId)).toBeNull();
+  expect((await repository.listCardio()).map((c) => c.id)).toEqual([swimId]);
+  await data.close?.();
+});
+
+test('el resumen semanal y el historial unificado incluyen el cardio', async () => {
+  const { data, repository, sessionId } = await setup();
+  const workout = (await repository.getWorkout(sessionId))!;
+  await repository.saveSet(sessionId, workout.exercises[0]!.sets.at(-1)!.id, { weightKg: 60, reps: 8, rir: 2, isWarmup: false });
+  await repository.finishWorkout(sessionId);
+  await repository.logCardio(cardioDraft({ activity: 'bike', minutes: '45', distance: '20' }));
+
+  const overview = await repository.getOverview();
+  expect(overview).toMatchObject({ strengthSessionsThisWeek: 1, cardioSessionsThisWeek: 1, sessionsThisWeek: 2 });
+  expect(overview.activityMinutesThisWeek).toBeGreaterThanOrEqual(45);
+
+  const history = mergeHistory(await repository.listHistory(), await repository.listCardio());
+  expect(history.map((item) => item.kind).sort()).toEqual(['cardio', 'strength']);
+  await data.close?.();
+});
+
+test('un registro que el contrato rechaza no se guarda (FC media > máxima pasada directo al adaptador)', async () => {
+  const { data, repository } = await setup();
+  const draft = { ...cardioDraft({ minutes: '10' }), avgHeartRateBpm: 180, maxHeartRateBpm: 150 };
+  await expect(repository.logCardio(draft)).rejects.toThrow();
+  expect(await repository.listCardio()).toEqual([]);
   await data.close?.();
 });
