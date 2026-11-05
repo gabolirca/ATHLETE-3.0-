@@ -45,7 +45,6 @@ function getBaseOptions(): OpenActiveStoreOptions {
     },
     randomBytes: (byteCount) => Crypto.getRandomBytes(byteCount),
     files: expoDatabaseFiles,
-    newInstallations: 'official',
   };
 }
 
@@ -80,7 +79,7 @@ export function _resetSharedStoreForTesting() {
 
 /**
  * Sole app bootstrap for the official local-first data services.
- * Uses openActiveStore to inspect and select between official and legacy storage without dual writes.
+ * Uses openActiveStore to inspect the official local store and open it only when it is safe to do so.
  */
 export function AthleteDataProvider({ children }: PropsWithChildren) {
   const [attempt, setAttempt] = useState(0);

@@ -83,16 +83,18 @@ describe('AthleteDataProvider with openActiveStore', () => {
     expect(view.getByText('selection:fresh-install')).toBeTruthy();
     expect(mockOpenActiveStore).toHaveBeenCalledWith(
       expect.objectContaining({
-        newInstallations: 'official',
         files: expect.any(Object),
       })
     );
   });
 
-  test('2. Dispositivo con almacenamiento legacy: devuelve legacy sin abrir datos oficiales', async () => {
+  test('2. Reinstalación en iOS (llavero conservado, sin archivos): blocked official-missing sin abrir datos', async () => {
     const fakeStore: ActiveStore = {
-      kind: 'legacy',
-      selection: { state: 'legacy-existing', active: 'legacy', migratable: true, officialFilePresent: false },
+      kind: 'blocked',
+      selection: {
+        state: 'open-error', active: null, store: 'official', code: 'official-missing',
+        message: 'La base oficial registrada ya no está en el dispositivo.', recovery: ['start-new-store'], accountLinked: false,
+      },
     };
     mockOpenActiveStore.mockResolvedValue(fakeStore);
 
@@ -103,16 +105,16 @@ describe('AthleteDataProvider with openActiveStore', () => {
     );
 
     await waitFor(() => expect(view.getByText('status:ready')).toBeTruthy());
-    expect(view.getByText('kind:legacy')).toBeTruthy();
+    expect(view.getByText('kind:blocked')).toBeTruthy();
     expect(view.getByText('data:no-data')).toBeTruthy();
-    expect(view.getByText('selection:legacy-existing')).toBeTruthy();
+    expect(view.getByText('selection:open-error')).toBeTruthy();
     expect(mockClose).not.toHaveBeenCalled();
   });
 
   test('3. Dispositivo con almacenamiento oficial existente: abre almacén oficial', async () => {
     const fakeStore: ActiveStore = {
       kind: 'official',
-      selection: { state: 'official-existing', active: 'official', legacy: 'absent' },
+      selection: { state: 'official-existing', active: 'official' },
       data: { close: mockClose } as never,
     };
     mockOpenActiveStore.mockResolvedValue(fakeStore);
@@ -129,14 +131,12 @@ describe('AthleteDataProvider with openActiveStore', () => {
     expect(view.getByText('selection:official-existing')).toBeTruthy();
   });
 
-  test('4. Migración pendiente: entra en estado blocked sin abrir almacén', async () => {
+  test('4. Almacén seguro bloqueado: blocked con solo reintentar, sin abrir almacén', async () => {
     const fakeStore: ActiveStore = {
       kind: 'blocked',
       selection: {
-        state: 'migration-pending',
-        active: null,
-        backupDir: 'legacy-backup-123',
-        recovery: ['resume-migration', 'rollback-to-legacy', 'start-new-store'],
+        state: 'open-error', active: null, store: 'unknown', code: 'secure-store-unavailable',
+        message: 'No se pudo leer el almacén seguro.', recovery: ['retry'], accountLinked: false,
       },
     };
     mockOpenActiveStore.mockResolvedValue(fakeStore);
@@ -150,7 +150,7 @@ describe('AthleteDataProvider with openActiveStore', () => {
     await waitFor(() => expect(view.getByText('status:ready')).toBeTruthy());
     expect(view.getByText('kind:blocked')).toBeTruthy();
     expect(view.getByText('data:no-data')).toBeTruthy();
-    expect(view.getByText('selection:migration-pending')).toBeTruthy();
+    expect(view.getByText('selection:open-error')).toBeTruthy();
     expect(mockClose).not.toHaveBeenCalled();
   });
 
@@ -198,8 +198,9 @@ describe('AthleteDataProvider with openActiveStore', () => {
   test('7. Recuperación y reintento: vuelve a llamar a openActiveStore', async () => {
     mockOpenActiveStore.mockRejectedValueOnce(new Error('transient-error'));
     const fakeStore: ActiveStore = {
-      kind: 'legacy',
-      selection: { state: 'legacy-existing', active: 'legacy', migratable: true, officialFilePresent: false },
+      kind: 'official',
+      selection: { state: 'official-existing', active: 'official' },
+      data: { close: mockClose } as never,
     };
     mockOpenActiveStore.mockResolvedValueOnce(fakeStore);
 
@@ -215,14 +216,14 @@ describe('AthleteDataProvider with openActiveStore', () => {
     await fireEvent.press(view.getByLabelText('retry-button'));
 
     await waitFor(() => expect(view.getByText('status:ready')).toBeTruthy());
-    expect(view.getByText('kind:legacy')).toBeTruthy();
+    expect(view.getByText('kind:official')).toBeTruthy();
     expect(mockOpenActiveStore).toHaveBeenCalledTimes(2);
   });
 
   test('8. Prevención de doble repositorio: dos proveedores comparten la misma apertura y cierran al desmontar', async () => {
     const fakeStore: ActiveStore = {
       kind: 'official',
-      selection: { state: 'official-existing', active: 'official', legacy: 'absent' },
+      selection: { state: 'official-existing', active: 'official' },
       data: { close: mockClose } as never,
     };
     mockOpenActiveStore.mockResolvedValue(fakeStore);
@@ -260,7 +261,7 @@ describe('AthleteDataProvider with openActiveStore', () => {
     };
     const newStore: ActiveStore = {
       kind: 'official',
-      selection: { state: 'official-existing', active: 'official', legacy: 'retained-read-only' },
+      selection: { state: 'official-existing', active: 'official' },
       data: { close: mockClose } as never,
     };
 
@@ -316,14 +317,14 @@ describe('AthleteDataProvider with openActiveStore', () => {
     await fireEvent.press(view.getByLabelText('new-store-button'));
     expect(mockStartNewStore).toHaveBeenCalledTimes(1);
 
-    resolveStart({ kind: 'official', selection: { state: 'official-existing', active: 'official', legacy: 'retained-read-only' }, data: { close: mockClose } as never });
+    resolveStart({ kind: 'official', selection: { state: 'official-existing', active: 'official' }, data: { close: mockClose } as never });
     await waitFor(() => expect(view.getByText('kind:official')).toBeTruthy());
     expect(mockStartNewStore).toHaveBeenCalledTimes(1);
   });
 
   test('12. newId conserva su identidad aunque cambie el contexto (no recrea el repositorio oficial)', async () => {
     mockOpenActiveStore.mockResolvedValue({
-      kind: 'official', selection: { state: 'official-existing', active: 'official', legacy: 'absent' }, data: { close: mockClose } as never,
+      kind: 'official', selection: { state: 'official-existing', active: 'official' }, data: { close: mockClose } as never,
     } as ActiveStore);
     seenNewIds.clear();
 
