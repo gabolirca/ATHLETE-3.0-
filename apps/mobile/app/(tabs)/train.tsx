@@ -37,6 +37,12 @@ export default function TrainScreen() {
         {overview?.latestWorkout?.state === 'active' ? 'Continuar sesión' : 'Iniciar sesión libre'}
       </ActionButton>
     </Card>
+    <Card accent={colors.green}>
+      <Eyebrow>CARDIO Y RESISTENCIA</Eyebrow>
+      <Text style={s.hero}>Corre, nada, pedalea o rema</Text>
+      <Text style={s.detail}>Registra duración, distancia, esfuerzo y frecuencia cardiaca. Se suma a tu semana junto con el gimnasio.</Text>
+      <ActionButton secondary onPress={() => router.push('/cardio/new')}>＋ Registrar actividad</ActionButton>
+    </Card>
     <Row><SectionHeading title="Mis rutinas" action="Historial" /></Row>
     <ActionButton secondary onPress={() => router.push('/routines/new')}>＋ Crear rutina</ActionButton>
     {loadError ? <EmptyState icon="alert-circle-outline" title="No pudimos cargar tus rutinas" detail="Los registros locales no se eliminaron. Vuelve a cargar esta sección." action="Reintentar" onAction={() => repository?.listRoutines().then(setRoutines).catch(() => setLoadError(true))}/> : null}

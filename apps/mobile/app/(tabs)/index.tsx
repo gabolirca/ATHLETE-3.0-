@@ -38,11 +38,15 @@ export default function HomeScreen() {
       <ActionButton onPress={() => router.push(overview?.latestWorkout?.state === 'active' ? `/workout/${overview.latestWorkout.id}` : '/workout/new')}>
         {overview?.latestWorkout?.state === 'active' ? 'Continuar sesión' : 'Iniciar entrenamiento'}
       </ActionButton>
+      <ActionButton secondary onPress={() => router.push('/cardio/new')}>Registrar cardio</ActionButton>
     </Card>
     <SectionHeading title="Esta semana · este dispositivo" action="Ver historial" />
     <Card>
       <Row><View><Eyebrow>SESIONES COMPLETADAS</Eyebrow><Text style={s.bigNumber}>{overview?.sessionsThisWeek ?? '—'}</Text></View><View><Eyebrow>TIEMPO DE ACTIVIDAD</Eyebrow><Text style={s.bigNumber}>{overview ? `${overview.activityMinutesThisWeek} min` : '—'}</Text></View></Row>
-      {overview?.pendingSyncCount ? <LocalSaveBadge pendingCount={overview.pendingSyncCount}/> : <Text style={s.muted}>No hay actividad registrada esta semana.</Text>}
+      {overview && overview.sessionsThisWeek > 0
+        ? <Text style={s.muted}>{overview.strengthSessionsThisWeek} de fuerza · {overview.cardioSessionsThisWeek} de cardio</Text>
+        : <Text style={s.muted}>No hay actividad registrada esta semana.</Text>}
+      {overview?.pendingSyncCount ? <LocalSaveBadge pendingCount={overview.pendingSyncCount}/> : null}
     </Card>
     <SectionHeading title="Entrenamiento programado" />
     <EmptyState icon="calendar-outline" title="Aún no tienes un plan" detail="Crea una rutina para organizar tu entrenamiento. Las sesiones que registres se guardarán localmente aunque no haya conexión." action="Crear rutina" onAction={() => router.push('/routines/new')} />

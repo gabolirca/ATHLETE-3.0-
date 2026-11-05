@@ -1,7 +1,10 @@
+import type { CardioSession } from '@athlete/contracts';
 import type { OpenedAthleteData } from '@athlete/data';
+import type { CardioDraft } from '@/cardio/cardioForm';
+import type { TrainingRepository } from './TrainingRepository';
 import { computePersonalRecords, setVolumeKg, summarizeWeek } from '@athlete/domain';
 import type { BodyMeasurementInput, LocalAthletePreferencesInput, LoggedSetInput, RoutineInput } from './trainingSchemas';
-import type { BodyMeasurement, Exercise, LocalAthletePreferences, ProgressSummary, Routine, TrainingOverview, Workout, WorkoutDetail, TrainingSet } from './trainingTypes';
+import type { BodyMeasurement, CardioEntry, Exercise, LocalAthletePreferences, ProgressSummary, Routine, TrainingOverview, Workout, WorkoutDetail, TrainingSet } from './trainingTypes';
 
 type IdFactory = () => string;
 type SessionDetail = Awaited<ReturnType<OpenedAthleteData['sessions']['getDetail']>>;
@@ -39,7 +42,16 @@ function toWorkout(session: Omit<OfficialSessionDetail, 'exercises'>, exerciseCo
 }
 
 /** UI adapter only: all reads and writes go through the repositories returned by openAthleteData. */
-export class OfficialTrainingRepository {
+function toCardioEntry(c: CardioSession): CardioEntry {
+  return {
+    id: c.id, activity: c.activity, startedAt: c.startedAt, localDate: c.localDate, durationSeconds: c.durationSeconds,
+    distanceMeters: c.distanceMeters, rounds: c.rounds, rpe: c.rpe, avgHeartRateBpm: c.avgHeartRateBpm,
+    maxHeartRateBpm: c.maxHeartRateBpm, swim: c.swim, notes: c.notes,
+    syncStatus: c.revision === null ? 'pending' : 'synced',
+  };
+}
+
+export class OfficialTrainingRepository implements TrainingRepository {
   private readonly drafts = new Map<string, DraftSet>();
 
   constructor(private readonly data: OpenedAthleteData, private readonly newId: IdFactory) {}
@@ -217,11 +229,13 @@ export class OfficialTrainingRepository {
     const now = new Date();
     const weekStart = new Date(now); weekStart.setDate(now.getDate() - 6);
     const workoutDetails = sessions.filter((item) => item.ok).map((item) => item.value);
-    const summary = summarizeWeek(localDate(now), workoutDetails, []);
+    const weekFrom = localDate(new Date(now.getTime() - 7 * 86_400_000));
+    const cardio = unwrap(await this.data.cardio.list({ from: weekFrom }, { limit: 100 })).items;
+    const summary = summarizeWeek(localDate(now), workoutDetails, cardio);
     const status = await this.data.sync.status();
     let latestWorkout: Workout | null = active ? toWorkout(active, active.exercises.length, active.exercises.reduce((n, e) => n + e.sets.length, 0), null) : null;
     if (!latestWorkout && history.items[0]) latestWorkout = toWorkout(unwrap(await this.data.sessions.getDetail(history.items[0].sessionId)), history.items[0].exerciseCount, history.items[0].workingSetCount, history.items[0].volumeKg);
-    return { sessionsThisWeek: summary.completedStrengthSessions, activityMinutesThisWeek: Math.round(summary.activeSeconds / 60), pendingSyncCount: status.pendingCount, latestWorkout };
+    return { sessionsThisWeek: summary.completedStrengthSessions + summary.cardioSessions, strengthSessionsThisWeek: summary.completedStrengthSessions, cardioSessionsThisWeek: summary.cardioSessions, activityMinutesThisWeek: Math.round(summary.activeSeconds / 60), pendingSyncCount: status.pendingCount, latestWorkout };
   }
 
   async getProgress(): Promise<ProgressSummary> {
@@ -290,4 +304,29 @@ export class OfficialTrainingRepository {
     const sports = input.sports ?? (input.preferredSport === 'hybrid' ? [] : [input.preferredSport]);
     unwrap(await this.data.profile.update({ displayName: input.displayName || null, timeZone: input.timezone, unitSystem: input.unitSystem, sports, loadUnit: input.unitSystem === 'imperial' ? 'lb' : 'kg' }));
   }
+
+  async logCardio(input: CardioDraft): Promise<string> {
+    const id = this.newId();
+    unwrap(await this.data.cardio.log({ ...input, id }));
+    return id;
+  }
+
+  async listCardio(): Promise<CardioEntry[]> {
+    const items: CardioEntry[] = [];
+    let cursor: string | null = null;
+    do {
+      const page: { items: CardioSession[]; nextCursor: string | null } = unwrap(await this.data.cardio.list({}, { cursor, limit: 100 }));
+      items.push(...page.items.map(toCardioEntry));
+      cursor = page.nextCursor;
+    } while (cursor !== null && items.length < 500);
+    return items;
+  }
+
+  async getCardio(id: string): Promise<CardioEntry | null> {
+    const result = await this.data.cardio.getById(id);
+    if (!result.ok && result.error.code === 'NOT_FOUND') return null;
+    return toCardioEntry(unwrap(result));
+  }
+
+  async tombstoneCardio(id: string): Promise<void> { unwrap(await this.data.cardio.delete(id)); }
 }
