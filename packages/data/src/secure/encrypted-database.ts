@@ -26,7 +26,9 @@ export type LocalDatabaseErrorCode =
   /** La clave guardada no abre la base (clave incorrecta o archivo dañado). Nada se migró ni escribió. */
   | 'database-unreadable'
   /** La compilación nativa no incluye SQLCipher: los datos no quedarían cifrados. */
-  | 'sqlcipher-unavailable';
+  | 'sqlcipher-unavailable'
+  /** Se esperaba una base existente pero falta la identidad del dispositivo. No se creó otra. */
+  | 'identity-missing';
 
 const RECOVERABLE: ReadonlySet<LocalDatabaseErrorCode> = new Set(['secure-store-unavailable', 'secret-conflict']);
 
@@ -109,6 +111,11 @@ export type OpenEncryptedDatabaseOptions = {
    * PRAGMAs que escriban (WAL). Sin clave guardada → `database-key-missing`.
    */
   readOnly?: boolean;
+  /**
+   * La base debe existir ya (lo decidió `openActiveStore`): sin clave guardada → `database-key-missing`, sin abrir
+   * el archivo ni generar clave. Evita tratar una base existente como instalación nueva.
+   */
+  requireExisting?: boolean;
 };
 
 export async function openEncryptedDatabase(options: OpenEncryptedDatabaseOptions): Promise<SqlDatabase> {
@@ -118,7 +125,7 @@ export async function openEncryptedDatabase(options: OpenEncryptedDatabaseOption
     throw new LocalDatabaseError('secret-invalid', 'La clave de la base guardada tiene un formato inválido; no se reemplazó.');
   }
 
-  if (storedKey === null && options.readOnly) {
+  if (storedKey === null && (options.readOnly || options.requireExisting)) {
     throw new LocalDatabaseError('database-key-missing', 'No hay clave para la base existente; no se generó ninguna.');
   }
   const raw = await options.open(options.name);

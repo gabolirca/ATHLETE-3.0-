@@ -71,6 +71,9 @@ pendiente de diseño.
 
 ### 2.2 Migración de la capa anterior (solo tras aprobación y nunca sobre el archivo original)
 
+> La app no debe encadenar estos pasos a mano: usa `migrateLegacyStore` (`contrato-seleccion-almacen.md`), que hace
+> la copia verificada y el cambio de almacén. El fragmento muestra lo que ocurre por dentro.
+
 ```ts
 import { openLegacyDatabaseCopy } from '@athlete/data';
 import * as Crypto from 'expo-crypto';
@@ -167,9 +170,12 @@ Mostrar `error.message`; nunca `details` crudos.
 
 ## 8. Indicador de transición y migración
 
-- `active-store` (`legacy` | `new`, valor no secreto). Mientras sea `legacy`, la app usa la capa heredada.
-- La migración la ejecuta `packages/data` (`importLegacyStore`, §2.2). Su ejecución con datos reales sigue sujeta a
-  la aprobación del propietario. La UI solo muestra el progreso y el resultado, incluida la cuarentena.
+- **Sustituido por `contrato-seleccion-almacen.md`.** El almacén activo lo decide `openActiveStore` a partir del
+  estado del dispositivo. El marcador `athlete3.active-store.v1` avanza `legacy → migrating → official` y nunca
+  retrocede desde `official`. La variable `EXPO_PUBLIC_ATHLETE_DATA_LAYER` ya no decide qué se monta.
+- La migración la orquesta `migrateLegacyStore`: copia verificada, apertura solo de la copia, `importLegacyStore`
+  (§2.2) y cambio del marcador. Su ejecución con datos reales sigue sujeta a la aprobación del propietario. La UI solo
+  muestra el progreso y el resultado, incluida la cuarentena.
 - Ningún código de la app borra `athlete3.db` ni su clave.
 
 ## 9. Lista de verificación de la integración

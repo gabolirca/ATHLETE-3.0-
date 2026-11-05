@@ -41,10 +41,22 @@ function decode(raw: string): DeviceIdentity {
   return { localUserId: p.localUserId, accountUserId: p.accountUserId as string | null };
 }
 
-/** Lee la identidad del dispositivo o la crea una sola vez (sin sobrescribir nada). */
-export async function resolveIdentity(store: SecureKeyValueStorage, newUuid: () => string): Promise<DeviceIdentity> {
+/** Lee la identidad guardada (null si no hay). */
+export async function readIdentity(store: SecureKeyValueStorage): Promise<DeviceIdentity | null> {
   const stored = await readSecret(store, IDENTITY_KEY);
-  if (stored !== null) return decode(stored);
+  return stored === null ? null : decode(stored);
+}
+
+/**
+ * Lee la identidad del dispositivo o la crea una sola vez (sin sobrescribir nada).
+ * Con `create: false` (base existente) nunca la crea: si falta → `identity-missing`.
+ */
+export async function resolveIdentity(store: SecureKeyValueStorage, newUuid: () => string, options: { create?: boolean } = {}): Promise<DeviceIdentity> {
+  const stored = await readIdentity(store);
+  if (stored !== null) return stored;
+  if (options.create === false) {
+    throw new LocalDatabaseError('identity-missing', 'Falta la identidad del dispositivo para una base existente; no se creó otra.');
+  }
 
   const legacy = await readSecret(store, LEGACY_OWNER_KEY);
   const legacyUuid = legacy?.startsWith('device:') ? legacy.slice('device:'.length).toLowerCase() : null;
@@ -52,6 +64,17 @@ export async function resolveIdentity(store: SecureKeyValueStorage, newUuid: () 
   const identity: DeviceIdentity = { localUserId, accountUserId: null };
   await storeNewSecret(store, IDENTITY_KEY, encode(identity));
   return identity;
+}
+
+/**
+ * Sustituye la identidad por una nueva base vacía (`startNewStore`, recuperación explícita). Comparar-y-escribir
+ * sobre el valor crudo actual (`expectedRaw`, incluso si era ilegible):
+ * la base y la clave anteriores siguen en su sitio con su nombre; solo cambia a qué base apunta el dispositivo.
+ */
+export async function replaceIdentity(store: SecureKeyValueStorage, expectedRaw: string | null, next: DeviceIdentity): Promise<DeviceIdentity> {
+  if (expectedRaw === null) await storeNewSecret(store, IDENTITY_KEY, encode(next));
+  else await replaceSecret(store, IDENTITY_KEY, expectedRaw, encode(next));
+  return next;
 }
 
 /** Vincula la cuenta (comparar-y-escribir sobre la identidad actual). */

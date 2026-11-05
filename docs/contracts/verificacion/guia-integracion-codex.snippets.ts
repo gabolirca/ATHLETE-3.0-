@@ -102,3 +102,64 @@ export async function frontendGuideStartup(): Promise<void> {
   if (data.identity.accountUserId === null) data = await data.adoptLocalData(state.user.id);
   await data.sync.syncNow();
 }
+
+// ---------------------------------------------------------------------------------------------------------------
+// contrato-seleccion-almacen.md: puerto de archivos con expo-file-system y arranque con openActiveStore.
+// ---------------------------------------------------------------------------------------------------------------
+import { Directory, File, Paths } from 'expo-file-system';
+import { migrateLegacyStore, openActiveStore, startNewStore, type ActiveStore, type DatabaseFiles, type OpenActiveStoreOptions } from '@athlete/data';
+
+const databaseDirectory = new Directory(SQLite.defaultDatabaseDirectory);
+const backupRoot = new Directory(Paths.document, 'athlete3-backups');
+const toHex = (b: ArrayBuffer) => Array.from(new Uint8Array(b), (x) => x.toString(16).padStart(2, '0')).join('');
+async function sha256OfFile(file: File): Promise<string | null> {
+  if (!file.exists) return null;
+  return toHex(await Crypto.digest(Crypto.CryptoDigestAlgorithm.SHA256, await file.arrayBuffer()));
+}
+
+export const expoDatabaseFiles: DatabaseFiles = {
+  async listDatabases() {
+    return databaseDirectory.exists ? databaseDirectory.list().filter((e): e is File => e instanceof File).map((f) => f.name) : [];
+  },
+  hashDatabaseFile: (name) => sha256OfFile(new File(databaseDirectory, name)),
+  async copyToBackup(name, dir) {
+    const target = new Directory(backupRoot, dir);
+    if (!target.exists) target.create({ intermediates: true });
+    const destination = new File(target, name);
+    if (destination.exists) throw new Error(`${dir}/${name} ya existe; no se sobrescribe.`);
+    new File(databaseDirectory, name).copy(destination);
+  },
+  hashBackupFile: (dir, name) => sha256OfFile(new File(backupRoot, dir, name)),
+};
+
+export async function bootstrapStorage(migrationApproved: boolean): Promise<ActiveStore> {
+  const secureStore = {
+    getItem: (k: string) => SecureStore.getItemAsync(k),
+    setItem: (k: string, v: string) => SecureStore.setItemAsync(k, v),
+    removeItem: (k: string) => SecureStore.deleteItemAsync(k),
+  };
+  const base: OpenActiveStoreOptions = {
+    openDatabase: (n) => SQLite.openDatabaseAsync(n),
+    secureStore,
+    randomBytes: getRandomBytes,
+    files: expoDatabaseFiles,
+    newInstallations: 'official',
+  };
+  const result = await openActiveStore(base);
+  const canMigrate = result.selection.state === 'migration-pending'
+    || (result.selection.state === 'legacy-existing' && result.selection.migratable);
+  if (migrationApproved && canMigrate) {
+    const migrated = await migrateLegacyStore({
+      ...base,
+      openBackupDatabase: (n, dir) => SQLite.openDatabaseAsync(n, {}, new Directory(backupRoot, dir).uri),
+      deviceTimeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      sha256: (t) => Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, t),
+    });
+    return { kind: 'official', selection: { state: 'official-existing', active: 'official', legacy: 'retained-read-only' }, data: migrated.data };
+  }
+  if (result.kind === 'blocked' && result.selection.state === 'open-error' && result.selection.recovery.includes('start-new-store')) {
+    // Solo tras confirmación explícita del usuario en la pantalla de recuperación.
+    return startNewStore({ ...base, confirm: 'start-new-store' });
+  }
+  return result;
+}

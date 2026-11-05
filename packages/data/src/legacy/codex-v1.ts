@@ -20,7 +20,9 @@ import type { SqlDatabase, SqlExecutor, SqlRow } from '../sql/types';
  */
 
 export const LEGACY_SOURCE = 'codex-mobile-v1';
-const STATE_KEY = 'legacy_import';
+/** Clave de `sync_state` con el informe de la importación confirmada. */
+export const LEGACY_IMPORT_STATE_KEY = 'legacy_import';
+const STATE_KEY = LEGACY_IMPORT_STATE_KEY;
 
 export type ImportErrorCode =
   | 'legacy-unsupported-version'

@@ -46,6 +46,10 @@ export async function fromExpoSqlite(raw: ExpoSQLiteDatabaseLike, options: ExpoS
  */
 export function localDatabaseName(userId: string, env?: 'local' | 'development' | 'testing' | 'production'): string {
   if (!/^[0-9a-f-]{36}$/i.test(userId)) throw new Error('userId no válido');
-  const prefix = env && env !== 'production' ? `athlete3-${env}` : 'athlete3';
-  return `${prefix}-${userId.toLowerCase()}.db`;
+  return `${localDatabasePrefix(env)}-${userId.toLowerCase()}.db`;
+}
+
+/** Prefijo de `localDatabaseName` para un ambiente (`athlete3`, `athlete3-development`, …). */
+export function localDatabasePrefix(env?: 'local' | 'development' | 'testing' | 'production'): string {
+  return env && env !== 'production' ? `athlete3-${env}` : 'athlete3';
 }
