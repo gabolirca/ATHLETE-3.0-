@@ -13,3 +13,15 @@ supabase/.temp/
 # Postgres local de pruebas
 .pgdata/
 .pgdata.log
+
+# Mobile / Expo
+.expo/
+web-build/
+*.log
+apps/mobile/ios/
+apps/mobile/android/
+
+# Native projects accidentally generated at repository root
+/ios/
+/android/
+.aider*

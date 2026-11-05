@@ -2,17 +2,21 @@
   "name": "athlete-3",
   "private": true,
   "version": "0.0.0",
-  "description": "ATHLETE 3.0 — monorepo TypeScript",
+  "description": "ATHLETE 3.0 \u2014 monorepo TypeScript",
   "workspaces": [
     "packages/*",
+    "apps/mobile",
     "supabase/tests"
   ],
   "engines": {
     "node": ">=22"
   },
   "scripts": {
+    "mobile": "npm --workspace @athlete/mobile start",
+    "ios": "npm --workspace @athlete/mobile run ios",
+    "android": "npm --workspace @athlete/mobile run android",
     "typecheck": "npm run typecheck --workspaces --if-present",
-    "test": "npm run test -w @athlete/contracts -w @athlete/domain -w @athlete/data",
+    "test": "npm run test -w @athlete/contracts -w @athlete/domain -w @athlete/data -w @athlete/mobile",
     "test:db": "npm run db:reset -w @athlete/supabase-tests && npm run test -w @athlete/supabase-tests && npm run test:integration -w @athlete/data",
     "test:all": "npm test && npm run test:db"
   },
