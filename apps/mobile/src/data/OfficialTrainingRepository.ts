@@ -132,7 +132,10 @@ export class OfficialTrainingRepository {
     const draft = this.drafts.get(setId);
     if (draft) {
       unwrap(await this.data.sessions.logSet({
-        id: setId, sessionExerciseId: draft.sessionExerciseId, position: draft.setIndex,
+        // Sin `position`: el backend asigna la siguiente posición libre al guardar (`nextPosition`).
+        // `draft.setIndex` solo sirve para mostrar el borrador; enviarlo duplicaba posiciones cuando
+        // coexistían el borrador automático de getWorkout y uno creado con addSet.
+        id: setId, sessionExerciseId: draft.sessionExerciseId,
         setType: input.isWarmup ? 'warmup' : 'working', weightKg: input.weightKg, reps: input.reps,
         rir: input.rir, rpe: null, restSeconds: null, durationSeconds: null, distanceMeters: null,
         completedAt: new Date().toISOString(), notes: null,

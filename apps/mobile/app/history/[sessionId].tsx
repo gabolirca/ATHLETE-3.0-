@@ -11,10 +11,11 @@ import { useTrainingRepository } from '@/data/MobileTrainingContext';
 import type { WorkoutDetail } from '@/data/trainingTypes';
 import { colors } from '@/theme/colors';
 
-function effortDescription(value: number | null): string {
+export function effortDescription(value: number | null): string {
   if (value === null) return '';
-  if (!Number.isInteger(value) || value < 0 || value > 10) return ` · valor guardado fuera del rango permitido (${value})`;
+  if (value < 0 || value > 10 || !Number.isInteger(value * 2)) return ` · valor guardado fuera del rango permitido (${value})`;
   if (value === 0) return ' · ninguna repetición más';
+  if (value === 0.5) return ' · 0.5 media repetición más';
   return ` · ${value} ${value === 1 ? 'repetición más' : 'repeticiones más'}`;
 }
 

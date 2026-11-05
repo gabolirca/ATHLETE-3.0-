@@ -19,7 +19,8 @@
       }
     },
     "android": {
-      "package": "com.athlete.mobile"
+      "package": "com.athlete.mobile",
+      "allowBackup": false
     },
     "plugins": [
       "expo-router",
