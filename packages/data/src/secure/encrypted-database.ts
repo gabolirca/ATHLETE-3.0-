@@ -107,11 +107,6 @@ export type OpenEncryptedDatabaseOptions = {
   /** Entrada del almacén seguro con la clave. Por defecto `databaseKeyName(name)`. */
   keyName?: string;
   /**
-   * Base existente de solo lectura (p. ej. la copia de la capa anterior): nunca crea clave y no ejecuta
-   * PRAGMAs que escriban (WAL). Sin clave guardada → `database-key-missing`.
-   */
-  readOnly?: boolean;
-  /**
    * La base debe existir ya (lo decidió `openActiveStore`): sin clave guardada → `database-key-missing`, sin abrir
    * el archivo ni generar clave. Evita tratar una base existente como instalación nueva.
    */
@@ -125,7 +120,7 @@ export async function openEncryptedDatabase(options: OpenEncryptedDatabaseOption
     throw new LocalDatabaseError('secret-invalid', 'La clave de la base guardada tiene un formato inválido; no se reemplazó.');
   }
 
-  if (storedKey === null && (options.readOnly || options.requireExisting)) {
+  if (storedKey === null && options.requireExisting) {
     throw new LocalDatabaseError('database-key-missing', 'No hay clave para la base existente; no se generó ninguna.');
   }
   const raw = await options.open(options.name);
@@ -161,7 +156,7 @@ export async function openEncryptedDatabase(options: OpenEncryptedDatabaseOption
       await storeNewSecret(options.secureStore, keyName, key);
     }
 
-    if (!options.readOnly) await raw.execAsync('PRAGMA journal_mode = WAL;');
+    await raw.execAsync('PRAGMA journal_mode = WAL;');
   } catch (error) {
     await raw.closeAsync().catch(() => undefined);
     throw error;

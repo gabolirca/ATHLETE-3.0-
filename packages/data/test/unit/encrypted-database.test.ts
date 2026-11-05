@@ -87,20 +87,4 @@ describe('openEncryptedDatabase', () => {
     await expectCode(openEncryptedDatabase({ name: NAME, open: cipherOpener(tmp.dir).open, secureStore: racing, randomBytes: randomBytesSync }), 'secret-conflict', true);
     expect(racing.writes).toEqual([]);
   });
-
-  it('solo lectura (copia heredada): sin clave no crea ninguna; con clave no ejecuta escrituras', async () => {
-    const opener = cipherOpener(tmp.dir);
-    await expectCode(open(opener, { readOnly: true, keyName: 'legacy.key' }), 'database-key-missing', false);
-    expect(opener.opened).toHaveLength(0);
-
-    const seed = await open();
-    await seed.exec('CREATE TABLE t (x INTEGER)');
-    await seed.close();
-    secure.items.set('legacy.key', secure.items.get(KEY)!);
-    const reader = cipherOpener(tmp.dir);
-    const db = await open(reader, { readOnly: true, keyName: 'legacy.key' });
-    expect(await db.all('SELECT count(*) AS n FROM t')).toEqual([{ n: 0 }]);
-    expect(reader.opened[0]?.statements.filter((s) => !/^\s*(PRAGMA key|PRAGMA cipher_version|SELECT)/i.test(s))).toEqual([]);
-    await db.close();
-  });
 });

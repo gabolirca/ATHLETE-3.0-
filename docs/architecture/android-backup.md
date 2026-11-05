@@ -20,7 +20,6 @@ se respaldan las preferencias compartidas que no son `SecureStore`.
 
 | Ruta en el dispositivo | Contenido | Respaldo en la nube | Transferencia entre dispositivos |
 |---|---|---|---|
-| `files/SQLite/athlete3.db` (+`-wal`, `-shm`) | Base legacy cifrada | Excluida (no está incluida) | Excluida |
 | `files/SQLite/athlete3-<uuid>.db` (+`-wal`, `-shm`) | Base oficial cifrada | Excluida | Excluida |
 | `files/athlete3-backups/**` | Copias de la migración (cifradas) | Excluida | Excluida |
 | `shared_prefs/SecureStore.xml` | Claves de las bases, identidad y marcador del almacén activo (cifrados con una clave del Keystore) | **Excluida explícitamente** | **Excluida explícitamente** |
@@ -66,5 +65,5 @@ Al restaurar habría archivos sin claves.
     viajan en respaldos cifrados;
   - el llavero sobrevive a la desinstalación.
 
-  El selector cubre los tres casos (§5 de `seleccion-almacen.md`). Falta decidir si los archivos se marcan con
+  El selector cubre los tres casos (§4 de `seleccion-almacen.md`). Falta decidir si los archivos se marcan con
   `isExcludedFromBackup`.

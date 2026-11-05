@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { join } from 'node:path';
 import type { Result } from '@athlete/contracts';
 import { BUNDLED_CATALOG, CATALOG_EXERCISE_ID } from '../../src/catalog/bundled';
-import { IDENTITY_KEY, LEGACY_OWNER_KEY } from '../../src/identity';
+import { IDENTITY_KEY } from '../../src/identity';
 import { localDatabaseName } from '../../src/sql/expo-sqlite';
 import { openAthleteData, type OpenedAthleteData } from '../../src/open';
 import { migrateLocalDatabase, LOCAL_SCHEMA_VERSION } from '../../src/local/schema';
@@ -66,12 +66,13 @@ describe('openAthleteData: identidad local sin cuenta', () => {
     await again.close();
   });
 
-  it('reutiliza el identificador de la capa anterior (`device:<uuid>`) sin modificarlo', async () => {
+  it('ignora el identificador de la capa anterior (retirada): crea una identidad propia y no toca esa entrada', async () => {
+    const oldOwnerKey = 'athlete3.local-owner.v1';
     const legacy = '1b4e28ba-2fa1-41d2-883f-0016d3cca427';
-    secure.items.set(LEGACY_OWNER_KEY, `device:${legacy}`);
+    secure.items.set(oldOwnerKey, `device:${legacy}`);
     const d = await open();
-    expect(d.identity.localUserId).toBe(legacy);
-    expect(secure.items.get(LEGACY_OWNER_KEY)).toBe(`device:${legacy}`);
+    expect(d.identity.localUserId).not.toBe(legacy);
+    expect(secure.items.get(oldOwnerKey)).toBe(`device:${legacy}`);
     await d.close();
   });
 
