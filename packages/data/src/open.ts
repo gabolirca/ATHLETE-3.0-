@@ -3,7 +3,6 @@ import { BUNDLED_CATALOG, BUNDLED_CATALOG_VERSION } from './catalog/bundled';
 import { buildAthleteData, type AthleteData } from './factory';
 import { linkAccount, localOnlyTransport, resolveIdentity, type DeviceIdentity } from './identity';
 import { createUuidV7Generator, systemClock } from './ids';
-import { importLegacyCodexV1, LEGACY_IMPORT_STATE_KEY, type LegacyImportReport, type LegacyImportResult } from './legacy/codex-v1';
 import { DataError, LocalStore } from './local/store';
 import type { Logger } from './logging';
 import { openEncryptedDatabase } from './secure/encrypted-database';
@@ -44,9 +43,6 @@ export type OpenAthleteDataOptions = {
 export type OpenedAthleteData = AthleteData & {
   readonly identity: Readonly<DeviceIdentity>;
   adoptLocalData(accountUserId: string): Promise<OpenedAthleteData>;
-  importLegacyStore(legacyCopy: SqlDatabase, options: { deviceTimeZone: string; sha256: (text: string) => Promise<string> }): Promise<LegacyImportResult>;
-  /** Informe de la importación de la capa anterior confirmada en este almacén (null si nunca se importó). */
-  legacyImportReport(): Promise<LegacyImportReport | null>;
 };
 
 export async function openAthleteData(options: OpenAthleteDataOptions): Promise<OpenedAthleteData> {
@@ -83,17 +79,6 @@ export async function openAthleteData(options: OpenAthleteDataOptions): Promise<
      * transacción, vincula la identidad y reabre. Devuelve la nueva instancia; la actual queda cerrada.
      * Si ya hay otra cuenta vinculada en este dispositivo → `FORBIDDEN` (multicuenta: pendiente de diseño).
      */
-    /**
-     * Importa la COPIA de la base de la capa anterior (abrirla con `openLegacyDatabaseCopy`). Transaccional,
-     * verificado e idempotente; nunca escribe en la copia. Ver `legacy/codex-v1.ts`.
-     */
-    importLegacyStore(legacyCopy, importOptions) {
-      return importLegacyCodexV1(store, legacyCopy, { ...importOptions, localUserId: identity.localUserId, now: clock.now() });
-    },
-    async legacyImportReport() {
-      const raw = await store.getState(LEGACY_IMPORT_STATE_KEY);
-      return raw === null ? null : (JSON.parse(raw) as LegacyImportReport);
-    },
     async adoptLocalData(accountUserId: string): Promise<OpenedAthleteData> {
       if (!/^[0-9a-f-]{36}$/i.test(accountUserId)) throw new DataError(appError('VALIDATION_FAILED', 'Cuenta no válida.'));
       const account = accountUserId.toLowerCase();
@@ -129,19 +114,4 @@ async function completeInterruptedAdoption(db: SqlDatabase, store: SecureKeyValu
     return linkAccount(store, identity, owner);
   }
   return identity;
-}
-
-/** Clave de la base de la capa anterior (`apps/mobile/src/data/database.ts`). Solo se lee; nunca se crea ni se cambia. */
-export const LEGACY_DATABASE_KEY_NAME = 'athlete3.sqlite.sqlcipher-key.v1';
-
-/**
- * Abre en solo lectura una COPIA de la base anterior con su clave original. No crea claves, no cambia el modo de
- * diario y falla con `database-key-missing` / `database-unreadable` si no puede leerla.
- * `open` debe abrir el archivo copiado (p. ej. `(name) => SQLite.openDatabaseAsync(name, {}, backupDirectory)`).
- */
-export function openLegacyDatabaseCopy(options: { name: string; open: (name: string) => Promise<ExpoSQLiteDatabaseLike>; secureStore: SecureKeyValueStorage }): Promise<SqlDatabase> {
-  return openEncryptedDatabase({
-    ...options, keyName: LEGACY_DATABASE_KEY_NAME, readOnly: true,
-    randomBytes: () => { throw new Error('La copia heredada nunca genera claves'); },
-  });
 }

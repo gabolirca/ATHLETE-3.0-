@@ -7,9 +7,6 @@ import { LocalDatabaseError, readSecret, replaceSecret, storeNewSecret } from '.
  * ATHLETE funciona desde la primera apertura sin registrarse. Cada dispositivo tiene un `localUserId` (UUID) que
  * hace de `user_id` de sus datos y da nombre a su base (`localDatabaseName(localUserId)`). Al iniciar sesión, los datos
  * locales se adoptan para la cuenta (`adoptLocalData`): se reasigna `user_id` y se guarda `accountUserId`.
- *
- * Continuidad con la capa anterior de la app: si existe su identificador `device:<uuid>`
- * (`athlete3.local-owner.v1`), se reutiliza ese UUID; no se modifica ni se borra esa entrada.
  */
 export type DeviceIdentity = {
   localUserId: string;
@@ -18,7 +15,6 @@ export type DeviceIdentity = {
 };
 
 export const IDENTITY_KEY = 'athlete3.identity.v1';
-export const LEGACY_OWNER_KEY = 'athlete3.local-owner.v1';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
@@ -58,9 +54,7 @@ export async function resolveIdentity(store: SecureKeyValueStorage, newUuid: () 
     throw new LocalDatabaseError('identity-missing', 'Falta la identidad del dispositivo para una base existente; no se creó otra.');
   }
 
-  const legacy = await readSecret(store, LEGACY_OWNER_KEY);
-  const legacyUuid = legacy?.startsWith('device:') ? legacy.slice('device:'.length).toLowerCase() : null;
-  const localUserId = legacyUuid && UUID.test(legacyUuid) ? legacyUuid : newUuid().toLowerCase();
+  const localUserId = newUuid().toLowerCase();
   const identity: DeviceIdentity = { localUserId, accountUserId: null };
   await storeNewSecret(store, IDENTITY_KEY, encode(identity));
   return identity;

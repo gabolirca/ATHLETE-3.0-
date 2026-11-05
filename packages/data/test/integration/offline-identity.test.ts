@@ -1,19 +1,12 @@
 /**
  * Contratos 0.3.0 contra Postgres local (migraciones reales, RLS y RPC de sync):
  *  - el catálogo incluido en la app es idéntico al del servidor;
- *  - un dispositivo sin cuenta trabaja offline y, al iniciar sesión, adopta sus datos y los sincroniza sin rechazos;
- *  - lo importado de la capa anterior cumple todas las restricciones del servidor.
+ *  - un dispositivo sin cuenta trabaja offline y, al iniciar sesión, adopta sus datos y los sincroniza sin rechazos.
  */
 import { afterAll, afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { copyFileSync } from 'node:fs';
-import { join } from 'node:path';
-import { DatabaseSync } from 'node:sqlite';
 import { BUNDLED_CATALOG, CATALOG_EXERCISE_ID } from '../../src/catalog/bundled';
-import { LEGACY_OWNER_KEY } from '../../src/identity';
 import { openAthleteData } from '../../src/open';
-import { SerializedDatabase } from '../../src/sql/types';
-import { createCodexV1, L } from '../fixtures/codex-v1';
-import { MemorySecureStore, TestClock, cipherOpener, expectOk, newId, randomBytesSync, sha256, tempDir } from '../support';
+import { MemorySecureStore, TestClock, cipherOpener, expectOk, newId, randomBytesSync, tempDir } from '../support';
 import { PgTransport, createUser, pool } from './pg-transport';
 
 let tmp: ReturnType<typeof tempDir>;
@@ -75,43 +68,6 @@ describe('contratos 0.3.0 contra el servidor', () => {
     expect(profile.rows[0]).toEqual({ id: user, sports: ['strength', 'swimming'], display_name: 'Atleta' });
     const foreign = await pool.query('select count(*)::int as n from athlete3.workout_sessions where id = $1 and user_id <> $2', [s.id, user]);
     expect(foreign.rows[0].n).toBe(0);
-    await adopted.close();
-  });
-
-  it('lo importado de la capa anterior sincroniza sin rechazos tras adoptar la cuenta', async () => {
-    const clock = new TestClock(Date.now() - 3600_000);
-    const secure = new MemorySecureStore();
-    secure.items.set(LEGACY_OWNER_KEY, `device:${L.owner}`);
-    const original = join(tmp.dir, 'legacy.db');
-    const setup = new DatabaseSync(original);
-    const wrap = (n: DatabaseSync) => new SerializedDatabase({
-      exec: async (q) => { n.exec(q); }, run: async (q, p) => ({ changes: Number(n.prepare(q).run(...p).changes) }),
-      all: async (q, p) => n.prepare(q).all(...p) as never, close: async () => n.close(),
-    });
-    await createCodexV1(wrap(setup));
-    setup.close();
-    copyFileSync(original, `${original}.copy`);
-    const legacy = wrap(new DatabaseSync(`${original}.copy`, { readOnly: true }));
-
-    const local = await device(secure, undefined, clock);
-    const { report } = await local.importLegacyStore(legacy, { deviceTimeZone: 'UTC', sha256 });
-    await legacy.close();
-    const user = await createUser();
-    const adopted = await (await device(secure, new PgTransport(user), clock)).adoptLocalData(user);
-    await local.close().catch(() => undefined);
-    const status = expectOk(await adopted.sync.syncNow());
-    expect([status.pendingCount, status.rejectedCount, status.conflictCount]).toEqual([0, 0, 0]);
-
-    const count = async (table: string) => Number((await pool.query(`select count(*)::int as n from athlete3.${table} where user_id = $1`, [user])).rows[0].n);
-    // En el servidor solo existe lo vivo (los eliminados nunca se enviaron).
-    expect(await count('training_plans')).toBe(1);
-    expect(await count('workout_sessions')).toBe(2);
-    expect(await count('strength_sets')).toBe(5);
-    expect(await count('body_weights')).toBe(1);
-    expect(report.enqueued).toBe(17);
-    const sets = await pool.query('select rir::float8 as rir, weight_kg::float8 as w from athlete3.strength_sets where id = any($1) order by weight_kg',
-      [[L.setRir2, L.setRir0]]);
-    expect(sets.rows).toEqual([{ rir: 0, w: 100 }, { rir: 2, w: 102.06 }]);
     await adopted.close();
   });
 });

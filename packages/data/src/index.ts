@@ -13,9 +13,8 @@ export * from './supabase/auth';
 export * from './config/environment';
 export * from './logging';
 export { createAthleteData, type AthleteData } from './factory';
-export { openAthleteData, openLegacyDatabaseCopy, LEGACY_DATABASE_KEY_NAME, type OpenAthleteDataOptions, type OpenedAthleteData } from './open';
-export { LegacyImportError, LEGACY_SOURCE, planLegacyImport, readLegacySnapshot, type LegacyImportReport, type LegacyImportResult, type ImportErrorCode } from './legacy/codex-v1';
-export { resolveIdentity, readIdentity, linkAccount, localOnlyTransport, IDENTITY_KEY, LEGACY_OWNER_KEY, type DeviceIdentity } from './identity';
+export { openAthleteData, type OpenAthleteDataOptions, type OpenedAthleteData } from './open';
+export { resolveIdentity, readIdentity, linkAccount, localOnlyTransport, IDENTITY_KEY, type DeviceIdentity } from './identity';
 export {
   openEncryptedDatabase, databaseKeyName, LocalDatabaseError, isLocalDatabaseError,
   type LocalDatabaseErrorCode, type OpenEncryptedDatabaseOptions,
@@ -24,9 +23,7 @@ export { BUNDLED_CATALOG, BUNDLED_CATALOG_VERSION, CATALOG_EXERCISE_ID } from '.
 export { createUuidV7Generator, systemClock } from './ids';
 export { fromSupabaseError } from './supabase/errors';
 export {
-  openActiveStore, inspectStorage, classifyStorage, migrateLegacyStore, rollbackMigration, keepLegacyStore, startNewStore,
-  ActiveStoreError, ACTIVE_STORE_KEY, LEGACY_DATABASE_NAME, DATABASE_FILE_SUFFIXES,
+  openActiveStore, inspectStorage, classifyStorage, startNewStore, ActiveStoreError, ACTIVE_STORE_KEY,
   type DatabaseFiles, type ActiveStore, type StoreSelection, type OpenErrorSelection, type StoreErrorCode, type RecoveryAction,
   type ActiveStoreMarker, type RetainedStore, type StorageProbe, type KeyState, type OpenActiveStoreOptions,
-  type MigrateLegacyStoreOptions, type MigrationResult,
 } from './storage/active-store';
