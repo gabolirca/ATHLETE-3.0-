@@ -1,0 +1,28 @@
+{
+  "name": "@athlete/data",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Persistencia local (SQLite), outbox, motor de sincronización y adaptadores de Supabase para ATHLETE 3.0.",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./node-sqlite": "./src/sql/node-sqlite.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run --dir test/unit",
+    "test:integration": "vitest run --dir test/integration"
+  },
+  "dependencies": {
+    "@athlete/contracts": "*",
+    "@athlete/domain": "*",
+    "@supabase/supabase-js": "^2.118.0",
+    "zod": "^4.1.0"
+  },
+  "devDependencies": {
+    "pg": "^8.13.0",
+    "@types/pg": "^8.11.0"
+  }
+}
