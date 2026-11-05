@@ -1,0 +1,13 @@
+node_modules/
+.expo/
+dist/
+web-build/
+coverage/
+*.log
+.DS_Store
+apps/mobile/ios/
+apps/mobile/android/
+
+# Native projects accidentally generated at repository root
+/ios/
+/android/

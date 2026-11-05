@@ -1,0 +1,24 @@
+{
+  "name": "athlete-3",
+  "private": true,
+  "version": "1.0.0",
+  "workspaces": [
+    "apps/mobile",
+    "packages/*"
+  ],
+  "scripts": {
+    "mobile": "npm --workspace @athlete/mobile start",
+    "ios": "npm --workspace @athlete/mobile run ios",
+    "android": "npm --workspace @athlete/mobile run android",
+    "typecheck": "npm --workspace @athlete/mobile run typecheck",
+    "test": "npm --workspace @athlete/mobile test"
+  },
+  "devDependencies": {
+    "typescript": "~6.0.3"
+  },
+  "overrides": {
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "test-renderer": "1.3.0"
+  }
+}
