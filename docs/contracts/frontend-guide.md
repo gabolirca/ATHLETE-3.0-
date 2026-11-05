@@ -36,7 +36,7 @@ const supabase = createAthleteSupabaseClient(env.value, secureSessionStorage); /
 const auth = new SupabaseAuthService(supabase.auth, { redirectTo: 'athlete3://auth/callback' });
 
 // Al arrancar, SIEMPRE (con o sin cuenta): identidad local, base cifrada y catálogo incluido.
-// Detalle y errores: docs/contracts/guia-integracion-codex.md §2 (fragmentos verificados contra la API real).
+// En la app no se llama directo: lo hace openActiveStore (docs/contracts/contrato-seleccion-almacen.md).
 let data = await openAthleteData({
   openDatabase: (name) => SQLite.openDatabaseAsync(name),
   secureStore: { getItem: SecureStore.getItemAsync, setItem: SecureStore.setItemAsync, removeItem: SecureStore.deleteItemAsync },

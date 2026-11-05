@@ -38,7 +38,7 @@ borra el clúster.
   (rutina → sesión → series con RIR → sync → segundo dispositivo) en `training-cycle.test.ts`; y en
   `offline-identity.test.ts`: catálogo incluido = catálogo del servidor, identidad local → adopción de cuenta → sync sin
   rechazos, e importación de la capa anterior → sync sin rechazos.
-- `packages/data/test/unit/{encrypted-database,open-athlete-data,legacy-import}.test.ts` usan un SQLCipher **simulado**
+- `packages/data/test/unit/{encrypted-database,open-athlete-data,active-store}.test.ts` usan un SQLCipher **simulado**
   sobre `node:sqlite` real (`FakeCipherDatabase` en `test/support.ts`): reproduce "clave incorrecta → file is not a
   database" y la adopción de clave en la primera escritura, pero **no** cifra el archivo. El cifrado real se valida en el
   simulador iOS.
@@ -77,7 +77,6 @@ TEST_DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres \
 | Importador de la capa anterior | Transformación, verificación, `ROLLBACK`, idempotencia y "no escribe en el origen" sobre SQLite real; el resultado sincroniza sin rechazos contra Postgres real | La copia cifrada en el caso extremo a extremo usa `FakeCipherDatabase` | ⏳ copia de archivos con `expo-file-system` y apertura con SQLCipher real |
 | Identidad local y adopción de cuenta | Reasignación transaccional sobre SQLite real; sync de lo adoptado contra Postgres real | Almacén seguro = `MemorySecureStore` (un `Map` con inyección de fallos) | ⏳ `expo-secure-store` real |
 | SQLCipher (`openEncryptedDatabase`) | Lógica de decisión (primera instalación, base existente, sin sobrescribir…) | `FakeCipherDatabase`: emula "clave incorrecta → file is not a database" y la adopción de clave en la primera escritura; **no cifra** el archivo. En este equipo no hay ningún SQLCipher (no existe `sqlcipher`; `node:sqlite` no tiene `cipher_version`) | ⏳ El 4-nov se validó en el simulador SQLCipher + SecureStore reales, pero con la capa anterior (`apps/mobile/src/data/database.ts`), **no** con `openEncryptedDatabase` |
-| Guía de integración | Fragmentos compilados con TS 5.9.3 y 6.0.3 contra los tipos reales de Expo SDK 58 (`docs/contracts/verificacion/`) | — | ⏳ ejecución en la app |
 
 Pendiente para cerrar las filas ⏳: validación conjunta en un simulador iOS **desechable**, nunca sobre la base actual
 del simulador. Opcional: una capa de pruebas en Node con cifrado real (p. ej. el paquete
