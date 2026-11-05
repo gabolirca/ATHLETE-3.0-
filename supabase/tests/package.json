@@ -1,0 +1,16 @@
+{
+  "name": "@athlete/supabase-tests",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Pruebas de base de datos (RLS, aislamiento, sync) contra un Postgres LOCAL. Nunca remoto.",
+  "type": "module",
+  "scripts": {
+    "db:reset": "bash harness/reset-local-db.sh",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "devDependencies": {
+    "pg": "^8.13.0",
+    "@types/pg": "^8.11.0"
+  }
+}
