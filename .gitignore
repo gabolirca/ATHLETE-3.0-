@@ -1,0 +1,15 @@
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+.DS_Store
+
+# Secretos y configuración local: nunca versionar
+.env
+.env.*
+!.env.example
+supabase/.temp/
+
+# Postgres local de pruebas
+.pgdata/
+.pgdata.log

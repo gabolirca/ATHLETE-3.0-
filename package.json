@@ -1,0 +1,24 @@
+{
+  "name": "athlete-3",
+  "private": true,
+  "version": "0.0.0",
+  "description": "ATHLETE 3.0 — monorepo TypeScript",
+  "workspaces": [
+    "packages/*",
+    "supabase/tests"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm run test -w @athlete/contracts -w @athlete/domain -w @athlete/data",
+    "test:db": "npm run db:reset -w @athlete/supabase-tests && npm run test -w @athlete/supabase-tests && npm run test:integration -w @athlete/data",
+    "test:all": "npm test && npm run test:db"
+  },
+  "devDependencies": {
+    "typescript": "~6.0.3",
+    "vitest": "^4.0.0",
+    "@types/node": "^22.0.0"
+  }
+}
