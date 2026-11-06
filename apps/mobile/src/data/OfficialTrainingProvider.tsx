@@ -19,8 +19,8 @@ export function OfficialTrainingProvider({ children }: PropsWithChildren) {
     if (status !== 'ready' || !data) return () => { active = false; };
     void (async () => {
       const contractsVersion: string = CONTRACTS_VERSION;
-      if (contractsVersion !== '0.3.0') {
-        throw new Error(`Contratos incompatibles: la app requiere 0.3.0 y el paquete informa ${contractsVersion}.`);
+      if (contractsVersion !== '0.4.0') {
+        throw new Error(`Contratos incompatibles: la app requiere 0.4.0 y el paquete informa ${contractsVersion}.`);
       }
       const profile = await data.profile.get();
       if (!profile.ok && profile.error.code === 'NOT_FOUND') {

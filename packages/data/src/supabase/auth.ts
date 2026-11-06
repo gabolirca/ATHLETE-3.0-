@@ -1,5 +1,8 @@
 import {
+  IdTokenSignInInput,
   PasswordResetRequestInput,
+  RequestEmailCodeInput,
+  VerifyEmailCodeInput,
   SignInInput,
   SignUpInput,
   UpdatePasswordInput,
@@ -35,6 +38,9 @@ export interface AuthClientLike {
   updateUser(attributes: { password?: string }): R<{ user: AuthUserLike | null }>;
   getSession(): R<{ session: AuthSessionLike | null }>;
   refreshSession(): R<{ session: AuthSessionLike | null; user: AuthUserLike | null }>;
+  signInWithOtp(credentials: { email: string; options?: { shouldCreateUser?: boolean; emailRedirectTo?: string } }): R<unknown>;
+  verifyOtp(params: { email: string; token: string; type: 'email' }): R<{ user: AuthUserLike | null; session: AuthSessionLike | null }>;
+  signInWithIdToken(credentials: { provider: 'apple' | 'google'; token: string; nonce?: string }): R<{ user: AuthUserLike | null; session: AuthSessionLike | null }>;
   onAuthStateChange(callback: (event: string, session: AuthSessionLike | null) => void): { data: { subscription: { unsubscribe(): void } } };
 }
 
@@ -47,6 +53,8 @@ export type SupabaseAuthServiceOptions = {
   refreshMarginMs?: number;
   /** Intervalo mínimo entre solicitudes de recuperación por correo en este dispositivo. */
   resetCooldownMs?: number;
+  /** Intervalo mínimo entre envíos de código de inicio de sesión al mismo correo. */
+  codeCooldownMs?: number;
 };
 
 const GENERIC_SIGNIN = 'Correo o contraseña incorrectos.';
@@ -69,6 +77,7 @@ export class SupabaseAuthService implements AuthService {
   private readonly log: Logger;
   private readonly now: () => number;
   private readonly lastReset = new Map<string, number>();
+  private readonly lastCode = new Map<string, number>();
   private readonly listeners = new Set<(s: AuthState) => void>();
   private subscription: { unsubscribe(): void } | null = null;
 
@@ -88,6 +97,7 @@ export class SupabaseAuthService implements AuthService {
     if (code === 'email_not_confirmed') return appError('UNAUTHENTICATED', 'Confirma tu correo para continuar.', { details: { reason: 'email_not_confirmed' } });
     if (code === 'weak_password') return appError('VALIDATION_FAILED', 'La contraseña no cumple la política.', { details: { field: 'password' } });
     if (code === 'same_password') return appError('VALIDATION_FAILED', 'La nueva contraseña debe ser distinta.', { details: { field: 'newPassword' } });
+    if (code === 'otp_expired' || code === 'otp_disabled' || code === 'invalid_otp') return appError('VALIDATION_FAILED', 'El código es incorrecto o ya venció. Pide uno nuevo.', { details: { field: 'code' } });
     if (code.startsWith('over_') || e.status === 429) return appError('RATE_LIMITED', 'Demasiados intentos. Espera un momento.');
     if (TERMINAL_SESSION_CODES.has(code)) return appError('SESSION_EXPIRED', 'Tu sesión expiró. Inicia sesión de nuevo.');
     if (code === 'reauthentication_needed') return appError('UNAUTHENTICATED', 'Vuelve a iniciar sesión para continuar.');
@@ -188,6 +198,60 @@ export class SupabaseAuthService implements AuthService {
     if (error) return err(this.mapError(error));
     this.log.info('auth.password_updated');
     return ok(undefined);
+  }
+
+  async requestEmailCode(raw: RequestEmailCodeInput): Promise<Result<void>> {
+    const parsed = parseInput(RequestEmailCodeInput, raw);
+    if (!parsed.ok) return parsed as Result<never>;
+    const email = parsed.value.email;
+    const last = this.lastCode.get(email);
+    if (last !== undefined && this.now() - last < (this.options.codeCooldownMs ?? 60_000)) {
+      return err(appError('RATE_LIMITED', 'Ya te enviamos un código. Espera un minuto antes de pedir otro.'));
+    }
+    this.lastCode.set(email, this.now());
+    const { error } = await this.auth.signInWithOtp({
+      email,
+      options: { shouldCreateUser: true, ...(this.options.redirectTo ? { emailRedirectTo: this.options.redirectTo } : {}) },
+    });
+    if (error) {
+      const mapped = this.mapError(error);
+      if (mapped.code === 'NETWORK_UNAVAILABLE' || mapped.code === 'RATE_LIMITED') {
+        this.lastCode.delete(email);
+        return err(mapped);
+      }
+      // Igual que la recuperación: no se revela si la cuenta existe o no.
+      this.log.warn('auth.email_code_suppressed', { code: error.code ?? 'unknown' });
+    }
+    this.log.info('auth.email_code_requested');
+    return ok(undefined);
+  }
+
+  async verifyEmailCode(raw: VerifyEmailCodeInput): Promise<Result<AuthState>> {
+    const parsed = parseInput(VerifyEmailCodeInput, raw);
+    if (!parsed.ok) return err(appError('VALIDATION_FAILED', 'El código debe tener de 6 a 10 dígitos.', { details: { field: 'code' } }));
+    const { data, error } = await this.auth.verifyOtp({ email: parsed.value.email, token: parsed.value.code, type: 'email' });
+    if (error || !data.session) {
+      this.log.warn('auth.email_code_failed', { code: error?.code ?? 'no_session' });
+      if (!error || error.status === 401 || error.status === 403) return err(appError('VALIDATION_FAILED', 'El código es incorrecto o ya venció. Pide uno nuevo.', { details: { field: 'code' } }));
+      return err(this.mapError(error));
+    }
+    this.lastCode.delete(parsed.value.email);
+    this.log.info('auth.sign_in', { method: 'email_code' });
+    return ok(this.signedIn(data.session));
+  }
+
+  async signInWithIdToken(raw: IdTokenSignInInput): Promise<Result<AuthState>> {
+    const parsed = parseInput(IdTokenSignInInput, raw);
+    if (!parsed.ok) return parsed as Result<never>;
+    const { provider, idToken, nonce } = parsed.value;
+    if (provider === 'apple' && !nonce) return err(appError('VALIDATION_FAILED', 'Falta el nonce de Apple.'));
+    const { data, error } = await this.auth.signInWithIdToken({ provider, token: idToken, ...(nonce ? { nonce } : {}) });
+    if (error || !data.session) {
+      this.log.warn('auth.id_token_failed', { provider, code: error?.code ?? 'no_session' });
+      return err(error ? this.mapError(error) : appError('UNAUTHENTICATED', 'No se pudo iniciar sesión.'));
+    }
+    this.log.info('auth.sign_in', { method: provider });
+    return ok(this.signedIn(data.session));
   }
 
   onStateChange(listener: (state: AuthState) => void): () => void {

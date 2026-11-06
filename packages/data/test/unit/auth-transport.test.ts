@@ -19,6 +19,9 @@ function fakeAuth(overrides: Partial<AuthClientLike> = {}): AuthClientLike {
     updateUser: vi.fn(async () => ({ data: { user }, error: null })),
     getSession: vi.fn(async () => ({ data: { session: session(3600) }, error: null })),
     refreshSession: vi.fn(async () => ({ data: { session: session(3600), user }, error: null })),
+    signInWithOtp: vi.fn(async () => ({ data: {}, error: null })),
+    verifyOtp: vi.fn(async () => ({ data: { user, session: session(3600) }, error: null })),
+    signInWithIdToken: vi.fn(async () => ({ data: { user, session: session(3600) }, error: null })),
     onAuthStateChange: vi.fn(() => ({ data: { subscription: { unsubscribe: vi.fn() } } })),
     ...overrides,
   };
@@ -176,6 +179,80 @@ describe('recuperación de contraseña', () => {
     const auth = fakeAuth();
     expect((await new SupabaseAuthService(auth).updatePassword({ newPassword: 'NuevaSegura123' })).ok).toBe(true);
     expect(auth.updateUser).toHaveBeenCalledWith({ password: 'NuevaSegura123' });
+  });
+});
+
+describe('código por correo (0.4.0)', () => {
+  it('pide el código normalizando el correo y permitiendo crear la cuenta', async () => {
+    const auth = fakeAuth();
+    const r = await new SupabaseAuthService(auth, { now: () => NOW, redirectTo: 'athlete3://auth/callback' }).requestEmailCode({ email: '  Ana@Test.Local ' });
+    expect(r.ok).toBe(true);
+    expect(auth.signInWithOtp).toHaveBeenCalledWith({ email: 'ana@test.local', options: { shouldCreateUser: true, emailRedirectTo: 'athlete3://auth/callback' } });
+  });
+
+  it('no permite reenviar al mismo correo antes de un minuto; sí tras la espera', async () => {
+    let now = NOW;
+    const auth = fakeAuth();
+    const svc = new SupabaseAuthService(auth, { now: () => now });
+    expect((await svc.requestEmailCode({ email: 'ana@test.local' })).ok).toBe(true);
+    const again = await svc.requestEmailCode({ email: 'ana@test.local' });
+    expect(again.ok).toBe(false);
+    expect(!again.ok && again.error.code).toBe('RATE_LIMITED');
+    now += 61_000;
+    expect((await svc.requestEmailCode({ email: 'ana@test.local' })).ok).toBe(true);
+    expect(auth.signInWithOtp).toHaveBeenCalledTimes(2);
+  });
+
+  it('un error del servidor que no es de red ni límite responde igual que el éxito (no revela cuentas)', async () => {
+    const auth = fakeAuth({ signInWithOtp: vi.fn(async () => ({ data: {}, error: { message: 'Signups not allowed', code: 'signup_disabled', status: 422 } })) });
+    expect((await new SupabaseAuthService(auth, { now: () => NOW }).requestEmailCode({ email: 'x@test.local' })).ok).toBe(true);
+  });
+
+  it('sin red: devuelve el error y libera la espera para reintentar', async () => {
+    const auth = fakeAuth({ signInWithOtp: vi.fn(async () => ({ data: {}, error: { message: 'Failed to fetch', name: 'AuthRetryableFetchError', status: 0 } })) });
+    const svc = new SupabaseAuthService(auth, { now: () => NOW });
+    const r = await svc.requestEmailCode({ email: 'ana@test.local' });
+    expect(!r.ok && r.error.code).toBe('NETWORK_UNAVAILABLE');
+    await svc.requestEmailCode({ email: 'ana@test.local' });
+    expect(auth.signInWithOtp).toHaveBeenCalledTimes(2);
+  });
+
+  it('verifica el código y abre sesión', async () => {
+    const auth = fakeAuth();
+    const r = await new SupabaseAuthService(auth, { now: () => NOW }).verifyEmailCode({ email: 'Ana@Test.Local', code: ' 123456 ' });
+    expect(auth.verifyOtp).toHaveBeenCalledWith({ email: 'ana@test.local', token: '123456', type: 'email' });
+    expect(r.ok && r.value.status).toBe('signed_in');
+  });
+
+  it('código con formato inválido: no llama al servidor', async () => {
+    const auth = fakeAuth();
+    const r = await new SupabaseAuthService(auth).verifyEmailCode({ email: 'ana@test.local', code: '12ab' });
+    expect(!r.ok && r.error.code).toBe('VALIDATION_FAILED');
+    expect(auth.verifyOtp).not.toHaveBeenCalled();
+  });
+
+  it('código incorrecto o vencido: VALIDATION_FAILED con mensaje claro', async () => {
+    const auth = fakeAuth({ verifyOtp: vi.fn(async () => ({ data: { user: null, session: null }, error: { message: 'Token has expired or is invalid', code: 'otp_expired', status: 403 } })) });
+    const r = await new SupabaseAuthService(auth).verifyEmailCode({ email: 'ana@test.local', code: '123456' });
+    expect(!r.ok && r.error).toMatchObject({ code: 'VALIDATION_FAILED', message: expect.stringMatching(/incorrecto o ya venció/) });
+  });
+});
+
+describe('Apple y Google (0.4.0)', () => {
+  it('Google con ID token abre sesión', async () => {
+    const auth = fakeAuth();
+    const r = await new SupabaseAuthService(auth, { now: () => NOW }).signInWithIdToken({ provider: 'google', idToken: 'g.token.sig' });
+    expect(auth.signInWithIdToken).toHaveBeenCalledWith({ provider: 'google', token: 'g.token.sig' });
+    expect(r.ok && r.value.status).toBe('signed_in');
+  });
+
+  it('Apple exige nonce y lo envía', async () => {
+    const auth = fakeAuth();
+    const svc = new SupabaseAuthService(auth, { now: () => NOW });
+    const missing = await svc.signInWithIdToken({ provider: 'apple', idToken: 'a.token.sig' });
+    expect(!missing.ok && missing.error.code).toBe('VALIDATION_FAILED');
+    await svc.signInWithIdToken({ provider: 'apple', idToken: 'a.token.sig', nonce: 'raw-nonce' });
+    expect(auth.signInWithIdToken).toHaveBeenCalledWith({ provider: 'apple', token: 'a.token.sig', nonce: 'raw-nonce' });
   });
 });
 

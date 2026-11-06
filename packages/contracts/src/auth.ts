@@ -41,6 +41,25 @@ export type PasswordResetRequestInput = z.input<typeof PasswordResetRequestInput
 export const UpdatePasswordInput = z.object({ newPassword: NewPassword });
 export type UpdatePasswordInput = z.input<typeof UpdatePasswordInput>;
 
+/** Código de un solo uso enviado por correo (0.4.0). Supabase permite de 6 a 10 dígitos. */
+export const EmailCode = z.string().trim().regex(/^\d{6,10}$/, { message: 'El código debe tener de 6 a 10 dígitos' });
+
+/** Pide un código por correo. Si la cuenta no existe, se crea al verificar (sin contraseña). */
+export const RequestEmailCodeInput = z.object({ email: Email });
+export type RequestEmailCodeInput = z.input<typeof RequestEmailCodeInput>;
+
+export const VerifyEmailCodeInput = z.object({ email: Email, code: EmailCode });
+export type VerifyEmailCodeInput = z.input<typeof VerifyEmailCodeInput>;
+
+/** Inicio de sesión nativo con Apple o Google: el SDK del sistema entrega un ID token firmado (0.4.0). */
+export const IdTokenSignInInput = z.object({
+  provider: z.enum(['apple', 'google']),
+  idToken: z.string().min(1).max(8192),
+  /** Nonce en claro usado al pedir el token (obligatorio con Apple). */
+  nonce: z.string().min(1).max(256).optional(),
+});
+export type IdTokenSignInInput = z.input<typeof IdTokenSignInInput>;
+
 export const AuthUser = z.object({
   id: Uuid,
   email: z.string().nullable(),
@@ -73,6 +92,12 @@ export interface AuthService {
   /** Siempre responde igual exista o no la cuenta (no permite enumerar usuarios). */
   requestPasswordReset(input: PasswordResetRequestInput): Promise<Result<void>>;
   updatePassword(input: UpdatePasswordInput): Promise<Result<void>>;
+  /** Envía un código de un solo uso. Responde igual exista o no la cuenta (no permite enumerar usuarios). */
+  requestEmailCode(input: RequestEmailCodeInput): Promise<Result<void>>;
+  /** Verifica el código y abre sesión. `VALIDATION_FAILED` si es incorrecto o venció. */
+  verifyEmailCode(input: VerifyEmailCodeInput): Promise<Result<AuthState>>;
+  /** Abre sesión con el ID token de Apple o Google obtenido por el SDK nativo. */
+  signInWithIdToken(input: IdTokenSignInInput): Promise<Result<AuthState>>;
   onStateChange(listener: (state: AuthState) => void): () => void;
 }
 
