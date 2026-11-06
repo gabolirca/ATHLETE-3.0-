@@ -217,6 +217,15 @@ describe('código por correo (0.4.0)', () => {
     expect(auth.signInWithOtp).toHaveBeenCalledTimes(2);
   });
 
+  it('si el servidor no puede enviar el correo (5xx) lo dice claramente: no es "sin conexión" ni un falso éxito', async () => {
+    const auth = fakeAuth({ signInWithOtp: vi.fn(async () => ({ data: {}, error: { message: 'Error sending confirmation email', code: 'unexpected_failure', status: 500, name: 'AuthRetryableFetchError' } })) });
+    const svc = new SupabaseAuthService(auth, { now: () => NOW });
+    const r = await svc.requestEmailCode({ email: 'ana@test.local' });
+    expect(!r.ok && r.error).toMatchObject({ code: 'INTERNAL', message: expect.stringMatching(/No pudimos enviar el correo/) });
+    await svc.requestEmailCode({ email: 'ana@test.local' }); // la espera se libera para reintentar
+    expect(auth.signInWithOtp).toHaveBeenCalledTimes(2);
+  });
+
   it('verifica el código y abre sesión', async () => {
     const auth = fakeAuth();
     const r = await new SupabaseAuthService(auth, { now: () => NOW }).verifyEmailCode({ email: 'Ana@Test.Local', code: ' 123456 ' });

@@ -219,6 +219,13 @@ export class SupabaseAuthService implements AuthService {
         this.lastCode.delete(email);
         return err(mapped);
       }
+      if ((error.status ?? 0) >= 500) {
+        // Falla del servidor o del proveedor de correo: no depende de si la cuenta existe, así que se informa
+        // (si se respondiera "enviado", el usuario esperaría un correo que nunca llega).
+        this.lastCode.delete(email);
+        this.log.error('auth.email_code_send_failed', { code: error.code ?? 'unknown', status: error.status });
+        return err(appError('INTERNAL', 'No pudimos enviar el correo en este momento. Intenta de nuevo en unos minutos.', { retryable: true }));
+      }
       // Igual que la recuperación: no se revela si la cuenta existe o no.
       this.log.warn('auth.email_code_suppressed', { code: error.code ?? 'unknown' });
     }

@@ -15,7 +15,10 @@ export function fromSupabaseError(error: SupabaseErrorLike | null | undefined): 
     const parsed = ErrorCode.safeParse(message.slice('ATHLETE:'.length));
     if (parsed.success) return appError(parsed.data, msg(parsed.data));
   }
-  if (error?.status === 0 || error?.name === 'AuthRetryableFetchError' || NETWORK.test(message)) {
+  // Solo es "sin conexión" si no hubo respuesta del servidor. supabase-js también marca como reintentables
+  // algunas respuestas 5xx: esas son errores del servidor, no de la red.
+  const noResponse = error?.status === undefined || error?.status === 0;
+  if (error?.status === 0 || (error?.name === 'AuthRetryableFetchError' && noResponse) || NETWORK.test(message)) {
     return appError('NETWORK_UNAVAILABLE', 'Sin conexión. Los cambios se guardan en el dispositivo.');
   }
   if (error?.status === 429) return appError('RATE_LIMITED', msg('RATE_LIMITED'));
