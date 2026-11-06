@@ -38,6 +38,15 @@ describe('Login', () => {
     expect(mockAccount.verifyCode).toHaveBeenCalledWith('Gabo@Test.mx', '123456');
   });
 
+  test('el campo de correo no usa autocorrector ni corrector ortográfico (pisaban lo escrito en iOS)', async () => {
+    const view = await render(<LoginScreen />);
+    const input = view.getByLabelText('Correo electrónico');
+    expect(input.props).toMatchObject({ autoCorrect: false, spellCheck: false, autoCapitalize: 'none', keyboardType: 'email-address' });
+    expect(input.props.textContentType).toBeUndefined();
+    await fireEvent.changeText(input, 'gabolirca6@gmail.com');
+    expect(view.getByDisplayValue('gabolirca6@gmail.com')).toBeTruthy();
+  });
+
   test('si el código es incorrecto muestra el error y no sale', async () => {
     mockAccount = account({ verifyCode: jest.fn().mockResolvedValue('El código es incorrecto o ya venció. Pide uno nuevo.') });
     const view = await render(<LoginScreen />);

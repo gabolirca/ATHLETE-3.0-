@@ -40,12 +40,12 @@ export default function LoginScreen() {
     <View><Eyebrow>RESPALDO EN LA NUBE</Eyebrow><Title>Iniciar sesión</Title></View>
     {step === 'email' ? <Card>
       <Text style={s.text}>Te enviaremos un código de un solo uso. Si aún no tienes cuenta, se crea al verificarlo. No necesitas contraseña.</Text>
-      <AppInput label="Correo electrónico" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" autoComplete="email" textContentType="emailAddress" placeholder="tu@correo.com"/>
+      <AppInput label="Correo electrónico" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" autoCorrect={false} spellCheck={false} autoComplete="email" placeholder="tu@correo.com"/>
       {error ? <Text accessibilityRole="alert" style={s.error}>{error}</Text> : null}
       <ActionButton onPress={() => void sendCode()} loading={busy} disabled={email.trim() === ''}>Enviarme un código</ActionButton>
     </Card> : <Card>
       <Text style={s.text}>Escribe el código que enviamos a <Text style={s.strong}>{email.trim().toLowerCase()}</Text>. Revisa también la carpeta de spam.</Text>
-      <AppInput label="Código" value={code} onChangeText={setCode} keyboardType="number-pad" autoComplete="one-time-code" textContentType="oneTimeCode" maxLength={10} placeholder="123456"/>
+      <AppInput label="Código" value={code} onChangeText={setCode} keyboardType="number-pad" autoCorrect={false} spellCheck={false} autoComplete="one-time-code" textContentType="oneTimeCode" maxLength={10} placeholder="123456"/>
       {error ? <Text accessibilityRole="alert" style={s.error}>{error}</Text> : null}
       <ActionButton onPress={() => void verify()} loading={busy} disabled={code.trim().length < 6}>Verificar e iniciar sesión</ActionButton>
       <Pressable accessibilityRole="button" onPress={() => { setStep('email'); setCode(''); setError(null); }}><Text style={s.link}>Cambiar correo o pedir otro código</Text></Pressable>
