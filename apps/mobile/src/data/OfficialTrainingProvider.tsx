@@ -6,10 +6,12 @@ import { CONTRACTS_VERSION } from '@athlete/contracts';
 import { useAthleteData } from './AthleteDataProvider';
 import { MobileTrainingContext } from './MobileTrainingContext';
 import { OfficialTrainingRepository } from './OfficialTrainingRepository';
+import type { TrainingRepository } from './TrainingRepository';
+import { withChangeNotifications } from './localChanges';
 
 export function OfficialTrainingProvider({ children }: PropsWithChildren) {
   const { status, data, newId, retry } = useAthleteData();
-  const [repository, setRepository] = useState<OfficialTrainingRepository | null>(null);
+  const [repository, setRepository] = useState<TrainingRepository | null>(null);
   const [profileError, setProfileError] = useState<Error | null>(null);
 
   useEffect(() => {
@@ -27,7 +29,7 @@ export function OfficialTrainingProvider({ children }: PropsWithChildren) {
         const initialized = await data.profile.initialize(Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC');
         if (!initialized.ok) throw new Error(initialized.error.message);
       } else if (!profile.ok) throw new Error(profile.error.message);
-      if (active) setRepository(new OfficialTrainingRepository(data, newId));
+      if (active) setRepository(withChangeNotifications(new OfficialTrainingRepository(data, newId)));
     })().catch((cause: unknown) => {
       if (active) setProfileError(cause instanceof Error ? cause : new Error('No se pudo preparar el perfil local.'));
     });
