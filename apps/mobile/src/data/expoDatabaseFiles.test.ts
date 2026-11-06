@@ -6,7 +6,7 @@ const mockExistingDirs = new Set<string>();
 const mockDirectoryContents = new Map<string, unknown[]>();
 
 jest.mock('expo-sqlite', () => ({
-  defaultDatabaseDirectory: 'file:///data/user/0/com.athlete.mobile/files/SQLite',
+  defaultDatabaseDirectory: 'file:///data/user/0/com.atheletsoftliirca.mobile/files/SQLite',
 }));
 
 jest.mock('expo-file-system', () => {
@@ -50,7 +50,7 @@ jest.mock('expo-file-system', () => {
   return {
     Directory: MockDirectory,
     File: MockFile,
-    Paths: { document: 'file:///data/user/0/com.athlete.mobile/files' },
+    Paths: { document: 'file:///data/user/0/com.atheletsoftliirca.mobile/files' },
   };
 });
 

@@ -3,6 +3,8 @@ import {
   BodyWeight,
   CardioSession,
   Exercise,
+  MealEntry,
+  NutritionTarget,
   Profile,
   SessionExercise,
   StrengthSet,
@@ -58,7 +60,7 @@ function camelize(row: LocalRow, renames: Record<string, string> = {}): Record<s
 const parseWith = <S extends z.ZodType>(schema: S, renames?: Record<string, string>) => (row: LocalRow) =>
   schema.parse(camelize(row, renames));
 
-export const ENTITIES: Readonly<Record<Exclude<SyncEntity, 'meal_entry' | 'nutrition_target'>, EntityMeta>> = {
+export const ENTITIES: Readonly<Record<SyncEntity, EntityMeta>> = {
   profile: {
     entity: 'profile',
     table: 'profiles',
@@ -157,6 +159,21 @@ export const ENTITIES: Readonly<Record<Exclude<SyncEntity, 'meal_entry' | 'nutri
       input_unit: 'text', source: 'text', notes: 'text',
     },
     toContract: parseWith(BodyMeasurement),
+  },
+  meal_entry: {
+    entity: 'meal_entry',
+    table: 'meal_entries',
+    columns: {
+      consumed_at: 'text', time_zone: 'text', local_date: 'text', meal_type: 'text', description: 'text',
+      energy_kcal: 'real', protein_g: 'real', carbs_g: 'real', fat_g: 'real', source: 'text', notes: 'text',
+    },
+    toContract: parseWith(MealEntry),
+  },
+  nutrition_target: {
+    entity: 'nutrition_target',
+    table: 'nutrition_targets',
+    columns: { effective_from: 'text', energy_kcal: 'real', protein_g: 'real', carbs_g: 'real', fat_g: 'real' },
+    toContract: parseWith(NutritionTarget),
   },
 };
 

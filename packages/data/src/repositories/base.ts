@@ -45,11 +45,11 @@ export function checkPosition(position: number, field = 'position'): number {
   return position;
 }
 
-/** `workout_sessions_sane_dates`: posterior a 2000-01-01 y como mucho 2 días por delante del reloj. */
-export function checkStartedAt(startedAt: string, now: string): void {
+/** `*_sane_dates` (sesiones, cardio, comidas): posterior a 2000-01-01 y como mucho 2 días por delante del reloj. */
+export function checkStartedAt(startedAt: string, now: string, field = 'startedAt', label = 'La hora de inicio'): void {
   const t = Date.parse(startedAt);
   if (!(t > Date.parse('2000-01-01T00:00:00Z')) || t >= Date.parse(now) + 2 * 86_400_000) {
-    fail('VALIDATION_FAILED', 'La hora de inicio está fuera de rango.', { details: { field: 'startedAt' } });
+    fail('VALIDATION_FAILED', `${label} está fuera de rango.`, { details: { field } });
   }
 }
 

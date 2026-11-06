@@ -78,6 +78,13 @@ const MIGRATIONS: ReadonlyArray<Migration> = [
       created_at TEXT NOT NULL
     );`);
   },
+  // v3 (nutrición): comidas y objetivos diarios. Una base nueva ya las trae desde la v1 (se genera desde ENTITIES).
+  [
+    entityTable(ENTITIES.meal_entry),
+    entityTable(ENTITIES.nutrition_target),
+    `CREATE INDEX IF NOT EXISTS meal_entries_day_idx ON meal_entries (local_date DESC, consumed_at);`,
+    `CREATE INDEX IF NOT EXISTS nutrition_targets_from_idx ON nutrition_targets (effective_from DESC);`,
+  ].join('\n'),
 ];
 
 export const LOCAL_SCHEMA_VERSION = MIGRATIONS.length;
