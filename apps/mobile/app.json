@@ -12,14 +12,14 @@
     "userInterfaceStyle": "dark",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.athlete.mobile",
+      "bundleIdentifier": "com.atheletsoftliirca.mobile",
       "deploymentTarget": "16.4",
       "infoPlist": {
         "UIViewControllerBasedStatusBarAppearance": true
       }
     },
     "android": {
-      "package": "com.athlete.mobile",
+      "package": "com.atheletsoftliirca.mobile",
       "allowBackup": false
     },
     "plugins": [
