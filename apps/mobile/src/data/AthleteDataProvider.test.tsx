@@ -23,6 +23,9 @@ jest.mock('./expoDatabaseFiles', () => ({
   },
 }));
 
+let mockCloud: { transport: object } | null = null;
+jest.mock('@/account/cloud', () => ({ getCloud: () => mockCloud }));
+
 jest.mock('expo-sqlite', () => ({ openDatabaseAsync: jest.fn() }));
 jest.mock('expo-secure-store', () => ({ getItemAsync: jest.fn(), setItemAsync: jest.fn(), deleteItemAsync: jest.fn() }));
 
@@ -57,6 +60,7 @@ const blockedKeyMissing: ActiveStore = {
 describe('AthleteDataProvider with openActiveStore', () => {
   beforeEach(() => {
     _resetSharedStoreForTesting();
+    mockCloud = null;
     jest.clearAllMocks();
     mockClose.mockClear();
     mockOpenActiveStore.mockReset();
@@ -335,5 +339,21 @@ describe('AthleteDataProvider with openActiveStore', () => {
     await waitFor(() => expect(view.getByText('status:ready')).toBeTruthy());
 
     expect(seenNewIds.size).toBe(1);
+  });
+
+  test('13. Con nube configurada, la apertura recibe el transporte de sincronización; sin nube, no', async () => {
+    const store: ActiveStore = { kind: 'official', selection: { state: 'fresh-install', active: 'official' }, data: { close: mockClose } as never };
+    mockOpenActiveStore.mockResolvedValue(store);
+    const view = await render(<AthleteDataProvider><Consumer /></AthleteDataProvider>);
+    await waitFor(() => expect(view.getByText('status:ready')).toBeTruthy());
+    expect(mockOpenActiveStore.mock.calls[0][0]).not.toHaveProperty('accountTransport');
+    view.unmount();
+
+    _resetSharedStoreForTesting();
+    const transport = { push: jest.fn(), pull: jest.fn() };
+    mockCloud = { transport };
+    const again = await render(<AthleteDataProvider><Consumer /></AthleteDataProvider>);
+    await waitFor(() => expect(again.getByText('status:ready')).toBeTruthy());
+    expect(mockOpenActiveStore.mock.calls[1][0]).toMatchObject({ accountTransport: transport });
   });
 });

@@ -11,6 +11,7 @@ import {
   type OpenedAthleteData,
   type OpenActiveStoreOptions,
 } from '@athlete/data';
+import { getCloud } from '@/account/cloud';
 import { expoDatabaseFiles } from './expoDatabaseFiles';
 
 export type AthleteDataState = {
@@ -25,6 +26,8 @@ export type AthleteDataState = {
   newId: () => string;
   retry: () => void;
   startNewStore: () => Promise<void>;
+  /** Sustituye los servicios abiertos (p. ej. tras `adoptLocalData`, que cierra la instancia anterior). */
+  replaceData: (next: OpenedAthleteData) => void;
 };
 
 const AthleteDataContext = createContext<AthleteDataState | null>(null);
@@ -45,6 +48,8 @@ function getBaseOptions(): OpenActiveStoreOptions {
     },
     randomBytes: (byteCount) => Crypto.getRandomBytes(byteCount),
     files: expoDatabaseFiles,
+    // Solo se usa con cuenta vinculada; sin `.env` la app trabaja solo en local.
+    ...(getCloud() ? { accountTransport: getCloud()!.transport } : {}),
   };
 }
 
@@ -154,6 +159,13 @@ export function AthleteDataProvider({ children }: PropsWithChildren) {
     return run;
   }, []);
 
+  const replaceData = useCallback((next: OpenedAthleteData) => {
+    if (sharedStore?.kind !== 'official') return;
+    const updated: ActiveStore = { ...sharedStore, data: next };
+    sharedStore = updated;
+    setStore(updated);
+  }, []);
+
   const data = store?.kind === 'official' ? store.data : null;
   const selection = store ? store.selection : null;
   const kind = store ? store.kind : null;
@@ -170,8 +182,9 @@ export function AthleteDataProvider({ children }: PropsWithChildren) {
       newId,
       retry,
       startNewStore: handleStartNewStore,
+      replaceData,
     }),
-    [status, store, kind, data, selection, error, actionError, retry, handleStartNewStore]
+    [status, store, kind, data, selection, error, actionError, retry, handleStartNewStore, replaceData]
   );
 
   return <AthleteDataContext.Provider value={value}>{children}</AthleteDataContext.Provider>;
