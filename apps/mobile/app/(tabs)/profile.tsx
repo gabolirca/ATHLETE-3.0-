@@ -6,6 +6,7 @@ import { AppInput } from '@/components/AppInput';
 import { Card } from '@/components/Card';
 import { Eyebrow, Label, Title } from '@/components/Typography';
 import { Screen, Row } from '@/components/Screen';
+import { AccountCard } from '@/account/AccountCard';
 import { useTrainingRepository } from '@/data/MobileTrainingContext';
 import type { LocalAthletePreferences } from '@/data/trainingTypes';
 import { LocalAthletePreferencesSchema } from '@/data/trainingSchemas';
@@ -43,7 +44,7 @@ export default function ProfileScreen() {
 
   return <Screen>
     <View><Eyebrow>DATOS LOCALES</Eyebrow><Title>Perfil</Title></View>
-    <Card><Eyebrow>INFORMACIÓN PERSONAL</Eyebrow><AppInput label="Nombre para mostrar (opcional)" value={prefs.displayName} onChangeText={(value) => update('displayName', value)} placeholder="Tu nombre" maxLength={60}/><Text style={s.note}>Este dato vive solo en el dispositivo y todavía no se sincroniza con una cuenta.</Text></Card>
+    <Card><Eyebrow>INFORMACIÓN PERSONAL</Eyebrow><AppInput label="Nombre para mostrar (opcional)" value={prefs.displayName} onChangeText={(value) => update('displayName', value)} placeholder="Tu nombre" maxLength={60}/><Text style={s.note}>Se guarda en este dispositivo y se respalda en tu cuenta si inicias sesión.</Text></Card>
     <Card><Eyebrow>PREFERENCIAS DEPORTIVAS</Eyebrow><Label>{prefs.sports ? 'Disciplinas que practicas' : 'Actividad preferida'}</Label><View style={s.options}>{(prefs.sports ? officialSports : sports).map((sport) => {
       const selected = prefs.sports ? prefs.sports.includes(sport.id as typeof officialSports[number]['id']) : prefs.preferredSport === sport.id;
       return <SelectChip key={sport.id} selected={selected} title={sport.title} onPress={() => {
@@ -58,7 +59,7 @@ export default function ProfileScreen() {
     {error ? <Text accessibilityRole="alert" style={s.error}>{error}</Text> : null}
     {saved ? <Text style={s.saved}>Preferencias guardadas localmente.</Text> : null}
     <ActionButton onPress={save} loading={loading}>Guardar preferencias</ActionButton>
-    <Card><Eyebrow>CUENTA</Eyebrow><Label>Modo local</Label><Text style={s.note}>La autenticación aún no está integrada. No hay una sesión remota activa ni una acción de cierre de sesión disponible.</Text></Card>
+    <AccountCard />
   </Screen>;
 }
 

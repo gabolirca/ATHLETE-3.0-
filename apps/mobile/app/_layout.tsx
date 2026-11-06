@@ -11,6 +11,7 @@ import { Card } from '@/components/Card';
 import { ActionButton } from '@/components/ActionButton';
 import { AthleteDataProvider, useAthleteData } from '@/data/AthleteDataProvider';
 import { OfficialTrainingProvider } from '@/data/OfficialTrainingProvider';
+import { AccountProvider } from '@/account/AccountProvider';
 import type { OpenErrorSelection } from '@athlete/data';
 
 export default function RootLayout() {
@@ -76,9 +77,11 @@ function RootStorageGate() {
 
   if (kind === 'official') {
     return (
-      <OfficialTrainingProvider>
-        <AppStack />
-      </OfficialTrainingProvider>
+      <AccountProvider>
+        <OfficialTrainingProvider>
+          <AppStack />
+        </OfficialTrainingProvider>
+      </AccountProvider>
     );
   }
 

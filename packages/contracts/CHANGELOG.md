@@ -4,6 +4,14 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 Mientras la versión sea `0.x`, los contratos son **borrador**: pueden cambiar sin incremento mayor,
 pero todo cambio debe registrarse aquí y revisarse con Codex (ADR-0001, regla 4).
 
+## [0.4.0] — 2026-11-05 — Inicio de sesión sin contraseña (Claude, aprobado por el propietario)
+
+Cambio aditivo: no modifica ni endurece nada existente.
+
+### Añadido
+- `auth`: `EmailCode`, `RequestEmailCodeInput`, `VerifyEmailCodeInput` e `IdTokenSignInInput`.
+- `AuthService.requestEmailCode()`, `verifyEmailCode()` y `signInWithIdToken()`. Sirven para el código por correo (OTP) y para Apple y Google con SDK nativo. Decisión del propietario del 5-nov-2026: Apple, Google y correo.
+
 ## [0.3.0] — 2026-11-05 — Integración móvil, atletas híbridos y alineación con el servidor (Claude, pendiente de revisión por Codex)
 
 Aprobado por el propietario el 4-nov-2026 (integración con `@athlete/data` como única persistencia).

@@ -195,7 +195,7 @@ export class OfficialTrainingRepository implements TrainingRepository {
         id: exercise.id, exerciseId: exercise.exerciseId,
         exerciseName: unwrap(await this.data.exercises.getById(exercise.exerciseId)).name,
         sortOrder: exercise.position, setsTarget: metadata?.targetSets ?? null,
-        repsTarget: metadata?.targetRepsMin ?? null, restSeconds: metadata?.targetRestSeconds ?? null,
+        repsTarget: metadata?.targetRepsMin ?? null, restSeconds: metadata?.targetRestSeconds ?? null, targetRir: metadata?.targetRir ?? null,
         sets: displayedSets,
       };
     }));

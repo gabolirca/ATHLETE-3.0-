@@ -12,4 +12,4 @@ export * from './sync';
 export * from './auth';
 export type * from './repositories';
 
-export const CONTRACTS_VERSION = '0.3.0';
+export const CONTRACTS_VERSION = '0.4.0';

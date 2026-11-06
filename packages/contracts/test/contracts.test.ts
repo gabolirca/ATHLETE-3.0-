@@ -3,6 +3,9 @@ import { readFileSync } from 'node:fs';
 import {
   AppError,
   CONTRACTS_VERSION,
+  IdTokenSignInInput,
+  RequestEmailCodeInput,
+  VerifyEmailCodeInput,
   AddSessionExerciseInput,
   CreateTrainingDayExerciseInput,
   CreateTrainingPlanInput,
@@ -164,5 +167,25 @@ describe('versión', () => {
   it('CONTRACTS_VERSION coincide con package.json', () => {
     const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')) as { version: string };
     expect(CONTRACTS_VERSION).toBe(pkg.version);
+  });
+});
+
+describe('0.4.0 — inicio de sesión sin contraseña', () => {
+  it('RequestEmailCodeInput normaliza el correo', () => {
+    expect(RequestEmailCodeInput.parse({ email: '  Ana@Test.Local ' })).toEqual({ email: 'ana@test.local' });
+    expect(RequestEmailCodeInput.safeParse({ email: 'no-es-correo' }).success).toBe(false);
+  });
+
+  it('VerifyEmailCodeInput acepta 6–10 dígitos y nada más', () => {
+    expect(VerifyEmailCodeInput.parse({ email: 'a@b.mx', code: ' 123456 ' }).code).toBe('123456');
+    expect(VerifyEmailCodeInput.safeParse({ email: 'a@b.mx', code: '12345' }).success).toBe(false);
+    expect(VerifyEmailCodeInput.safeParse({ email: 'a@b.mx', code: '12345678901' }).success).toBe(false);
+    expect(VerifyEmailCodeInput.safeParse({ email: 'a@b.mx', code: '12a456' }).success).toBe(false);
+  });
+
+  it('IdTokenSignInInput solo admite Apple o Google', () => {
+    expect(IdTokenSignInInput.safeParse({ provider: 'apple', idToken: 'x.y.z', nonce: 'n' }).success).toBe(true);
+    expect(IdTokenSignInInput.safeParse({ provider: 'facebook', idToken: 'x.y.z' }).success).toBe(false);
+    expect(IdTokenSignInInput.safeParse({ provider: 'google', idToken: '' }).success).toBe(false);
   });
 });

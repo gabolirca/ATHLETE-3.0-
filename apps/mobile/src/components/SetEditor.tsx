@@ -5,18 +5,21 @@ import { Card } from './Card';
 import { LoggedSetSchema, type LoggedSetInput } from '@/data/trainingSchemas';
 import type { TrainingSet } from '@/data/trainingTypes';
 import { colors } from '@/theme/colors';
+import { rirLabel, rirOptions } from './rirOptions';
 
-const rirValues = Array.from({ length: 21 }, (_, index) => index / 2);
-
-export function SetEditor({ set, onSave }: { set: TrainingSet; onSave: (input: LoggedSetInput) => Promise<void> }) {
+export function SetEditor({ set, onSave, targetRir = null }: { set: TrainingSet; onSave: (input: LoggedSetInput) => Promise<void>; targetRir?: number | null }) {
   const [weight, setWeight] = useState(set.weightKg === null ? '' : String(set.weightKg));
   const [reps, setReps] = useState(set.reps === null ? '' : String(set.reps));
   const [rir, setRir] = useState<number | null>(set.rir);
   const [warmup, setWarmup] = useState(set.isWarmup);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  const [precise, setPrecise] = useState(false);
   const lastSaved = useRef<LoggedSetInput>({ weightKg: set.weightKg, reps: set.reps, rir: set.rir, isWarmup: set.isWarmup });
   const rirIsOutOfRange = set.rir !== null && (set.rir < 0 || set.rir > 10 || !Number.isInteger(set.rir * 2));
+  // Si el valor guardado es inválido, se despliega todo para poder corregirlo.
+  const options = rirOptions({ targetRir, current: rir, expanded: expanded || rirIsOutOfRange, precise });
 
   useEffect(() => {
     lastSaved.current = { weightKg: set.weightKg, reps: set.reps, rir: set.rir, isWarmup: set.isWarmup };
@@ -56,22 +59,27 @@ export function SetEditor({ set, onSave }: { set: TrainingSet; onSave: (input: L
       <AppInput label="Peso (kg)" value={weight} onChangeText={setWeight} onBlur={() => { void persist(); }} keyboardType="decimal-pad" placeholder="—" returnKeyType="done" />
       <AppInput label="Repeticiones" value={reps} onChangeText={setReps} onBlur={() => { void persist(); }} keyboardType="number-pad" placeholder="—" returnKeyType="done" />
     </View>
-    <View style={styles.effortSection}>
+    {warmup ? null : <View style={styles.effortSection}>
       <Text style={styles.effortQuestion}>¿Cuántas repeticiones más podrías haber hecho?</Text>
-      <Text style={styles.effortHint}>Indica cuántas repeticiones adicionales te quedaban al terminar la serie.</Text>
       <View style={styles.choices} accessibilityLabel="Repeticiones adicionales posibles">
-        {rirValues.map((value) => {
+        {options.values.map((value) => {
           const selected = rir === value;
-          const label = value === 0 ? '0 ninguna repetición más' : `${value} ${value === 1 ? 'repetición más' : value === 0.5 ? 'media repetición más' : 'repeticiones más'}`;
-          return <Pressable key={value} disabled={saving} accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ selected, disabled: saving }} onPress={() => selectRir(value)} style={[styles.choice, selected && styles.choiceSelected, saving && styles.choiceDisabled]}>
+          const isTarget = targetRir === value;
+          return <Pressable key={value} disabled={saving} accessibilityRole="button" accessibilityLabel={rirLabel(value) + (isTarget ? ' (objetivo)' : '')} accessibilityState={{ selected, disabled: saving }} onPress={() => selectRir(value)} style={[styles.choice, isTarget && styles.choiceTarget, selected && styles.choiceSelected, saving && styles.choiceDisabled]}>
             <Text style={[styles.choiceValue, selected && styles.choiceValueSelected]}>{value}</Text>
           </Pressable>;
         })}
+        {options.canExpand ? <Pressable accessibilityRole="button" accessibilityLabel="Mostrar más opciones" onPress={() => setExpanded(true)} style={styles.choice}><Text style={styles.choiceValue}>{options.values.at(-1)! >= 5 ? '+' : '5+'}</Text></Pressable> : null}
       </View>
-      <Pressable disabled={saving} accessibilityRole="button" accessibilityLabel="Sin respuesta" accessibilityState={{ selected: rir === null, disabled: saving }} onPress={() => selectRir(null)} style={[styles.noResponse, rir === null && styles.choiceSelected]}><Text style={[styles.noResponseText, rir === null && styles.choiceValueSelected]}>Sin respuesta</Text></Pressable>
-      <Text style={styles.effortHint}>0 = ninguna repetición más · 1 = una repetición más · 2 = dos repeticiones más</Text>
+      <View style={styles.links}>
+        <Text style={styles.effortHint}>{targetRir !== null && targetRir !== undefined ? `Objetivo de la rutina: ${targetRir}` : '0 = no podías hacer ninguna más'}</Text>
+        <View style={styles.linkRow}>
+          {!options.precise ? <Pressable accessibilityRole="button" onPress={() => setPrecise(true)}><Text style={styles.link}>Más precisión</Text></Pressable> : null}
+          {rir !== null ? <Pressable accessibilityRole="button" accessibilityLabel="Sin respuesta" disabled={saving} onPress={() => selectRir(null)}><Text style={styles.link}>Quitar respuesta</Text></Pressable> : null}
+        </View>
+      </View>
       {rirIsOutOfRange ? <Text accessibilityRole="alert" style={styles.warning}>El valor guardado ({set.rir}) está fuera del rango permitido (0–10). Selecciona un valor para corregirlo.</Text> : null}
-    </View>
+    </View>}
     {error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : null}
     {saving ? <Text style={styles.saving}>Guardando…</Text> : null}
   </Card>;
@@ -91,11 +99,13 @@ const styles=StyleSheet.create({
   choices:{flexDirection:'row',flexWrap:'wrap',gap:7,paddingVertical:2},
   choice:{width:42,height:44,borderRadius:12,borderWidth:1,borderColor:colors.border,backgroundColor:colors.surfaceRaised,alignItems:'center',justifyContent:'center'},
   choiceSelected:{borderColor:colors.blue,backgroundColor:'#172849'},
+  choiceTarget:{borderColor:colors.green},
+  links:{gap:6},
+  linkRow:{flexDirection:'row',gap:16},
+  link:{color:'#9DBDFF',fontSize:11,fontWeight:'700'},
   choiceDisabled:{opacity:0.55},
   choiceValue:{color:colors.secondary,fontSize:16,fontWeight:'800'},
   choiceValueSelected:{color:'#9DBDFF'},
-  noResponse:{minHeight:40,borderRadius:11,borderWidth:1,borderColor:colors.border,backgroundColor:colors.surfaceRaised,alignItems:'center',justifyContent:'center',paddingHorizontal:12},
-  noResponseText:{color:colors.secondary,fontSize:12,fontWeight:'700'},
   warning:{color:'#F4C46A',fontSize:11,lineHeight:16},
   error:{color:colors.red,fontSize:11},
   saving:{color:colors.muted,fontSize:10},
