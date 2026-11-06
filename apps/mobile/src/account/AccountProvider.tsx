@@ -4,6 +4,8 @@ import type { AuthState, SyncStatus } from '@athlete/contracts';
 import { useAthleteData } from '@/data/AthleteDataProvider';
 import { cloudUnavailableReason, getCloud } from './cloud';
 import { linkAccountIfNeeded } from './linkAccount';
+import { onLocalChange } from '@/data/localChanges';
+import { DEFAULT_SCHEDULER_OPTIONS, SyncScheduler, type SyncOutcome, type SyncSchedulerOptions } from './syncScheduler';
 
 export type AccountLink = 'none' | 'linked' | 'other-account';
 
@@ -22,9 +24,9 @@ export type AccountContextValue = {
 };
 
 const AccountContext = createContext<AccountContextValue | null>(null);
-const AUTO_SYNC_MIN_INTERVAL_MS = 30_000;
 
-export function AccountProvider({ children }: PropsWithChildren) {
+/** `syncOptions` solo se cambia en pruebas (tiempos cortos); la app usa los tiempos por defecto. */
+export function AccountProvider({ children, syncOptions = DEFAULT_SCHEDULER_OPTIONS }: PropsWithChildren<{ syncOptions?: SyncSchedulerOptions }>) {
   const cloud = getCloud();
   const { data, replaceData } = useAthleteData();
   const [auth, setAuth] = useState<AuthState | null>(null);
@@ -39,7 +41,6 @@ export function AccountProvider({ children }: PropsWithChildren) {
   const authRef = useRef(auth);
   authRef.current = auth;
   const syncingRef = useRef(false);
-  const lastAutoSync = useRef(0);
   const linkingFor = useRef<string | null>(null);
 
   const refreshStatus = useCallback(async () => {
@@ -47,28 +48,48 @@ export function AccountProvider({ children }: PropsWithChildren) {
     if (current) setStatus(await current.sync.status().catch(() => null));
   }, []);
 
-  const syncNow = useCallback(async () => {
+  const runSync = useCallback(async (): Promise<SyncOutcome> => {
     const current = dataRef.current;
-    if (!current || syncingRef.current || linkRef.current !== 'linked' || authRef.current?.status !== 'signed_in') return;
+    if (!current || syncingRef.current || linkRef.current !== 'linked' || authRef.current?.status !== 'signed_in') return 'skipped';
     syncingRef.current = true;
     setSyncing(true);
     try {
       const result = await current.sync.syncNow();
-      if (result.ok) { setStatus(result.value); setSyncError(null); }
-      else setSyncError(result.error.code === 'NETWORK_UNAVAILABLE' ? 'Sin conexión: se sincronizará cuando vuelva la red.' : result.error.message);
+      if (result.ok) { setStatus(result.value); setSyncError(null); return 'ok'; }
+      const offline = result.error.code === 'NETWORK_UNAVAILABLE';
+      setSyncError(offline ? 'Sin conexión: tus datos están guardados en el teléfono y se subirán solos cuando vuelva la red.' : result.error.message);
+      void refreshStatus();
+      return offline ? 'offline' : 'error';
     } catch (cause) {
       setSyncError(cause instanceof Error ? cause.message : 'No se pudo sincronizar.');
+      return 'error';
     } finally {
       syncingRef.current = false;
       setSyncing(false);
     }
-  }, []);
+  }, [refreshStatus]);
 
-  const autoSync = useCallback(() => {
-    if (Date.now() - lastAutoSync.current < AUTO_SYNC_MIN_INTERVAL_MS) return;
-    lastAutoSync.current = Date.now();
-    void syncNow();
-  }, [syncNow]);
+  const syncNow = useCallback(async () => { await runSync(); }, [runSync]);
+
+  // Sincronización automática: tras cada cambio local, al abrir/cerrar la app y con reintentos sin conexión.
+  const schedulerRef = useRef<SyncScheduler | null>(null);
+  if (schedulerRef.current === null) {
+    schedulerRef.current = new SyncScheduler({
+      sync: () => runSync(),
+      hasPending: async () => {
+        const current = dataRef.current;
+        if (!current) return false;
+        const s = await current.sync.status();
+        return s.pendingCount > 0;
+      },
+    }, syncOptions);
+  }
+  const scheduler = schedulerRef.current;
+  useEffect(() => () => scheduler.dispose(), [scheduler]);
+  useEffect(() => onLocalChange(() => { void refreshStatus(); scheduler.notifyChange(); }), [scheduler, refreshStatus]);
+  useEffect(() => {
+    scheduler.setEnabled(cloud !== null && link === 'linked' && auth?.status === 'signed_in');
+  }, [scheduler, cloud, link, auth]);
 
   // Estado de la sesión.
   useEffect(() => {
@@ -84,11 +105,14 @@ export function AccountProvider({ children }: PropsWithChildren) {
     if (!cloud) return;
     if (AppState.currentState === 'active') void cloud.supabase.auth.startAutoRefresh();
     const subscription = AppState.addEventListener('change', (state) => {
-      if (state === 'active') { void cloud.supabase.auth.startAutoRefresh(); autoSync(); }
-      else void cloud.supabase.auth.stopAutoRefresh();
+      if (state === 'active') { void cloud.supabase.auth.startAutoRefresh(); scheduler.onForeground(); }
+      else {
+        if (state === 'background') scheduler.onBackground();
+        void cloud.supabase.auth.stopAutoRefresh();
+      }
     });
     return () => subscription.remove();
-  }, [cloud, autoSync]);
+  }, [cloud, scheduler]);
 
   useEffect(() => { void refreshStatus(); }, [data, refreshStatus]);
 
@@ -103,16 +127,14 @@ export function AccountProvider({ children }: PropsWithChildren) {
         const outcome = await linkAccountIfNeeded(data, userId);
         if (outcome.kind === 'other-account') { setLink('other-account'); return; }
         if (outcome.kind === 'linked') { dataRef.current = outcome.data; replaceData(outcome.data); }
-        setLink('linked');
         linkRef.current = 'linked';
-        lastAutoSync.current = Date.now();
-        await syncNow();
+        setLink('linked'); // activa la sincronización automática (primera subida inmediata)
       } catch (cause) {
         linkingFor.current = null;
         setSyncError(cause instanceof Error ? cause.message : 'No se pudieron vincular tus datos a la cuenta.');
       }
     })();
-  }, [auth, data, replaceData, syncNow]);
+  }, [auth, data, replaceData]);
 
   const requestCode = useCallback(async (email: string) => {
     if (!cloud) return 'La nube no está configurada en esta compilación.';
