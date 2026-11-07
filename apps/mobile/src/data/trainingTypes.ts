@@ -5,14 +5,28 @@ export type Exercise = { id: string; name: string; muscleGroup: string; equipmen
 export type RoutineExercise = { exerciseId: string; exerciseName: string; sortOrder: number; sets: number | null; reps: number | null; restSeconds: number | null };
 export type Routine = { id: string; name: string; exercises: RoutineExercise[]; updatedAt: string };
 export type TrainingSet = LoggedSetInput & { id: string; setIndex: number };
-export type SessionExercise = { id: string; exerciseId: string; exerciseName: string; sortOrder: number; setsTarget: number | null; repsTarget: number | null; restSeconds: number | null; targetRir?: number | null; sets: TrainingSet[] };
+/** Récord que esta sesión supera (peso máximo o 1RM estimado). La primera vez que haces un ejercicio no cuenta como récord. */
+export type SessionRecord = { kind: 'max_weight' | 'best_e1rm'; value: number; weightKg: number | null; reps: number | null };
+export type SessionExercise = { id: string; exerciseId: string; exerciseName: string; sortOrder: number; setsTarget: number | null; repsTarget: number | null; restSeconds: number | null; targetRir?: number | null; sets: TrainingSet[]; newRecords?: SessionRecord[] };
 export type Workout = { id: string; state: 'active' | 'completed'; startedAt: string; completedAt: string | null; localVersion: number | null; serverVersion: number | null; syncStatus: 'pending' | 'synced' | 'conflict' | 'failed'; exerciseCount: number; setCount: number; durationMinutes: number | null };
 export type WorkoutDetail = { workout: Workout; exercises: SessionExercise[] };
 /** `sessionsThisWeek` = fuerza + cardio. `activityMinutesThisWeek` incluye la duración del cardio. */
 export type TrainingOverview = { sessionsThisWeek: number; strengthSessionsThisWeek: number; cardioSessionsThisWeek: number; activityMinutesThisWeek: number; pendingSyncCount: number; latestWorkout: Workout | null };
 export type OutboxOperation = { id: string; clientMutationId: string; aggregateType: string; aggregateId: string; operation: string; localVersion: number; baseServerVersion: number | null; payloadJson: string; status: 'pending' | 'syncing' | 'failed' | 'conflict' | 'acked'; attemptCount: number };
 export type BodyMeasurement = { id: string; type: 'weight_kg' | 'waist_cm' | 'chest_cm' | 'hip_cm'; value: number; unit: 'kg' | 'cm'; measuredAt: string; localVersion: number | null; serverVersion: number | null; syncStatus: Workout['syncStatus'] };
-export type ProgressSummary = { weeklyVolumeKg: number; sessionsThisMonth: number; dailyVolumeKg: Array<{ label: string; volumeKg: number }>; records: Array<{ exerciseName: string; weightKg: number; reps: number | null; measuredAt: string }>; measurements: BodyMeasurement[] };
+/**
+ * Récords de un ejercicio: el peso más alto que levantaste (con sus reps) y el mejor 1RM estimado (Epley,
+ * series de 1 a 12 reps). El estimado NO es una medición: es lo que podrías levantar una vez.
+ */
+export type ExerciseRecord = {
+  exerciseId: string;
+  exerciseName: string;
+  weightKg: number;
+  reps: number | null;
+  measuredAt: string;
+  e1rm: { valueKg: number; weightKg: number; reps: number; localDate: string } | null;
+};
+export type ProgressSummary = { weeklyVolumeKg: number; sessionsThisMonth: number; dailyVolumeKg: Array<{ label: string; volumeKg: number }>; records: ExerciseRecord[]; measurements: BodyMeasurement[] };
 export type LocalAthletePreferences = { displayName: string; unitSystem: 'metric' | 'imperial'; preferredSport: 'strength' | 'hybrid' | 'running' | 'swimming'; sports?: Array<'strength' | 'running' | 'swimming' | 'cycling' | 'rowing' | 'functional_fitness' | 'other'>; timezone: string };
 
 export type RoutineDraft = RoutineInput;

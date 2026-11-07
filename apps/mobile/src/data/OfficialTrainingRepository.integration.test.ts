@@ -164,3 +164,31 @@ test('un entrenamiento de hoy sigue igual: empieza y termina ahora sin pedir dur
   expect(done.ok && Math.abs(Date.parse(done.value.endedAt!) - Date.now())).toBeLessThan(60_000);
   await data.close?.();
 });
+
+test('récords: la primera vez no es PR; superar el peso o el 1RM estimado sí, y Progreso muestra ambos', async () => {
+  const { data, repository, sessionId: first } = await setup();
+  const exerciseId = (await repository.getWorkout(first))!.exercises[0]!.exerciseId;
+  const log = async (sessionId: string, weightKg: number, reps: number) => {
+    const draft = (await repository.getWorkout(sessionId))!.exercises[0]!.sets.at(-1)!.id;
+    await repository.saveSet(sessionId, draft, { weightKg, reps, rir: 1, isWarmup: false });
+  };
+  await log(first, 80, 5); // e1RM 93.3
+  expect((await repository.getWorkout(first))!.exercises[0]!.newRecords).toEqual([]); // primera vez
+  await repository.finishWorkout(first);
+
+  const second = await repository.startWorkout();
+  await repository.addExercise(second, exerciseId);
+  await log(second, 75, 10); // menos peso, pero e1RM 100 → récord de 1RM estimado, no de peso
+  let records = (await repository.getWorkout(second))!.exercises[0]!.newRecords!;
+  expect(records.map((r) => r.kind)).toEqual(['best_e1rm']);
+  expect(records[0]!.value).toBeCloseTo(100, 5);
+  await log(second, 85, 3); // más peso → también PR de peso
+  records = (await repository.getWorkout(second))!.exercises[0]!.newRecords!;
+  expect(records.find((r) => r.kind === 'max_weight')).toMatchObject({ value: 85, reps: 3 });
+  await repository.finishWorkout(second);
+
+  const progress = await repository.getProgress();
+  expect(progress.records[0]).toMatchObject({ exerciseId, weightKg: 85, reps: 3, e1rm: { weightKg: 75, reps: 10 } });
+  expect(progress.records[0]!.e1rm!.valueKg).toBeCloseTo(100, 5);
+  await data.close?.();
+});

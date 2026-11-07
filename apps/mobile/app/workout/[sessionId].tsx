@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react';
+import { NewRecordBadge } from '@/progress/records';
 import { AppInput } from '@/components/AppInput';
 import { isPastWorkout } from '@/data/OfficialTrainingRepository';
 import { dayLabel, localDateOfDevice } from '@/lib/localDate';
@@ -66,6 +67,7 @@ export default function WorkoutScreen() {
     {detail.exercises.length === 0 ? <EmptyState icon="barbell-outline" title="Agrega tu primer ejercicio" detail="Elige un ejercicio del catálogo local y registra tus series." action={showPicker ? undefined : 'Buscar ejercicios'} onAction={() => setShowPicker(true)}/> : null}
     {detail.exercises.map((exercise) => <View key={exercise.id} style={s.exerciseBlock}>
       <Card accent={colors.graphite}><Row><View style={{flex:1}}><Eyebrow>{exercise.setsTarget ? `${exercise.setsTarget} SERIES · OBJETIVO ${exercise.repsTarget} REPS` : 'EJERCICIO'}</Eyebrow><Text style={s.exerciseName}>{exercise.exerciseName}</Text></View><Pressable accessibilityRole="button" accessibilityLabel={`Agregar serie a ${exercise.exerciseName}`} onPress={async () => { try { await repository?.addSet(sessionId, exercise.id); setActionError(''); await refresh(false); } catch { setActionError('No se pudo agregar la serie. Intenta de nuevo.'); } }} style={s.addSet}><Ionicons name="add" size={18} color={colors.blue}/><Text style={s.addSetText}>Serie</Text></Pressable></Row>{exercise.restSeconds ? <Text style={s.detail}>Descanso objetivo: {exercise.restSeconds} s</Text> : null}</Card>
+      <NewRecordBadge records={exercise.newRecords ?? []}/>
       {exercise.sets.map((set) => <SetEditor key={set.id} set={set} targetRir={exercise.targetRir ?? null} onSave={async (values) => { await repository?.saveSet(sessionId, set.id, values); await refresh(false); }} />)}
     </View>)}
     {detail.exercises.length ? <ActionButton secondary onPress={() => setShowPicker((value) => !value)}>{showPicker ? 'Cerrar catálogo' : '＋ Agregar ejercicio'}</ActionButton> : null}
