@@ -1,9 +1,10 @@
 import { forwardRef } from 'react';
 import { StyleSheet, Text, TextInput, TextInputInstance, TextInputProps, View } from 'react-native';
 import { colors } from '@/theme/colors';
+import { notifyInputFocus } from './keyboardReveal';
 
 export const AppInput = forwardRef<TextInputInstance, TextInputProps & { label: string; error?: string }>(function AppInput(
-  { label, error, style, accessibilityLabel, ...props }, ref,
+  { label, error, style, accessibilityLabel, onFocus, ...props }, ref,
 ) {
   return (
     <View style={styles.wrap}>
@@ -15,6 +16,7 @@ export const AppInput = forwardRef<TextInputInstance, TextInputProps & { label: 
         selectionColor={colors.blue}
         style={[styles.input, error ? styles.invalid : null, style]}
         {...props}
+        onFocus={(e) => { notifyInputFocus(); onFocus?.(e); }}
       />
       {error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : null}
     </View>
