@@ -1,4 +1,4 @@
-import type { MealEntry, NutritionDaySummary, NutritionRepository, Result } from '@athlete/contracts';
+import type { MealEntry, NutritionDaySummary, NutritionRepository, NutritionTarget, NutritionTargetSource, Result } from '@athlete/contracts';
 import { useMemo } from 'react';
 import { useAthleteData } from '@/data/AthleteDataProvider';
 import { emitLocalChange } from '@/data/localChanges';
@@ -14,6 +14,17 @@ export type MobileNutrition = {
   logMeal(draft: MealDraft): Promise<MealEntry>;
   updateMeal(id: string, draft: MealDraft): Promise<MealEntry>;
   deleteMeal(id: string): Promise<void>;
+  getTarget(localDate: string): Promise<NutritionTarget | null>;
+  setTarget(target: TargetDraft): Promise<NutritionTarget>;
+};
+
+export type TargetDraft = {
+  effectiveFrom: string;
+  energyKcal: number;
+  proteinG: number | null;
+  carbsG: number | null;
+  fatG: number | null;
+  source: NutritionTargetSource;
 };
 
 function value<T>(r: Result<T>): T {
@@ -34,6 +45,8 @@ export function createMobileNutrition(repo: NutritionRepository, newId: () => st
     logMeal: (draft) => write(() => repo.logMeal({ ...draft, id: newId() })),
     updateMeal: (id, draft) => write(() => repo.updateMeal(id, draft)),
     deleteMeal: (id) => write(() => repo.deleteMeal(id)),
+    getTarget: async (localDate) => value(await repo.getTargetFor(localDate)),
+    setTarget: (target) => write(() => repo.setTarget({ ...target, id: newId() })),
   };
 }
 

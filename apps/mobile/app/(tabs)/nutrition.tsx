@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import type { MealEntry, NutritionDaySummary } from '@athlete/contracts';
+import type { MealEntry, NutritionDaySummary, NutritionTarget } from '@athlete/contracts';
 import { ActionButton } from '@/components/ActionButton';
 import { Card } from '@/components/Card';
 import { DatePickerSheet } from '@/components/DatePicker';
@@ -11,9 +11,10 @@ import { Screen } from '@/components/Screen';
 import { Eyebrow, Title } from '@/components/Typography';
 import { MEAL_TYPES, dayLabel, formatAmount, localDateOfDevice, shiftDay, timeOf } from '@/nutrition/mealForm';
 import { useNutrition } from '@/nutrition/mobileNutrition';
+import { TARGET_SOURCE_LABEL } from '@/nutrition/targetLabels';
 import { colors } from '@/theme/colors';
 
-type DayState = { meals: MealEntry[]; summary: NutritionDaySummary } | null;
+type DayState = { meals: MealEntry[]; summary: NutritionDaySummary; target: NutritionTarget | null } | null;
 
 export default function NutritionScreen() {
   const router = useRouter();
@@ -26,7 +27,7 @@ export default function NutritionScreen() {
 
   const load = useCallback(() => {
     if (!nutrition) return;
-    nutrition.loadDay(date).then((d) => { setDay(d); setError(null); })
+    Promise.all([nutrition.loadDay(date), nutrition.getTarget(date)]).then(([d, target]) => { setDay({ ...d, target }); setError(null); })
       .catch((cause: unknown) => setError(cause instanceof Error ? cause.message : 'No se pudieron cargar tus comidas.'));
   }, [nutrition, date]);
   useFocusEffect(load);
@@ -55,7 +56,24 @@ export default function NutritionScreen() {
 
     {error ? <EmptyState icon="alert-circle-outline" title="No pudimos cargar tus comidas" detail={error} action="Reintentar" onAction={load}/> : null}
 
-    {summary && summary.entryCount > 0 ? <Card accent={colors.blue}>
+    {day?.target ? <Card accent={colors.blue}>
+      <View style={s.targetHead}><Eyebrow>META DEL DÍA</Eyebrow>
+        <Pressable accessibilityRole="button" accessibilityLabel="Cambiar meta" onPress={() => router.push('/nutrition/plan')}><Text style={s.link}>Cambiar</Text></Pressable></View>
+      <Text style={s.hint}>{TARGET_SOURCE_LABEL[day.target.source]}</Text>
+      <Progress label="Calorías" unit="kcal" value={summary?.energyKcal ?? null} target={day.target.energyKcal}/>
+      <Progress label="Proteína" unit="g" value={summary?.proteinG ?? null} target={day.target.proteinG}/>
+      <Progress label="Carbos" unit="g" value={summary?.carbsG ?? null} target={day.target.carbsG}/>
+      <Progress label="Grasa" unit="g" value={summary?.fatG ?? null} target={day.target.fatG}/>
+      {summary && summary.entriesMissingEnergy > 0 ? <Text style={s.hint}>
+        {summary.entriesMissingEnergy === 1 ? '1 comida no tiene' : `${summary.entriesMissingEnergy} comidas no tienen`} calorías: lo consumido es al menos esto.
+      </Text> : null}
+    </Card> : day && !error ? <Pressable accessibilityRole="button" onPress={() => router.push('/nutrition/plan')} style={s.cta}>
+      <Ionicons name="flag-outline" size={18} color={colors.blue}/>
+      <View style={s.flex}><Text style={s.mealText}>Define tu meta diaria</Text><Text style={s.hint}>Captura el plan de tu nutriólogo o calcula uno provisional.</Text></View>
+      <Ionicons name="chevron-forward" size={18} color={colors.secondary}/>
+    </Pressable> : null}
+
+    {!day?.target && summary && summary.entryCount > 0 ? <Card accent={colors.blue}>
       <Eyebrow>TOTAL DEL DÍA</Eyebrow>
       <View style={s.kcalRow}>
         <Text style={s.kcal}>{summary.energyKcal === null ? '—' : formatAmount(summary.energyKcal)}</Text>
@@ -99,6 +117,19 @@ function macroLine(m: MealEntry): string {
   return parts.length ? ` · ${parts.join(' · ')}` : '';
 }
 
+function Progress({ label, unit, value, target }: { label: string; unit: string; value: number | null; target: number | null }) {
+  if (target === null) return null;
+  const ratio = value === null ? 0 : Math.min(value / target, 1);
+  const over = value !== null && value > target * 1.05;
+  return <View style={s.progress}>
+    <View style={s.progressHead}>
+      <Text style={s.progressLabel}>{label}</Text>
+      <Text style={s.progressValue}>{value === null ? '—' : formatAmount(value)} <Text style={s.hint}>de {formatAmount(target)} {unit}</Text></Text>
+    </View>
+    <View style={s.track}><View style={[s.fill, { width: `${Math.round(ratio * 100)}%` }, over && s.fillOver]}/></View>
+  </View>;
+}
+
 function Macro({ label, value }: { label: string; value: number | null }) {
   return <View style={s.macro}><Text style={s.macroValue}>{value === null ? '—' : `${formatAmount(value)} g`}</Text><Text style={s.hint}>{label}</Text></View>;
 }
@@ -108,6 +139,16 @@ const s = StyleSheet.create({
   arrow: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
   disabled: { opacity: 0.35 },
   dayCenter: { flex: 1, alignItems: 'center' },
+  targetHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  link: { color: colors.blue, fontSize: 12, fontWeight: '800' },
+  cta: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, borderRadius: 14, borderWidth: 1, borderColor: colors.blue, backgroundColor: '#10203F' },
+  progress: { gap: 6 },
+  progressHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
+  progressLabel: { color: colors.text, fontSize: 13, fontWeight: '700' },
+  progressValue: { color: colors.text, fontSize: 14, fontWeight: '800' },
+  track: { height: 8, borderRadius: 4, backgroundColor: colors.surfaceRaised, overflow: 'hidden' },
+  fill: { height: 8, borderRadius: 4, backgroundColor: colors.blue },
+  fillOver: { backgroundColor: '#F5B841' },
   dayLine: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   dayText: { color: colors.text, fontSize: 16, fontWeight: '800', textTransform: 'capitalize' },
   kcalRow: { flexDirection: 'row', alignItems: 'baseline', gap: 6 },
