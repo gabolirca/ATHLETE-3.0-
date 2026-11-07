@@ -43,12 +43,37 @@ export const LogMealEntryInput = z.object({
 });
 export type LogMealEntryInput = z.input<typeof LogMealEntryInput>;
 
+/**
+ * De dónde viene una meta diaria (contratos 0.5.0):
+ *  - `estimated`: plan provisional calculado por la app (Mifflin-St Jeor); es una sugerencia, no prescripción.
+ *  - `professional`: capturado por el usuario a partir del plan de su nutriólogo.
+ *  - `manual`: el usuario fija sus propias metas.
+ */
+export const NutritionTargetSource = z.enum(['estimated', 'professional', 'manual']);
+export type NutritionTargetSource = z.infer<typeof NutritionTargetSource>;
+
 /** Objetivos nutricionales diarios vigentes desde una fecha local. */
 export const NutritionTarget = SyncedRecord.extend({
   effectiveFrom: LocalDate,
   ...nutrientFields,
+  source: NutritionTargetSource,
 });
 export type NutritionTarget = z.infer<typeof NutritionTarget>;
+
+/**
+ * Fija la meta vigente desde `effectiveFrom`. Si ya hay una para ese día, se reemplaza (una por día).
+ * Al menos las kcal son obligatorias: una meta sin energía no sirve para comparar el día.
+ */
+export const SetNutritionTargetInput = z.object({
+  id: NutritionTarget.shape.id,
+  effectiveFrom: LocalDate,
+  energyKcal: z.number().min(800).max(10_000),
+  proteinG: nutrientFields.proteinG.default(null),
+  carbsG: nutrientFields.carbsG.default(null),
+  fatG: nutrientFields.fatG.default(null),
+  source: NutritionTargetSource,
+});
+export type SetNutritionTargetInput = z.input<typeof SetNutritionTargetInput>;
 
 /** Resumen diario calculado (no almacenado). Totales null si ninguna entrada tiene el valor. */
 export const NutritionDaySummary = z.object({

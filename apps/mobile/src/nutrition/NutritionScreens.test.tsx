@@ -10,6 +10,8 @@ const mockNutrition = {
   logMeal: jest.fn().mockResolvedValue({}),
   updateMeal: jest.fn(),
   deleteMeal: jest.fn(),
+  getTarget: jest.fn().mockResolvedValue(null),
+  setTarget: jest.fn().mockResolvedValue({}),
 };
 
 jest.mock('expo-router', () => {
@@ -32,7 +34,7 @@ const meal = (over: Record<string, unknown>) => ({
   source: 'manual', notes: null, ...over,
 });
 
-beforeEach(() => jest.clearAllMocks());
+beforeEach(() => { jest.clearAllMocks(); mockNutrition.getTarget.mockResolvedValue(null); });
 
 test('muestra el total del día, avisa si es un mínimo y agrupa por tipo', async () => {
   mockNutrition.loadDay.mockResolvedValue({

@@ -189,3 +189,14 @@ describe('0.4.0 — inicio de sesión sin contraseña', () => {
     expect(IdTokenSignInInput.safeParse({ provider: 'google', idToken: '' }).success).toBe(false);
   });
 });
+
+describe('0.5.0 — metas nutricionales con origen', () => {
+  it('kcal obligatorias, macros opcionales y origen explícito', async () => {
+    const { SetNutritionTargetInput, NutritionTargetSource } = await import('../src/nutrition');
+    const ok = SetNutritionTargetInput.parse({ id: '0190f0f0-0000-7000-8000-000000000001', effectiveFrom: '2026-11-07', energyKcal: 2400, source: 'estimated' });
+    expect(ok).toMatchObject({ proteinG: null, carbsG: null, fatG: null });
+    expect(SetNutritionTargetInput.safeParse({ ...ok, energyKcal: 500 }).success).toBe(false);
+    expect(SetNutritionTargetInput.safeParse({ ...ok, source: 'ai' }).success).toBe(false);
+    expect(NutritionTargetSource.options).toEqual(['estimated', 'professional', 'manual']);
+  });
+});

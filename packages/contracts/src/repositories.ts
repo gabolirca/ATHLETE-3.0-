@@ -45,7 +45,7 @@ import type {
 import type { LogSetInput, StrengthSet, UpdateSetInput } from './sets';
 import type { CardioSession, LogCardioSessionInput } from './cardio';
 import type { BodyMeasurement, BodySite, BodyWeight, LogBodyMeasurementInput, LogBodyWeightInput } from './body';
-import type { LogMealEntryInput, MealEntry, NutritionDaySummary } from './nutrition';
+import type { LogMealEntryInput, MealEntry, NutritionDaySummary, NutritionTarget, SetNutritionTargetInput } from './nutrition';
 import type {
   ConflictResolution,
   OutboxEntry,
@@ -151,6 +151,10 @@ export interface NutritionRepository {
   deleteMeal(id: Uuid): Promise<Result<void>>;
   listMeals(localDate: LocalDate): Promise<Result<MealEntry[]>>;
   getDaySummary(localDate: LocalDate): Promise<Result<NutritionDaySummary>>;
+  /** Crea o reemplaza la meta del día `effectiveFrom` (0.5.0). */
+  setTarget(input: SetNutritionTargetInput): Promise<Result<NutritionTarget>>;
+  /** Meta vigente en `localDate`: la más reciente con `effectiveFrom <= localDate`, o null (0.5.0). */
+  getTargetFor(localDate: LocalDate): Promise<Result<NutritionTarget | null>>;
 }
 
 // ---------- Puertos de sincronización ----------

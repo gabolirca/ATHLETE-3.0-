@@ -85,6 +85,11 @@ const MIGRATIONS: ReadonlyArray<Migration> = [
     `CREATE INDEX IF NOT EXISTS meal_entries_day_idx ON meal_entries (local_date DESC, consumed_at);`,
     `CREATE INDEX IF NOT EXISTS nutrition_targets_from_idx ON nutrition_targets (effective_from DESC);`,
   ].join('\n'),
+  // v4 (contratos 0.5.0): origen de la meta nutricional.
+  async (tx) => {
+    await addColumnIfMissing(tx, 'nutrition_targets', 'source', 'TEXT');
+    await tx.exec("UPDATE nutrition_targets SET source = 'manual' WHERE source IS NULL");
+  },
 ];
 
 export const LOCAL_SCHEMA_VERSION = MIGRATIONS.length;
