@@ -1,4 +1,7 @@
 import { useCallback, useState } from 'react';
+import { AppInput } from '@/components/AppInput';
+import { isPastWorkout } from '@/data/OfficialTrainingRepository';
+import { dayLabel, localDateOfDevice } from '@/lib/localDate';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -25,6 +28,7 @@ export default function WorkoutScreen() {
   const [finishError, setFinishError] = useState('');
   const [actionError, setActionError] = useState('');
   const [finishing, setFinishing] = useState(false);
+  const [duration, setDuration] = useState('60');
 
   const refresh = useCallback(async (showLoading = true) => {
     if (!repository) return;
@@ -36,9 +40,15 @@ export default function WorkoutScreen() {
   useFocusEffect(useCallback(() => { void refresh(); }, [refresh]));
 
   async function finish() {
-    if (!repository) return;
+    if (!repository || !detail) return;
+    let durationMinutes: number | undefined;
+    if (isPastWorkout(detail.workout.startedAt)) {
+      const n = Number(duration.trim());
+      if (!/^\d{1,3}$/.test(duration.trim()) || n < 1 || n > 600) { setFinishError('Indica cuántos minutos duró (entre 1 y 600).'); return; }
+      durationMinutes = n;
+    }
     setFinishing(true); setFinishError('');
-    try { await repository.finishWorkout(sessionId); router.replace('/history'); }
+    try { await repository.finishWorkout(sessionId, durationMinutes ? { durationMinutes } : {}); router.replace('/history'); }
     catch (error) { setFinishError(error instanceof Error && error.message === 'WORKOUT_REQUIRES_RECORDED_SET' ? 'Registra al menos una serie con peso o repeticiones antes de finalizar.' : 'No pudimos finalizar la sesión. La información sigue guardada localmente.'); }
     finally { setFinishing(false); }
   }
@@ -47,8 +57,11 @@ export default function WorkoutScreen() {
   if (loadError) return <Screen><Title>Sesión</Title><EmptyState icon="alert-circle-outline" title="No pudimos cargar la sesión" detail="La base local no se modificó. Intenta volver a abrirla." action="Reintentar" onAction={() => void refresh()}/></Screen>;
   if (!detail) return <Screen><Title>Sesión</Title><EmptyState title="Sesión no disponible" detail="Puede que se haya eliminado de este dispositivo." action="Ir a Entrenar" onAction={() => router.replace('/train')}/></Screen>;
 
+  const past = isPastWorkout(detail.workout.startedAt);
   return <Screen>
-    <View><Eyebrow>INICIADA {new Date(detail.workout.startedAt).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}</Eyebrow><Title>Entrenamiento</Title></View>
+    <View><Eyebrow>{past
+      ? `${dayLabel(localDateOfDevice(new Date(detail.workout.startedAt)), localDateOfDevice(new Date()))} · ${new Date(detail.workout.startedAt).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}`.toUpperCase()
+      : `INICIADA ${new Date(detail.workout.startedAt).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}`}</Eyebrow><Title>{past ? 'Entrenamiento pasado' : 'Entrenamiento'}</Title></View>
     <LocalSaveBadge status={detail.workout.syncStatus}/>
     {detail.exercises.length === 0 ? <EmptyState icon="barbell-outline" title="Agrega tu primer ejercicio" detail="Elige un ejercicio del catálogo local y registra tus series." action={showPicker ? undefined : 'Buscar ejercicios'} onAction={() => setShowPicker(true)}/> : null}
     {detail.exercises.map((exercise) => <View key={exercise.id} style={s.exerciseBlock}>
@@ -58,6 +71,7 @@ export default function WorkoutScreen() {
     {detail.exercises.length ? <ActionButton secondary onPress={() => setShowPicker((value) => !value)}>{showPicker ? 'Cerrar catálogo' : '＋ Agregar ejercicio'}</ActionButton> : null}
     {showPicker ? <ExercisePicker onSelect={async (exercise) => { try { await repository?.addExercise(sessionId, exercise.id); setActionError(''); setShowPicker(false); await refresh(false); } catch { setActionError('No se pudo agregar el ejercicio. Intenta de nuevo.'); } }} /> : null}
     {actionError ? <Text accessibilityRole="alert" style={s.error}>{actionError}</Text> : null}
+    {past && detail.workout.state === 'active' ? <AppInput label="¿Cuánto duró? (minutos)" defaultValue={duration} onChangeText={setDuration} keyboardType="number-pad" maxLength={3}/> : null}
     {finishError ? <Text accessibilityRole="alert" style={s.error}>{finishError}</Text> : null}
     <ActionButton onPress={finish} loading={finishing} disabled={detail.workout.state !== 'active'}>Finalizar y guardar sesión</ActionButton>
   </Screen>;

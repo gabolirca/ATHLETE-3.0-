@@ -116,10 +116,12 @@ export class OfficialTrainingRepository implements TrainingRepository {
 
   async tombstoneRoutine(id: string): Promise<void> { unwrap(await this.data.plans.deletePlan(id)); }
 
-  async startWorkout(planId?: string): Promise<string> {
+  async startWorkout(planId?: string, options: { startedAt?: string } = {}): Promise<string> {
     const active = unwrap(await this.data.sessions.getActive());
+    // Un entrenamiento pasado no debe "abrir" el que está en curso sin avisar.
+    if (active && options.startedAt) throw new Error('ACTIVE_WORKOUT_EXISTS');
     if (active) return active.id;
-    const startedAt = new Date().toISOString();
+    const startedAt = options.startedAt ?? new Date().toISOString();
     const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
     if (!planId) return unwrap(await this.data.sessions.start({ id: this.newId(), startedAt, timeZone, trainingDayId: null, title: null, notes: null })).id;
     const plan = unwrap(await this.data.plans.getPlan(planId));
@@ -150,19 +152,35 @@ export class OfficialTrainingRepository implements TrainingRepository {
         id: setId, sessionExerciseId: draft.sessionExerciseId,
         setType: input.isWarmup ? 'warmup' : 'working', weightKg: input.weightKg, reps: input.reps,
         rir: input.rir, rpe: null, restSeconds: null, durationSeconds: null, distanceMeters: null,
-        completedAt: new Date().toISOString(), notes: null,
+        completedAt: await this.setCompletionTime(sessionId), notes: null,
       }));
       this.drafts.delete(setId);
       return;
     }
     unwrap(await this.data.sessions.updateSet({
       setId, setType: input.isWarmup ? 'warmup' : 'working', weightKg: input.weightKg,
-      reps: input.reps, rir: input.rir, completedAt: new Date().toISOString(),
+      reps: input.reps, rir: input.rir, completedAt: await this.setCompletionTime(sessionId),
     }));
-    void sessionId;
   }
 
-  async finishWorkout(sessionId: string): Promise<void> { unwrap(await this.data.sessions.complete({ sessionId, endedAt: new Date().toISOString() })); }
+  /** Hora de una serie: ahora, salvo en un entrenamiento pasado, donde se usa su hora de inicio (no la de hoy). */
+  private async setCompletionTime(sessionId: string): Promise<string> {
+    const now = new Date();
+    const startedAt = unwrap(await this.data.sessions.getDetail(sessionId)).startedAt;
+    return isPastWorkout(startedAt, now) ? startedAt : now.toISOString();
+  }
+
+  async finishWorkout(sessionId: string, options: { durationMinutes?: number } = {}): Promise<void> {
+    const now = new Date();
+    const { startedAt } = unwrap(await this.data.sessions.getDetail(sessionId));
+    let endedAt = now.toISOString();
+    if (isPastWorkout(startedAt, now)) {
+      const minutes = options.durationMinutes;
+      if (minutes === undefined || !Number.isInteger(minutes) || minutes < 1 || minutes > 600) throw new Error('WORKOUT_DURATION_REQUIRED');
+      endedAt = new Date(Math.min(Date.parse(startedAt) + minutes * 60_000, now.getTime())).toISOString();
+    }
+    unwrap(await this.data.sessions.complete({ sessionId, endedAt }));
+  }
   async tombstoneWorkout(sessionId: string): Promise<void> { unwrap(await this.data.sessions.delete(sessionId)); }
 
   async getWorkout(sessionId: string): Promise<WorkoutDetail | null> {
@@ -329,4 +347,10 @@ export class OfficialTrainingRepository implements TrainingRepository {
   }
 
   async tombstoneCardio(id: string): Promise<void> { unwrap(await this.data.cardio.delete(id)); }
+}
+
+/** Un entrenamiento es "pasado" si empezó hace más de 12 h: se registró después, no en vivo. */
+export const PAST_WORKOUT_MS = 12 * 3_600_000;
+export function isPastWorkout(startedAt: string, now: Date = new Date()): boolean {
+  return now.getTime() - Date.parse(startedAt) > PAST_WORKOUT_MS;
 }
