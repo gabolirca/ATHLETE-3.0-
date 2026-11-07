@@ -120,3 +120,47 @@ test('un registro que el contrato rechaza no se guarda (FC media > máxima pasad
   expect(await repository.listCardio()).toEqual([]);
   await data.close?.();
 });
+
+test('entrenamiento de otro día: inicia en esa fecha, las series llevan esa hora y la duración fija el fin', async () => {
+  const { data, repository, sessionId: active } = await setup();
+  const exerciseId = (await data.sessions.getDetail(active)).ok ? (await repository.getWorkout(active))!.exercises[0]!.exerciseId : '';
+  const threeDaysAgo = new Date(Date.now() - 3 * 86_400_000);
+  threeDaysAgo.setHours(18, 30, 0, 0);
+  const startedAt = threeDaysAgo.toISOString();
+
+  // Con una sesión en curso no se registra otra de otro día (se avisa, no se abre la actual en silencio).
+  await expect(repository.startWorkout(undefined, { startedAt })).rejects.toThrow('ACTIVE_WORKOUT_EXISTS');
+  await repository.tombstoneWorkout(active);
+
+  const past = await repository.startWorkout(undefined, { startedAt });
+  await repository.addExercise(past, exerciseId);
+  const draft = (await repository.getWorkout(past))!.exercises[0]!.sets.at(-1)!.id;
+  await repository.saveSet(past, draft, { weightKg: 90, reps: 6, rir: 2, isWarmup: false });
+
+  const detail = await data.sessions.getDetail(past);
+  if (!detail.ok) throw new Error(detail.error.message);
+  expect(detail.value.startedAt).toBe(startedAt);
+  expect(detail.value.localDate).toBe(`${threeDaysAgo.getFullYear()}-${String(threeDaysAgo.getMonth() + 1).padStart(2, '0')}-${String(threeDaysAgo.getDate()).padStart(2, '0')}`);
+  expect(detail.value.exercises[0]!.sets[0]!.completedAt).toBe(startedAt); // no "hoy"
+
+  await expect(repository.finishWorkout(past)).rejects.toThrow('WORKOUT_DURATION_REQUIRED');
+  await repository.finishWorkout(past, { durationMinutes: 75 });
+  const done = await data.sessions.getDetail(past);
+  if (!done.ok) throw new Error(done.error.message);
+  expect(done.value.status).toBe('completed');
+  expect(Date.parse(done.value.endedAt!) - Date.parse(startedAt)).toBe(75 * 60_000);
+  const workout = (await repository.getWorkout(past))!.workout;
+  expect(workout.durationMinutes).toBe(75);
+  await data.close?.();
+});
+
+test('un entrenamiento de hoy sigue igual: empieza y termina ahora sin pedir duración', async () => {
+  const { data, repository, sessionId } = await setup();
+  const draft = (await repository.getWorkout(sessionId))!.exercises[0]!.sets.at(-1)!.id;
+  await repository.saveSet(sessionId, draft, { weightKg: 100, reps: 5, rir: 1, isWarmup: false });
+  await repository.finishWorkout(sessionId);
+  const done = await data.sessions.getDetail(sessionId);
+  expect(done.ok && done.value.status).toBe('completed');
+  expect(done.ok && Math.abs(Date.parse(done.value.endedAt!) - Date.now())).toBeLessThan(60_000);
+  await data.close?.();
+});

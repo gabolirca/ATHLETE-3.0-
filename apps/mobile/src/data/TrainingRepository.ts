@@ -7,11 +7,13 @@ export interface TrainingRepository {
   listRoutines(): Promise<Routine[]>;
   createRoutine(input: RoutineDraft): Promise<string>;
   tombstoneRoutine(routineId: string): Promise<void>;
-  startWorkout(routineId?: string): Promise<string>;
+  /** Sin `startedAt` empieza ahora (o retoma la sesión en curso). Con `startedAt` registra un entrenamiento pasado. */
+  startWorkout(routineId?: string, options?: { startedAt?: string }): Promise<string>;
   addExercise(sessionId: string, exerciseId: string): Promise<void>;
   addSet(sessionId: string, sessionExerciseId: string): Promise<string>;
   saveSet(sessionId: string, setId: string, input: LoggedSetInput): Promise<void>;
-  finishWorkout(sessionId: string): Promise<void>;
+  /** En un entrenamiento pasado, `durationMinutes` fija la hora de fin (inicio + duración). */
+  finishWorkout(sessionId: string, options?: { durationMinutes?: number }): Promise<void>;
   tombstoneWorkout(sessionId: string): Promise<void>;
   getWorkout(sessionId: string): Promise<WorkoutDetail | null>;
   listHistory(): Promise<Workout[]>;
