@@ -5,6 +5,8 @@ import { Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 import { ActionButton } from '@/components/ActionButton';
 import { AppInput } from '@/components/AppInput';
 import { Card } from '@/components/Card';
+import { DateField } from '@/components/DatePicker';
+import { localDateOfDevice } from '@/lib/localDate';
 import { Eyebrow, Title } from '@/components/Typography';
 import { Screen } from '@/components/Screen';
 import { ACTIVITIES, EMPTY_FORM, STROKES, describeCardio, fieldsFor, parseCardioForm, type CardioFormErrors, type CardioFormValues, type UnitSystem } from '@/cardio/cardioForm';
@@ -30,6 +32,7 @@ export default function NewCardioScreen() {
 
   const set = <K extends keyof CardioFormValues>(key: K, value: CardioFormValues[K]) => setValues((v) => ({ ...v, [key]: value }));
   const fields = fieldsFor(values.activity);
+  const today = localDateOfDevice(new Date());
   const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
 
   // Vista previa en vivo: solo si lo escrito ya es válido; nunca muestra un ritmo inventado.
@@ -66,11 +69,8 @@ export default function NewCardioScreen() {
 
     <Card>
       <Eyebrow>CUÁNDO</Eyebrow>
-      <View style={s.chips}>
-        <Chip label="Hoy" selected={values.day === 'today'} onPress={() => set('day', 'today')}/>
-        <Chip label="Ayer" selected={values.day === 'yesterday'} onPress={() => set('day', 'yesterday')}/>
-      </View>
-      <AppInput label={values.day === 'today' ? 'Hora de inicio (HH:MM, vacío = terminé ahora)' : 'Hora de inicio (HH:MM)'} value={values.startTime} onChangeText={(t) => set('startTime', t)} placeholder="07:30" keyboardType="numbers-and-punctuation" error={errors.startTime}/>
+      <DateField value={values.date || today} onChange={(d) => set('date', d)}/>
+      <AppInput label={(values.date || today) === today ? 'Hora de inicio (HH:MM, vacío = terminé ahora)' : 'Hora de inicio (HH:MM)'} value={values.startTime} onChangeText={(t) => set('startTime', t)} placeholder="07:30" keyboardType="numbers-and-punctuation" error={errors.startTime}/>
     </Card>
 
     <Card>

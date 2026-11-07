@@ -1,4 +1,4 @@
-import { dayLabel, emptyMealForm, formFromMeal, kcalFromMacros, parseAmount, parseMealForm, shiftDay, suggestMealType } from './mealForm';
+import { dayLabel, emptyMealForm, yesterdayFits, formFromMeal, kcalFromMacros, parseAmount, parseMealForm, shiftDay, suggestMealType } from './mealForm';
 
 const ctx = (now: Date, localDate = '2026-11-06') => ({ localDate, now, timeZone: 'America/Mexico_City' });
 const base = { ...emptyMealForm(new Date(2026, 10, 6, 14, 0)), description: 'Tacos de pollo' };
@@ -27,7 +27,7 @@ test('errores claros', () => {
   expect(r.ok).toBe(false);
   expect(!r.ok && r.errors).toEqual({ description: 'Describe qué comiste.', time: 'Usa el formato HH:MM, por ejemplo 14:30.', kcal: 'Escribe solo números.', fat: 'Máximo 2,000.' });
   const future = parseMealForm({ ...base, time: '18:00' }, ctx(now));
-  expect(!future.ok && future.errors.time).toBe('La hora no puede estar en el futuro.');
+  expect(!future.ok && future.errors.time).toBe('Esa hora todavía no llega hoy. Si fue ayer, cambia el día.');
   const pastNoTime = parseMealForm(base, ctx(now, '2026-11-05'));
   expect(!pastNoTime.ok && pastNoTime.errors.time).toBe('Indica a qué hora comiste.');
 });
@@ -49,4 +49,12 @@ test('fechas: etiquetas y desplazamiento entre meses', () => {
 test('una comida guardada vuelve al formulario sin perder decimales', () => {
   const v = formFromMeal({ id: 'x', userId: 'u', createdAt: '', updatedAt: '', deletedAt: null, revision: 1, consumedAt: new Date(2026, 10, 6, 8, 5).toISOString(), timeZone: 'UTC', localDate: '2026-11-06', mealType: 'breakfast', description: 'Avena', energyKcal: 350, proteinG: 12.5, carbsG: null, fatG: 6, source: 'manual', notes: null });
   expect(v).toEqual({ mealType: 'breakfast', description: 'Avena', time: '08:05', kcal: '350', protein: '12.5', carbs: '', fat: '6', notes: '' });
+});
+
+test('pasada la medianoche, una cena de las 21:45 se puede guardar en ayer', () => {
+  const now = new Date(2026, 10, 7, 0, 30);
+  expect(yesterdayFits({ time: '21:45' }, '2026-11-07', now)).toBe(true);
+  expect(yesterdayFits({ time: '00:10' }, '2026-11-07', now)).toBe(false); // ya pasó hoy
+  const r = parseMealForm({ ...base, time: '21:45' }, ctx(now, '2026-11-06'));
+  expect(r.ok && new Date(r.draft.consumedAt).getDate()).toBe(6);
 });

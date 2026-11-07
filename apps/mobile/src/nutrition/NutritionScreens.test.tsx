@@ -79,3 +79,31 @@ test('sin descripción no guarda', async () => {
   await waitFor(() => expect(screen.getByText('Describe qué comiste.')).toBeTruthy());
   expect(mockNutrition.logMeal).not.toHaveBeenCalled();
 });
+
+test('pasada la medianoche ofrece guardar la cena en ayer', async () => {
+  jest.useFakeTimers({ now: new Date(2026, 10, 7, 0, 30), doNotFake: ['queueMicrotask', 'setImmediate', 'clearImmediate', 'setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'nextTick'] });
+  try {
+    const screen = await render(<NewMealScreen />);
+    await fireEvent.changeText(screen.getByLabelText('¿Qué comiste?'), 'Pizza');
+    await fireEvent.changeText(screen.getByLabelText('Hora (HH:MM, vacío = ahora)'), '21:45');
+    await fireEvent.press(screen.getByText('Guardar comida'));
+    await waitFor(() => expect(screen.getByText('Guardar en ayer a las 21:45')).toBeTruthy());
+    await fireEvent.press(screen.getByText('Guardar en ayer a las 21:45'));
+    await waitFor(() => expect(mockNutrition.logMeal).toHaveBeenCalledTimes(1));
+    expect(new Date(mockNutrition.logMeal.mock.calls[0][0].consumedAt).getDate()).toBe(6);
+  } finally {
+    jest.useRealTimers();
+  }
+});
+
+test('el calendario elige un día pasado y no deja elegir días futuros', async () => {
+  mockNutrition.loadDay.mockResolvedValue({ meals: [], summary: { localDate: today, entryCount: 0, energyKcal: null, proteinG: null, carbsG: null, fatG: null, entriesMissingEnergy: 0 } });
+  const screen = await render(<NutritionScreen />);
+  await fireEvent.press(screen.getByLabelText('Elegir día en el calendario'));
+  expect(screen.getByLabelText('Mes siguiente')).toBeDisabled(); // no hay meses futuros
+  await fireEvent.press(screen.getByLabelText('Mes anterior'));
+  const firstOfPrev = screen.getAllByRole('button').find((b) => /^\S+ 1 \S+/.test(String(b.props.accessibilityLabel ?? '')));
+  expect(firstOfPrev).toBeTruthy();
+  await fireEvent.press(firstOfPrev!);
+  await waitFor(() => expect(mockNutrition.loadDay.mock.calls.at(-1)?.[0]).not.toBe(today));
+});

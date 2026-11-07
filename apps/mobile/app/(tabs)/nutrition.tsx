@@ -5,6 +5,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { MealEntry, NutritionDaySummary } from '@athlete/contracts';
 import { ActionButton } from '@/components/ActionButton';
 import { Card } from '@/components/Card';
+import { DatePickerSheet } from '@/components/DatePicker';
 import { EmptyState } from '@/components/EmptyState';
 import { Screen } from '@/components/Screen';
 import { Eyebrow, Title } from '@/components/Typography';
@@ -21,6 +22,7 @@ export default function NutritionScreen() {
   const [date, setDate] = useState(today);
   const [day, setDay] = useState<DayState>(null);
   const [error, setError] = useState<string | null>(null);
+  const [calendar, setCalendar] = useState(false);
 
   const load = useCallback(() => {
     if (!nutrition) return;
@@ -40,14 +42,16 @@ export default function NutritionScreen() {
       <Pressable accessibilityRole="button" accessibilityLabel="Día anterior" onPress={() => setDate(shiftDay(date, -1))} style={s.arrow}>
         <Ionicons name="chevron-back" size={20} color={colors.text}/>
       </Pressable>
-      <Pressable accessibilityRole="button" accessibilityLabel="Ir a hoy" onPress={() => setDate(today)} style={s.dayCenter}>
-        <Text style={s.dayText}>{dayLabel(date, today)}</Text>
-        {date !== today ? <Text style={s.hint}>Toca para volver a hoy</Text> : null}
+      <Pressable accessibilityRole="button" accessibilityLabel="Elegir día en el calendario" onPress={() => setCalendar(true)} style={s.dayCenter}>
+        <View style={s.dayLine}><Ionicons name="calendar-outline" size={16} color={colors.blue}/><Text style={s.dayText}>{dayLabel(date, today)}</Text></View>
+        <Text style={s.hint}>Toca para elegir otro día</Text>
       </Pressable>
       <Pressable accessibilityRole="button" accessibilityLabel="Día siguiente" disabled={date >= today} onPress={() => setDate(shiftDay(date, 1))} style={[s.arrow, date >= today && s.disabled]}>
         <Ionicons name="chevron-forward" size={20} color={colors.text}/>
       </Pressable>
     </View>
+
+    <DatePickerSheet visible={calendar} value={date} onSelect={setDate} onClose={() => setCalendar(false)}/>
 
     {error ? <EmptyState icon="alert-circle-outline" title="No pudimos cargar tus comidas" detail={error} action="Reintentar" onAction={load}/> : null}
 
@@ -104,6 +108,7 @@ const s = StyleSheet.create({
   arrow: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
   disabled: { opacity: 0.35 },
   dayCenter: { flex: 1, alignItems: 'center' },
+  dayLine: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   dayText: { color: colors.text, fontSize: 16, fontWeight: '800', textTransform: 'capitalize' },
   kcalRow: { flexDirection: 'row', alignItems: 'baseline', gap: 6 },
   kcal: { color: colors.text, fontSize: 34, fontWeight: '800', letterSpacing: -1 },

@@ -3,11 +3,12 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Alert, View } from 'react-native';
 import type { MealEntry } from '@athlete/contracts';
 import { ActionButton } from '@/components/ActionButton';
+import { DateField } from '@/components/DatePicker';
 import { EmptyState } from '@/components/EmptyState';
 import { Screen } from '@/components/Screen';
 import { Eyebrow, Title } from '@/components/Typography';
 import { MealFormView } from '@/nutrition/MealFormView';
-import { dayLabel, formFromMeal, localDateOfDevice, parseMealForm, type MealFormErrors, type MealFormValues } from '@/nutrition/mealForm';
+import { formFromMeal, localDateOfDevice, parseMealForm, type MealFormErrors, type MealFormValues } from '@/nutrition/mealForm';
 import { useNutrition } from '@/nutrition/mobileNutrition';
 
 export default function EditMealScreen() {
@@ -19,10 +20,11 @@ export default function EditMealScreen() {
   const [meal, setMeal] = useState<MealEntry | null | undefined>(undefined);
   const [errors, setErrors] = useState<MealFormErrors>({});
   const [saving, setSaving] = useState(false);
+  const [day, setDay] = useState<string | null>(null);
 
   useEffect(() => {
     if (!nutrition || typeof mealId !== 'string') return;
-    nutrition.getMeal(mealId, localDate).then(setMeal).catch(() => setMeal(null));
+    nutrition.getMeal(mealId, localDate).then((m) => { setMeal(m); if (m) setDay(m.localDate); }).catch(() => setMeal(null));
   }, [nutrition, mealId, localDate]);
 
   if (meal === undefined) return <Screen><Title>Cargando…</Title></Screen>;
@@ -32,7 +34,7 @@ export default function EditMealScreen() {
 
   async function save(values: MealFormValues) {
     if (!nutrition || !meal || saving) return;
-    const parsed = parseMealForm(values, { localDate: meal.localDate, now: new Date(), timeZone: meal.timeZone });
+    const parsed = parseMealForm(values, { localDate: day ?? meal.localDate, now: new Date(), timeZone: meal.timeZone });
     if (!parsed.ok) { setErrors(parsed.errors); return; }
     setErrors({});
     setSaving(true);
@@ -57,7 +59,8 @@ export default function EditMealScreen() {
   }
 
   return <Screen>
-    <View><Eyebrow>NUTRICIÓN · {dayLabel(meal.localDate, today).toUpperCase()}</Eyebrow><Title>Editar comida</Title></View>
+    <View><Eyebrow>NUTRICIÓN</Eyebrow><Title>Editar comida</Title></View>
+    <DateField value={day ?? meal.localDate} onChange={setDay}/>
     <MealFormView initial={formFromMeal(meal)} errors={errors} saving={saving} submitLabel="Guardar cambios" timeHint="Hora (HH:MM)" onSubmit={(v) => void save(v)}/>
     <ActionButton secondary onPress={confirmDelete}>Borrar comida</ActionButton>
   </Screen>;

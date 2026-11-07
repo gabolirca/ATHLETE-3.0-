@@ -1,4 +1,5 @@
 import type { LogMealEntryInput, MealEntry, MealType } from '@athlete/contracts';
+import { atLocalTime, localDateOfDevice, shiftDay } from '@/lib/localDate';
 
 /**
  * Formulario de comida → entrada del contrato. Calorías y macros son opcionales: lo que no se escribe
@@ -74,6 +75,14 @@ export function kcalFromMacros(values: Pick<MealFormValues, 'protein' | 'carbs' 
 
 const LIMITS = { kcal: 20_000, protein: 2_000, carbs: 2_000, fat: 2_000 } as const;
 
+/** Si la hora escrita es futura hoy, la misma hora ayer sí es válida (para ofrecer "Cambiar a ayer"). */
+export function yesterdayFits(values: Pick<MealFormValues, 'time'>, today: string, now: Date): boolean {
+  const m = /^(\d{1,2}):(\d{2})$/.exec(values.time.trim());
+  if (!m || Number(m[1]) > 23 || Number(m[2]) > 59) return false;
+  return atLocalTime(today, Number(m[1]), Number(m[2])).getTime() > now.getTime() + 60_000
+    && atLocalTime(shiftDay(today, -1), Number(m[1]), Number(m[2])).getTime() <= now.getTime();
+}
+
 export function parseMealForm(
   values: MealFormValues,
   context: { localDate: string; now: Date; timeZone: string },
@@ -83,7 +92,6 @@ export function parseMealForm(
   if (!description) errors.description = 'Describe qué comiste.';
   else if (description.length > 500) errors.description = 'Máximo 500 caracteres.';
 
-  const [y, mo, d] = context.localDate.split('-').map(Number) as [number, number, number];
   const isToday = context.localDate === localDateOfDevice(context.now);
   let consumedAt: Date | null = null;
   const time = values.time.trim();
@@ -96,8 +104,11 @@ export function parseMealForm(
     const min = match ? Number(match[2]) : NaN;
     if (!match || h > 23 || min > 59) errors.time = 'Usa el formato HH:MM, por ejemplo 14:30.';
     else {
-      consumedAt = new Date(y, mo - 1, d, h, min, 0, 0);
-      if (consumedAt.getTime() > context.now.getTime() + 60_000) errors.time = 'La hora no puede estar en el futuro.';
+      consumedAt = atLocalTime(context.localDate, h, min);
+      if (consumedAt.getTime() > context.now.getTime() + 60_000) {
+        // Caso típico: cenaste a las 21:45 y lo registras pasada la medianoche.
+        errors.time = isToday ? 'Esa hora todavía no llega hoy. Si fue ayer, cambia el día.' : 'La hora no puede estar en el futuro.';
+      }
     }
   }
 
@@ -123,24 +134,4 @@ export function parseMealForm(
   };
 }
 
-/** Fecha local (YYYY-MM-DD) del teléfono. */
-export function localDateOfDevice(date: Date): string {
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
-}
-
-const DAYS = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
-const MONTHS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
-
-/** "Hoy", "Ayer" o "lunes 3 nov". */
-export function dayLabel(localDate: string, today: string): string {
-  if (localDate === today) return 'Hoy';
-  const [y, m, d] = localDate.split('-').map(Number) as [number, number, number];
-  const date = new Date(y, m - 1, d);
-  if (shiftDay(today, -1) === localDate) return 'Ayer';
-  return `${DAYS[date.getDay()]} ${d} ${MONTHS[m - 1]}`;
-}
-
-export function shiftDay(localDate: string, days: number): string {
-  const [y, m, d] = localDate.split('-').map(Number) as [number, number, number];
-  return localDateOfDevice(new Date(y, m - 1, d + days));
-}
+export { dayLabel, localDateOfDevice, shiftDay } from '@/lib/localDate';
