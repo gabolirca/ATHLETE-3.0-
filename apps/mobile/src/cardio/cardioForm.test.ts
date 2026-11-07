@@ -41,18 +41,25 @@ describe('parseCardioForm', () => {
     expect(draft).toMatchObject({ distanceMeters: null, rpe: null, avgHeartRateBpm: null, maxHeartRateBpm: null });
   });
 
-  test('ayer exige hora de inicio; con hora, el inicio es ayer a esa hora', () => {
-    const missing = parseCardioForm(form({ day: 'yesterday', minutes: '45' }), ctx);
+  test('un día pasado exige hora de inicio; con hora, el inicio es ese día a esa hora', () => {
+    const missing = parseCardioForm(form({ date: '2026-11-04', minutes: '45' }), ctx);
     expect(missing.ok).toBe(false);
     expect(!missing.ok && missing.errors.startTime).toMatch(/hora/);
-    const draft = draftOf(form({ day: 'yesterday', startTime: '07:30', minutes: '45' }));
+    const draft = draftOf(form({ date: '2026-11-04', startTime: '07:30', minutes: '45' }));
     const started = new Date(draft.startedAt);
     expect([started.getDate(), started.getHours(), started.getMinutes()]).toEqual([4, 7, 30]);
+    const older = new Date(draftOf(form({ date: '2026-10-28', startTime: '06:00', minutes: '30' })).startedAt);
+    expect([older.getMonth(), older.getDate()]).toEqual([9, 28]);
+  });
+
+  test('no se registran días futuros', () => {
+    const r = parseCardioForm(form({ date: '2026-11-06', startTime: '07:00', minutes: '10' }), ctx);
+    expect(!r.ok && r.errors.startTime).toBe('No puedes registrar días futuros.');
   });
 
   test('una hora de inicio en el futuro se rechaza', () => {
     const r = parseCardioForm(form({ startTime: '23:00', minutes: '10' }), ctx);
-    expect(!r.ok && r.errors.startTime).toMatch(/futuro/);
+    expect(!r.ok && r.errors.startTime).toBe('Esa hora todavía no llega hoy. Si fue ayer, cambia el día.');
   });
 
   test('duración obligatoria, minutos y segundos menores a 60, máximo 24 h', () => {

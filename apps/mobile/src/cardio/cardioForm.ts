@@ -1,4 +1,5 @@
 import type { CardioActivity, LogCardioSessionInput, SwimStroke } from '@athlete/contracts';
+import { atLocalTime, localDateOfDevice } from '@/lib/localDate';
 import { formatDuration, pacePer100mSeconds, paceSecondsPerKm, speedKmh, swimDistanceFromLaps } from '@athlete/domain';
 
 /**
@@ -44,8 +45,9 @@ export function fieldsFor(activity: CardioActivity) {
 
 export type CardioFormValues = {
   activity: CardioActivity;
-  day: 'today' | 'yesterday';
-  /** Hora de inicio `HH:MM` (24 h). Vacía = terminó ahora mismo (solo con `today`). */
+  /** Día local (YYYY-MM-DD). Vacío = hoy. */
+  date: string;
+  /** Hora de inicio `HH:MM` (24 h). Vacía = terminó ahora mismo (solo si el día es hoy). */
   startTime: string;
   hours: string;
   minutes: string;
@@ -64,7 +66,7 @@ export type CardioFormValues = {
 };
 
 export const EMPTY_FORM: CardioFormValues = {
-  activity: 'run', day: 'today', startTime: '', hours: '', minutes: '', seconds: '', distance: '', rounds: '',
+  activity: 'run', date: '', startTime: '', hours: '', minutes: '', seconds: '', distance: '', rounds: '',
   rpe: null, avgHeartRate: '', maxHeartRate: '', poolLength: '25', laps: '', stroke: null, openWater: false, notes: '',
 };
 
@@ -104,18 +106,21 @@ export function parseCardioForm(values: CardioFormValues, context: { now: Date; 
 
   // Momento de inicio
   let startedAt: Date | null = null;
+  const today = localDateOfDevice(context.now);
+  const date = values.date || today;
   const time = values.startTime.trim();
-  if (time === '') {
-    if (values.day === 'yesterday') errors.startTime = 'Indica a qué hora empezaste.';
+  if (date > today) errors.startTime = 'No puedes registrar días futuros.';
+  else if (time === '') {
+    if (date !== today) errors.startTime = 'Indica a qué hora empezaste.';
     else if (!errors.minutes) startedAt = new Date(context.now.getTime() - durationSeconds * 1000);
   } else {
     const match = /^([01]?\d|2[0-3]):([0-5]\d)$/.exec(time);
     if (!match) errors.startTime = 'Usa el formato HH:MM, por ejemplo 07:30.';
     else {
-      startedAt = new Date(context.now);
-      if (values.day === 'yesterday') startedAt.setDate(startedAt.getDate() - 1);
-      startedAt.setHours(Number(match[1]), Number(match[2]), 0, 0);
-      if (startedAt.getTime() > context.now.getTime()) errors.startTime = 'La hora de inicio no puede estar en el futuro.';
+      startedAt = atLocalTime(date, Number(match[1]), Number(match[2]));
+      if (startedAt.getTime() > context.now.getTime()) {
+        errors.startTime = date === today ? 'Esa hora todavía no llega hoy. Si fue ayer, cambia el día.' : 'La hora de inicio no puede estar en el futuro.';
+      }
     }
   }
 
