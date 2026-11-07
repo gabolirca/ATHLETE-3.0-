@@ -92,7 +92,37 @@ describe('nutrición (local)', () => {
     await d2.close();
     const check = await openNodeSqlite(path);
     expect((await check.get<{ user_version: number }>('PRAGMA user_version'))?.user_version).toBe(LOCAL_SCHEMA_VERSION);
-    expect(LOCAL_SCHEMA_VERSION).toBe(3);
+    expect(LOCAL_SCHEMA_VERSION).toBe(4);
     await check.close();
+  });
+});
+
+describe('metas nutricionales (0.5.0)', () => {
+  it('una meta por día: la vigente es la más reciente anterior o igual a la fecha', async () => {
+    const d = await openDevice(path, USER, new FakeTransport());
+    expect(expectOk(await d.nutrition.getTargetFor('2026-11-03'))).toBeNull();
+    expectOk(await d.nutrition.setTarget({ id: newId(), effectiveFrom: '2026-11-01', energyKcal: 2400, proteinG: 150, source: 'estimated' }));
+    const pro = expectOk(await d.nutrition.setTarget({ id: newId(), effectiveFrom: '2026-11-05', energyKcal: 2200, proteinG: 160, carbsG: 220, fatG: 70, source: 'professional' }));
+    expect(expectOk(await d.nutrition.getTargetFor('2026-11-03'))).toMatchObject({ energyKcal: 2400, source: 'estimated', carbsG: null });
+    expect(expectOk(await d.nutrition.getTargetFor('2026-11-06'))).toMatchObject({ id: pro.id, source: 'professional' });
+    // Reemplazar la del mismo día conserva el registro (no crea duplicados que el servidor rechazaría).
+    const replaced = expectOk(await d.nutrition.setTarget({ id: newId(), effectiveFrom: '2026-11-05', energyKcal: 2300, source: 'manual' }));
+    expect(replaced.id).toBe(pro.id);
+    expect(expectOk(await d.nutrition.getTargetFor('2026-11-06'))).toMatchObject({ energyKcal: 2300, source: 'manual', proteinG: null });
+    const bad = await d.nutrition.setTarget({ id: newId(), effectiveFrom: '2026-11-05', energyKcal: 300, source: 'manual' });
+    expect(bad.ok === false && bad.error.code).toBe('VALIDATION_FAILED');
+    await d.close();
+  });
+
+  it('un teléfono en la versión 3 recibe la columna de origen sin perder metas', async () => {
+    const d1 = await openDevice(path, USER, new FakeTransport());
+    expectOk(await d1.nutrition.setTarget({ id: newId(), effectiveFrom: '2026-11-01', energyKcal: 2000, source: 'manual' }));
+    await d1.close();
+    const raw = await openNodeSqlite(path);
+    await raw.exec('ALTER TABLE nutrition_targets DROP COLUMN source; PRAGMA user_version = 3;');
+    await raw.close();
+    const d2 = await openDevice(path, USER, new FakeTransport());
+    expect(expectOk(await d2.nutrition.getTargetFor('2026-11-02'))).toMatchObject({ energyKcal: 2000, source: 'manual' });
+    await d2.close();
   });
 });

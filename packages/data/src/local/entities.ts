@@ -172,7 +172,7 @@ export const ENTITIES: Readonly<Record<SyncEntity, EntityMeta>> = {
   nutrition_target: {
     entity: 'nutrition_target',
     table: 'nutrition_targets',
-    columns: { effective_from: 'text', energy_kcal: 'real', protein_g: 'real', carbs_g: 'real', fat_g: 'real' },
+    columns: { effective_from: 'text', energy_kcal: 'real', protein_g: 'real', carbs_g: 'real', fat_g: 'real', source: 'text' },
     toContract: parseWith(NutritionTarget),
   },
 };

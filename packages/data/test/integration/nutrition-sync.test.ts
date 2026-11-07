@@ -65,7 +65,7 @@ describe('nutrición con el servidor', () => {
     const anaDevice = newId();
     const target = await new PgTransport(ana).push({ deviceId: anaDevice, mutations: [{
       mutationId: newId(), deviceId: anaDevice, entity: 'nutrition_target', entityId: newId(), op: 'upsert', baseRevision: null,
-      payload: { effective_from: '2026-11-01', energy_kcal: 2200, protein_g: 150, carbs_g: null, fat_g: null },
+      payload: { effective_from: '2026-11-01', energy_kcal: 2200, protein_g: 150, carbs_g: null, fat_g: null, source: 'professional' },
       clientRecordedAt: clock.now(),
     }] } as never);
     expect(expectOk(target).results[0]).toMatchObject({ status: 'applied' });
@@ -77,6 +77,25 @@ describe('nutrición con el servidor', () => {
     expect(pulled.changes.filter((c) => c.entity === 'meal_entry' || c.entity === 'nutrition_target')).toEqual([]);
     const own = expectOk(await new PgTransport(ana).pull({ cursor: null, limit: 500 }));
     expect(own.changes.map((c) => c.entity).sort()).toEqual(['meal_entry', 'nutrition_target']);
+    await Promise.all([a.close(), b.close()]);
+  });
+
+  it('una meta con origen viaja entre dispositivos; un origen inválido se rechaza', async () => {
+    const user = await createUser();
+    const clock = new TestClock(Date.now() - 3600_000);
+    const a = await openDevice(join(tmp.dir, 'ta.db'), user, new PgTransport(user), clock);
+    expectOk(await a.nutrition.setTarget({ id: newId(), effectiveFrom: '2026-11-01', energyKcal: 2450, proteinG: 150, source: 'estimated' }));
+    expect(expectOk(await a.sync.syncNow())).toMatchObject({ pendingCount: 0, rejectedCount: 0 });
+    const b = await openDevice(join(tmp.dir, 'tb.db'), user, new PgTransport(user), clock);
+    expectOk(await b.sync.syncNow());
+    expect(expectOk(await b.nutrition.getTargetFor('2026-11-07'))).toMatchObject({ energyKcal: 2450, source: 'estimated' });
+    const device = newId();
+    const bad = await new PgTransport(user).push({ deviceId: device, mutations: [{
+      mutationId: newId(), deviceId: device, entity: 'nutrition_target', entityId: newId(), op: 'upsert', baseRevision: null,
+      payload: { effective_from: '2026-11-02', energy_kcal: 2000, protein_g: null, carbs_g: null, fat_g: null, source: 'ai' },
+      clientRecordedAt: new Date().toISOString(),
+    }] } as never);
+    expect(expectOk(bad).results[0]).toMatchObject({ status: 'rejected', error: { code: 'VALIDATION_FAILED' } });
     await Promise.all([a.close(), b.close()]);
   });
 

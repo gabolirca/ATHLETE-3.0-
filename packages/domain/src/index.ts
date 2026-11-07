@@ -6,3 +6,4 @@ export * from './cardio';
 export * from './session';
 export * from './sync';
 export * from './analytics';
+export * from './nutrition';

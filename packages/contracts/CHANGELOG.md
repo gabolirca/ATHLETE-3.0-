@@ -4,6 +4,17 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 Mientras la versión sea `0.x`, los contratos son **borrador**: pueden cambiar sin incremento mayor,
 pero todo cambio debe registrarse aquí y revisarse con Codex (ADR-0001, regla 4).
 
+## [0.5.0] — 2026-11-07 — Metas nutricionales con origen (Claude, aprobado por el propietario)
+
+Cambio aditivo.
+
+### Añadido
+- `nutrition`: `NutritionTargetSource` (`estimated`, `professional`, `manual`) y `NutritionTarget.source`.
+  Distingue el plan provisional calculado por la app (sugerencia, con aviso aceptado) del plan de un nutriólogo.
+  En el servidor: columna `athlete3.nutrition_targets.source` (migración `20261107000100`).
+- `SetNutritionTargetInput` (kcal obligatorias, 800–10 000; macros opcionales).
+- `NutritionRepository.setTarget()` (una meta por día; reemplaza la existente) y `getTargetFor()`.
+
 ## [0.4.0] — 2026-11-05 — Inicio de sesión sin contraseña (Claude, aprobado por el propietario)
 
 Cambio aditivo: no modifica ni endurece nada existente.

@@ -1,7 +1,9 @@
 import {
   LocalDate,
   LogMealEntryInput,
+  SetNutritionTargetInput,
   type MealEntry,
+  type NutritionTarget,
   type NutritionDaySummary,
   type NutritionRepository,
   type Result,
@@ -65,6 +67,29 @@ export class LocalNutritionRepository extends Repository implements NutritionRep
       const day = input(LocalDate, localDate);
       const rows = await this.store.select('meal_entry', 'WHERE deleted_at IS NULL AND local_date = ?', [day]);
       return summarizeNutritionDay(day, rows.map((r) => this.store.toContract<MealEntry>('meal_entry', r)));
+    });
+  }
+
+  setTarget(raw: SetNutritionTargetInput): Promise<Result<NutritionTarget>> {
+    return guard(() => this.store.db.transaction(async (tx) => {
+      const i = input(SetNutritionTargetInput, raw);
+      // Una meta activa por día (igual que el índice único del servidor): se reemplaza la existente.
+      const existing = (await this.store.select('nutrition_target', 'WHERE deleted_at IS NULL AND effective_from = ? LIMIT 1', [i.effectiveFrom], tx))[0];
+      const id = existing ? existing.id : i.id;
+      if (!existing && await this.store.get('nutrition_target', id, tx)) fail('DUPLICATE', 'La meta ya existe.');
+      const row = await this.store.upsert('nutrition_target', id, {
+        effective_from: i.effectiveFrom, energy_kcal: toServerScale(i.energyKcal, 1), protein_g: toServerScale(i.proteinG, 1),
+        carbs_g: toServerScale(i.carbsG, 1), fat_g: toServerScale(i.fatG, 1), source: i.source,
+      }, tx);
+      return this.store.toContract<NutritionTarget>('nutrition_target', row);
+    }));
+  }
+
+  getTargetFor(localDate: LocalDate): Promise<Result<NutritionTarget | null>> {
+    return guard(async () => {
+      const day = input(LocalDate, localDate);
+      const row = (await this.store.select('nutrition_target', 'WHERE deleted_at IS NULL AND effective_from <= ? ORDER BY effective_from DESC LIMIT 1', [day]))[0];
+      return row ? this.store.toContract<NutritionTarget>('nutrition_target', row) : null;
     });
   }
 }
