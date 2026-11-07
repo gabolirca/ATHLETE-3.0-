@@ -2,9 +2,9 @@ import type { CardioSession } from '@athlete/contracts';
 import type { OpenedAthleteData } from '@athlete/data';
 import type { CardioDraft } from '@/cardio/cardioForm';
 import type { TrainingRepository } from './TrainingRepository';
-import { computePersonalRecords, setVolumeKg, summarizeWeek } from '@athlete/domain';
+import { computePersonalRecords, newRecordsInSession, setVolumeKg, summarizeWeek } from '@athlete/domain';
 import type { BodyMeasurementInput, LocalAthletePreferencesInput, LoggedSetInput, RoutineInput } from './trainingSchemas';
-import type { BodyMeasurement, CardioEntry, Exercise, LocalAthletePreferences, ProgressSummary, Routine, TrainingOverview, Workout, WorkoutDetail, TrainingSet } from './trainingTypes';
+import type { BodyMeasurement, CardioEntry, Exercise, ExerciseRecord, LocalAthletePreferences, ProgressSummary, Routine, SessionRecord, TrainingOverview, Workout, WorkoutDetail, TrainingSet } from './trainingTypes';
 
 type IdFactory = () => string;
 type SessionDetail = Awaited<ReturnType<OpenedAthleteData['sessions']['getDetail']>>;
@@ -215,9 +215,20 @@ export class OfficialTrainingRepository implements TrainingRepository {
         sortOrder: exercise.position, setsTarget: metadata?.targetSets ?? null,
         repsTarget: metadata?.targetRepsMin ?? null, restSeconds: metadata?.targetRestSeconds ?? null, targetRir: metadata?.targetRir ?? null,
         sets: displayedSets,
+        newRecords: await this.sessionRecords(exercise.exerciseId, sessionId, persisted.length > 0),
       };
     }));
     return { workout, exercises };
+  }
+
+  /** Récords (peso máximo y 1RM estimado) que esta sesión supera frente a todo el historial del ejercicio. */
+  private async sessionRecords(exerciseId: string, sessionId: string, hasSets: boolean): Promise<SessionRecord[]> {
+    if (!hasSets) return [];
+    const history = await this.data.sessions.listSetsForExercise(exerciseId);
+    if (!history.ok) return [];
+    return newRecordsInSession(history.value, sessionId)
+      .filter((r) => r.kind === 'max_weight' || r.kind === 'best_e1rm')
+      .map((r) => ({ kind: r.kind as SessionRecord['kind'], value: r.value, weightKg: r.weightKg, reps: r.reps }));
   }
 
   private async findPlannedExercise(dayId: string | null, plannedId: string) {
@@ -274,8 +285,15 @@ export class OfficialTrainingRepository implements TrainingRepository {
       const [exercise, sets] = await Promise.all([this.data.exercises.getById(exerciseId), this.data.sessions.listSetsForExercise(exerciseId)]);
       const personal = computePersonalRecords(unwrap(sets));
       const record = personal.max_weight;
-      return exercise.ok && record ? { exerciseName: exercise.value.name, weightKg: record.value, reps: record.reps, measuredAt: `${record.localDate}T12:00:00.000Z` } : null;
-    }))).filter((item): item is NonNullable<typeof item> => item !== null);
+      const e1rm = personal.best_e1rm;
+      if (!exercise.ok || !record) return null;
+      const item: ExerciseRecord = {
+        exerciseId, exerciseName: exercise.value.name, weightKg: record.value, reps: record.reps, measuredAt: `${record.localDate}T12:00:00.000Z`,
+        e1rm: e1rm && e1rm.weightKg !== null && e1rm.reps !== null ? { valueKg: e1rm.value, weightKg: e1rm.weightKg, reps: e1rm.reps, localDate: e1rm.localDate } : null,
+      };
+      return item;
+    }))).filter((item): item is ExerciseRecord => item !== null)
+      .sort((a, b) => (b.e1rm?.valueKg ?? b.weightKg) - (a.e1rm?.valueKg ?? a.weightKg));
     const measurements = await this.listBodyMeasurements();
     return {
       weeklyVolumeKg: dailyVolumeKg.reduce((sum, item) => sum + item.volumeKg, 0),
