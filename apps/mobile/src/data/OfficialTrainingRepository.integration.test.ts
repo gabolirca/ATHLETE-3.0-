@@ -6,7 +6,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { randomBytes } from 'node:crypto';
-import { createAthleteData, createUuidV7Generator, localOnlyTransport } from '@athlete/data';
+import { BUNDLED_CATALOG, BUNDLED_CATALOG_VERSION, LocalStore, createAthleteData, createUuidV7Generator, localOnlyTransport, systemClock } from '@athlete/data';
 import { openNodeSqlite } from '@athlete/data/node-sqlite';
 import { EMPTY_FORM, parseCardioForm, type CardioFormValues } from '@/cardio/cardioForm';
 import { mergeHistory } from './history';
@@ -20,8 +20,10 @@ let dir: string;
 beforeEach(() => { dir = mkdtempSync(join(tmpdir(), 'athlete3-mobile-')); });
 afterEach(() => rmSync(dir, { recursive: true, force: true }));
 
-async function setup() {
-  const data = await createAthleteData({ db: openNodeSqlite(join(dir, 'device.db')), userId: USER, ids, transport: localOnlyTransport });
+async function setup(options: { catalog?: boolean } = {}) {
+  const db = openNodeSqlite(join(dir, 'device.db'));
+  if (options.catalog) await (await LocalStore.open(db, { userId: USER, ids, clock: systemClock })).applyBundledCatalog(BUNDLED_CATALOG, BUNDLED_CATALOG_VERSION);
+  const data = await createAthleteData({ db, userId: USER, ids, transport: localOnlyTransport });
   const profile = await data.profile.initialize('America/Mexico_City');
   if (!profile.ok) throw new Error(profile.error.message);
   const exerciseId = newId();
@@ -190,5 +192,29 @@ test('récords: la primera vez no es PR; superar el peso o el 1RM estimado sí, 
   const progress = await repository.getProgress();
   expect(progress.records[0]).toMatchObject({ exerciseId, weightKg: 85, reps: 3, e1rm: { weightKg: 75, reps: 10 } });
   expect(progress.records[0]!.e1rm!.valueKg).toBeCloseTo(100, 5);
+  await data.close?.();
+});
+
+test('volumen por músculo: cuenta series efectivas de la semana con el catálogo real (principal 1, secundario 0.5)', async () => {
+  const { data, repository, sessionId } = await setup({ catalog: true });
+  const bench = (await repository.searchExercises('Press de banca')).find((e) => e.name === 'Press de banca')!;
+  await repository.addExercise(sessionId, bench.id);
+  const workout = (await repository.getWorkout(sessionId))!;
+  const benchRow = workout.exercises.find((e) => e.exerciseId === bench.id)!;
+  const first = benchRow.sets[benchRow.sets.length - 1]!.id;
+  await repository.saveSet(sessionId, first, { weightKg: 60, reps: 10, rir: null, isWarmup: true });
+  for (let i = 0; i < 3; i++) {
+    const id = await repository.addSet(sessionId, benchRow.id);
+    await repository.saveSet(sessionId, id, { weightKg: 80, reps: 6, rir: 2, isWarmup: false });
+  }
+  const volume = await repository.getWeeklyMuscleVolume(); // sesión en curso incluida
+  const by = Object.fromEntries(volume.items.map((m) => [m.muscle, m]));
+  expect(by.chest).toMatchObject({ name: 'Pecho', sets: 3, status: 'low', range: [10, 20] });
+  expect(by.shoulders?.sets).toBe(1.5);
+  expect(by.triceps?.sets).toBe(1.5);
+  expect(by.quadriceps).toMatchObject({ sets: 0, status: 'low' });
+  expect(volume).toMatchObject({ totalSets: 3, sessions: 1 });
+  await repository.finishWorkout(sessionId);
+  expect((await repository.getWeeklyMuscleVolume()).totalSets).toBe(3);
   await data.close?.();
 });

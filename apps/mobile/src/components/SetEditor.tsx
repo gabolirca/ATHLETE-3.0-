@@ -12,7 +12,10 @@ export type PreviousSet = { weightKg: number | null; reps: number | null };
 
 const fmt = (n: number | null) => (n === null ? '—' : String(n));
 
-export function SetEditor({ set, onSave, targetRir = null, previous = null }: { set: TrainingSet; onSave: (input: LoggedSetInput) => Promise<void>; targetRir?: number | null; previous?: PreviousSet | null }) {
+/** Carga sugerida para hoy (ver `suggestLoad`). */
+export type SuggestedSet = { weightKg: number | null; reps: number };
+
+export function SetEditor({ set, onSave, targetRir = null, previous = null, suggestion = null }: { set: TrainingSet; onSave: (input: LoggedSetInput) => Promise<void>; targetRir?: number | null; previous?: PreviousSet | null; suggestion?: SuggestedSet | null }) {
   const [weight, setWeight] = useState(set.weightKg === null ? '' : String(set.weightKg));
   const [reps, setReps] = useState(set.reps === null ? '' : String(set.reps));
   const [rir, setRir] = useState<number | null>(set.rir);
@@ -54,13 +57,13 @@ export function SetEditor({ set, onSave, targetRir = null, previous = null }: { 
     finally { setSaving(false); }
   }
 
-  /** "Igual que la vez pasada": copia peso y reps de la misma serie anterior y guarda. */
-  function repeatPrevious() {
-    if (!previous) return;
-    const next = { weight: previous.weightKg === null ? '' : String(previous.weightKg), reps: previous.reps === null ? '' : String(previous.reps) };
+  /** Llena peso y reps (de la vez pasada o de la sugerencia) y guarda. */
+  function fill(values: { weightKg: number | null; reps: number | null }) {
+    const next = { weight: values.weightKg === null ? '' : String(values.weightKg), reps: values.reps === null ? '' : String(values.reps) };
     setWeight(next.weight); setReps(next.reps); setInputKey((k) => k + 1);
     void persist(rir, warmup, next);
   }
+  const hint = suggestion ?? previous;
 
   function selectRir(value: number | null) {
     setRir(value);
@@ -74,12 +77,17 @@ export function SetEditor({ set, onSave, targetRir = null, previous = null }: { 
       <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: warmup }} onPress={() => { const next = !warmup; setWarmup(next); void persist(rir, next); }} style={[styles.warmup, warmup && styles.warmupActive]}><Text style={[styles.warmupText, warmup && styles.warmupTextActive]}>Calentamiento</Text></Pressable>
     </View>
     <View style={styles.fields}>
-      <AppInput key={`w-${inputKey}`} label="Peso (kg)" defaultValue={weight} onChangeText={setWeight} onBlur={() => { void persist(); }} keyboardType="decimal-pad" placeholder={previous ? fmt(previous.weightKg) : '—'} returnKeyType="done" autoCorrect={false} spellCheck={false} />
-      <AppInput key={`r-${inputKey}`} label="Repeticiones" defaultValue={reps} onChangeText={setReps} onBlur={() => { void persist(); }} keyboardType="number-pad" placeholder={previous ? fmt(previous.reps) : '—'} returnKeyType="done" autoCorrect={false} spellCheck={false} />
+      <AppInput key={`w-${inputKey}`} label="Peso (kg)" defaultValue={weight} onChangeText={setWeight} onBlur={() => { void persist(); }} keyboardType="decimal-pad" placeholder={hint ? fmt(hint.weightKg) : '—'} returnKeyType="done" autoCorrect={false} spellCheck={false} />
+      <AppInput key={`r-${inputKey}`} label="Repeticiones" defaultValue={reps} onChangeText={setReps} onBlur={() => { void persist(); }} keyboardType="number-pad" placeholder={hint ? fmt(hint.reps) : '—'} returnKeyType="done" autoCorrect={false} spellCheck={false} />
     </View>
-    {previous && weight === '' && reps === '' ? <Pressable accessibilityRole="button" accessibilityLabel={`Igual que la vez pasada: ${fmt(previous.weightKg)} kilos por ${fmt(previous.reps)}`} onPress={repeatPrevious} style={styles.repeat}>
-      <Text style={styles.repeatText}>↻ Igual que la vez pasada · {fmt(previous.weightKg)} kg × {fmt(previous.reps)}</Text>
-    </Pressable> : null}
+    {(previous || suggestion) && weight === '' && reps === '' ? <View style={styles.quick}>
+      {suggestion && !warmup ? <Pressable accessibilityRole="button" accessibilityLabel={`Usar sugerencia: ${suggestion.weightKg === null ? '' : `${suggestion.weightKg} kilos por `}${suggestion.reps}`} onPress={() => fill(suggestion)} style={[styles.repeat, styles.suggest]}>
+        <Text style={styles.suggestText}>→ Sugerido · {suggestion.weightKg === null ? `${suggestion.reps} reps` : `${suggestion.weightKg} kg × ${suggestion.reps}`}</Text>
+      </Pressable> : null}
+      {previous ? <Pressable accessibilityRole="button" accessibilityLabel={`Igual que la vez pasada: ${fmt(previous.weightKg)} kilos por ${fmt(previous.reps)}`} onPress={() => fill(previous)} style={styles.repeat}>
+        <Text style={styles.repeatText}>↻ Igual que la vez pasada · {fmt(previous.weightKg)} kg × {fmt(previous.reps)}</Text>
+      </Pressable> : null}
+    </View> : null}
     {warmup ? null : <View style={styles.effortSection}>
       <Text style={styles.effortQuestion}>¿Cuántas repeticiones más podrías haber hecho?</Text>
       <View style={styles.choices} accessibilityLabel="Repeticiones adicionales posibles">
@@ -107,6 +115,9 @@ export function SetEditor({ set, onSave, targetRir = null, previous = null }: { 
 }
 
 const styles=StyleSheet.create({
+  quick:{flexDirection:'row',flexWrap:'wrap',gap:7},
+  suggest:{borderColor:colors.green,backgroundColor:'#12291F'},
+  suggestText:{color:colors.green,fontSize:12,fontWeight:'800'},
   repeat:{alignSelf:'flex-start',paddingVertical:6,paddingHorizontal:10,borderRadius:10,borderWidth:1,borderColor:colors.border,backgroundColor:colors.surfaceRaised},
   repeatText:{color:'#9DBDFF',fontSize:12,fontWeight:'700'},
   header:{flexDirection:'row',alignItems:'center',justifyContent:'space-between'},

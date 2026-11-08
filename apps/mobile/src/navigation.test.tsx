@@ -7,6 +7,7 @@ const mockRepository = {
   searchExercises: jest.fn().mockResolvedValue([]),
   listRoutines: jest.fn().mockResolvedValue([]),
   getOverview: jest.fn().mockResolvedValue({ sessionsThisWeek: 0, activityMinutesThisWeek: 0, pendingSyncCount: 0, latestWorkout: null }),
+  getWeeklyMuscleVolume: jest.fn().mockResolvedValue({ items: [], totalSets: 0, sessions: 0 }),
 };
 
 jest.mock('expo-router', () => {

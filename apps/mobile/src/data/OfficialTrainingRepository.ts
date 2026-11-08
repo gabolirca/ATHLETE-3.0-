@@ -2,9 +2,9 @@ import type { CardioSession } from '@athlete/contracts';
 import type { OpenedAthleteData } from '@athlete/data';
 import type { CardioDraft } from '@/cardio/cardioForm';
 import type { TrainingRepository } from './TrainingRepository';
-import { computePersonalRecords, newRecordsInSession, setVolumeKg, summarizeWeek } from '@athlete/domain';
+import { computePersonalRecords, diagnoseWeeklyVolume, isEffectiveSet, newRecordsInSession, setVolumeKg, summarizeWeek, weeklySetsByMuscle, type ExerciseMuscles } from '@athlete/domain';
 import type { BodyMeasurementInput, LocalAthletePreferencesInput, LoggedSetInput, RoutineInput } from './trainingSchemas';
-import type { BodyMeasurement, CardioEntry, Exercise, ExerciseRecord, LocalAthletePreferences, PreviousPerformance, ProgressSummary, Routine, SessionRecord, TrainingOverview, Workout, WorkoutDetail, TrainingSet } from './trainingTypes';
+import type { BodyMeasurement, CardioEntry, Exercise, ExerciseRecord, LocalAthletePreferences, PreviousPerformance, ProgressSummary, Routine, SessionRecord, WeeklyMuscleVolume, TrainingOverview, Workout, WorkoutDetail, TrainingSet } from './trainingTypes';
 
 type IdFactory = () => string;
 type SessionDetail = Awaited<ReturnType<OpenedAthleteData['sessions']['getDetail']>>;
@@ -196,7 +196,10 @@ export class OfficialTrainingRepository implements TrainingRepository {
     const sets = detail.exercises.flatMap((exercise) => exercise.sets);
     const volumeKg = sets.reduce((sum, set) => sum + (set.setType === 'working' ? setVolumeKg(set) ?? 0 : 0), 0);
     const workout = toWorkout(detail, detail.exercises.length, sets.filter((set) => set.completedAt !== null).length, volumeKg);
+    const equipment = await this.data.exercises.listEquipment();
+    const equipmentSlug = new Map(equipment.ok ? equipment.value.map((e) => [e.id, e.slug]) : []);
     const exercises = await Promise.all(detail.exercises.map(async (exercise) => {
+      const catalog = unwrap(await this.data.exercises.getById(exercise.exerciseId));
       const metadata = exercise.trainingDayExerciseId
         ? await this.findPlannedExercise(detail.trainingDayId, exercise.trainingDayExerciseId)
         : null;
@@ -216,7 +219,8 @@ export class OfficialTrainingRepository implements TrainingRepository {
       }
       return {
         id: exercise.id, exerciseId: exercise.exerciseId,
-        exerciseName: unwrap(await this.data.exercises.getById(exercise.exerciseId)).name,
+        exerciseName: catalog.name,
+        incrementKg: loadIncrementKg(catalog.loadType, catalog.equipmentIds.map((id) => equipmentSlug.get(id) ?? '')),
         sortOrder: exercise.position, setsTarget: metadata?.targetSets ?? null,
         repsTarget: metadata?.targetRepsMin ?? null, restSeconds: metadata?.targetRestSeconds ?? null, targetRir: metadata?.targetRir ?? null,
         sets: displayedSets,
@@ -231,8 +235,9 @@ export class OfficialTrainingRepository implements TrainingRepository {
    * que esta sesión supera (peso máximo y 1RM estimado).
    */
   private async exerciseHistory(exerciseId: string, sessionId: string, hasSets: boolean): Promise<{ newRecords: SessionRecord[]; previous: PreviousPerformance | null }> {
-    const history = await this.data.sessions.listSetsForExercise(exerciseId);
-    if (!history.ok) return { newRecords: [], previous: null };
+    const all = await this.data.sessions.listSetsForExercise(exerciseId);
+    if (!all.ok) return { newRecords: [], previous: null };
+    const history = { value: upToSession(all.value, sessionId) };
     const newRecords = hasSets
       ? newRecordsInSession(history.value, sessionId)
         .filter((r) => r.kind === 'max_weight' || r.kind === 'best_e1rm')
@@ -312,6 +317,35 @@ export class OfficialTrainingRepository implements TrainingRepository {
     };
   }
 
+  async getWeeklyMuscleVolume(): Promise<WeeklyMuscleVolume> {
+    const from = localDate(new Date(Date.now() - 6 * 86_400_000));
+    const [active, history, groups] = await Promise.all([
+      this.data.sessions.getActive(),
+      this.data.sessions.listHistory({ status: ['completed'] }, { limit: 100 }),
+      this.data.exercises.listMuscleGroups(),
+    ]);
+    const recent = unwrap(history).items.filter((item) => item.localDate >= from);
+    const details = (await Promise.all(recent.map((item) => this.data.sessions.getDetail(item.sessionId))))
+      .filter((item) => item.ok).map((item) => item.value);
+    const current = unwrap(active);
+    if (current && current.localDate >= from && !details.some((d) => d.id === current.id)) details.push(current);
+
+    const groupList = unwrap(groups);
+    const slugOf = new Map(groupList.map((g) => [g.id, g.slug]));
+    const nameOf = new Map(groupList.map((g) => [g.slug, g.name]));
+    const muscles = new Map<string, ExerciseMuscles>();
+    for (const exerciseId of new Set(details.flatMap((d) => d.exercises.map((e) => e.exerciseId)))) {
+      const exercise = await this.data.exercises.getById(exerciseId);
+      if (!exercise.ok) continue;
+      const toSlugs = (ids: string[]) => ids.map((id) => slugOf.get(id)).filter((x): x is string => Boolean(x));
+      muscles.set(exerciseId, { primary: toSlugs(exercise.value.primaryMuscleGroupIds), secondary: toSlugs(exercise.value.secondaryMuscleGroupIds) });
+    }
+    const sets = weeklySetsByMuscle(details, (id) => muscles.get(id));
+    const items = diagnoseWeeklyVolume(sets).map((m) => ({ ...m, name: nameOf.get(m.muscle) ?? m.muscle }));
+    const totalSets = details.reduce((n, d) => n + d.exercises.reduce((k, e) => k + e.sets.filter(isEffectiveSet).length, 0), 0);
+    return { items, totalSets, sessions: details.length };
+  }
+
   async addBodyMeasurement(input: BodyMeasurementInput): Promise<string> {
     const id = this.newId(); const measuredAt = input.measuredAt; const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
     if (input.type === 'weight_kg') unwrap(await this.data.body.logWeight({ id, measuredAt, timeZone, value: input.value, inputUnit: 'kg' }));
@@ -386,6 +420,24 @@ export function isPastWorkout(startedAt: string, now: Date = new Date()): boolea
 type HistorySet = { sessionId: string; localDate: string; setType: string; weightKg: number | null; reps: number | null; rir: number | null; completedAt: string | null; position: number };
 
 /** Series de trabajo de la sesión más reciente (distinta de la actual) en la que hiciste el ejercicio. */
+/**
+ * Historial hasta esta sesión: quita las sesiones posteriores. Así, al abrir una sesión vieja, "la vez pasada"
+ * y los récords se calculan como eran ese día (no contra entrenamientos que vinieron después).
+ */
+export function upToSession<T extends HistorySet>(sets: readonly T[], sessionId: string): T[] {
+  const own = sets.filter((s) => s.sessionId === sessionId);
+  if (!own.length) return [...sets];
+  const day = own.reduce((d, s) => (s.localDate < d ? s.localDate : d), own[0]!.localDate);
+  const first = own.reduce((t, s) => (s.completedAt && s.completedAt < t ? s.completedAt : t), '\uffff');
+  return sets.filter((s) => s.sessionId === sessionId || s.localDate < day || (s.localDate === day && (s.completedAt ?? '') < first));
+}
+
+/** Incremento de carga para sugerir: mancuernas y kettlebell de 2 en 2 kg; lo demás 2.5 kg; peso corporal o tiempo, ninguno. */
+export function loadIncrementKg(loadType: string, equipmentSlugs: readonly string[]): number | null {
+  if (loadType !== 'external') return null;
+  return equipmentSlugs.some((e) => e === 'dumbbell' || e === 'kettlebell') ? 2 : 2.5;
+}
+
 export function previousPerformance(sets: readonly HistorySet[], currentSessionId: string): PreviousPerformance | null {
   const others = sets.filter((s) => s.sessionId !== currentSessionId && s.setType !== 'warmup' && (s.weightKg !== null || s.reps !== null));
   if (!others.length) return null;

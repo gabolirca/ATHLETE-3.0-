@@ -10,7 +10,8 @@ import { Eyebrow, Label, Title } from '@/components/Typography';
 import { Screen, Row } from '@/components/Screen';
 import { SectionHeading } from '@/components/SectionHeading';
 import { useTrainingRepository } from '@/data/MobileTrainingContext';
-import type { BodyMeasurement, ProgressSummary } from '@/data/trainingTypes';
+import type { BodyMeasurement, ProgressSummary, WeeklyMuscleVolume } from '@/data/trainingTypes';
+import { MuscleVolumeRow, VolumeExplainer } from '@/progress/muscleVolume';
 import { BodyMeasurementSchema } from '@/data/trainingSchemas';
 import { colors } from '@/theme/colors';
 
@@ -25,6 +26,7 @@ type MeasurementKind = typeof kinds[number]['id'];
 export default function ProgressScreen() {
   const repository = useTrainingRepository();
   const [summary, setSummary] = useState<ProgressSummary | null>(null);
+  const [volume, setVolume] = useState<WeeklyMuscleVolume | null>(null);
   const [loadingError, setLoadingError] = useState(false);
   const [kind, setKind] = useState<MeasurementKind>('weight_kg');
   const [value, setValue] = useState('');
@@ -34,6 +36,7 @@ export default function ProgressScreen() {
   const refresh = useCallback(async () => {
     if (!repository) return;
     try { setSummary(await repository.getProgress()); setLoadingError(false); } catch { setLoadingError(true); }
+    repository.getWeeklyMuscleVolume().then(setVolume).catch(() => setVolume(null));
   }, [repository]);
   useFocusEffect(useCallback(() => { void refresh(); }, [refresh]));
 
@@ -59,6 +62,10 @@ export default function ProgressScreen() {
     <Card><Row><View><Eyebrow>VOLUMEN DE FUERZA · 7 DÍAS</Eyebrow><Text style={s.number}>{Math.round(summary?.weeklyVolumeKg ?? 0).toLocaleString('es-MX')} <Text style={s.unit}>kg·reps</Text></Text></View><View><Eyebrow>SESIONES</Eyebrow><Text style={s.metric}>{summary?.sessionsThisMonth ?? 0}<Text style={s.unit}> este mes</Text></Text></View></Row>
       {chartMax > 0 ? <View style={s.chart}>{summary?.dailyVolumeKg.map((day, index) => <View key={`${day.label}-${index}`} style={s.barColumn}><View style={[s.bar, { height: Math.max(5, Math.round((day.volumeKg / chartMax) * 94)), backgroundColor: day.volumeKg ? colors.blue : colors.graphite }]} /><Text style={s.day}>{day.label}</Text></View>)}</View> : <Text style={s.note}>Registra sesiones con peso y repeticiones para ver tu volumen. Las series de calentamiento no se cuentan.</Text>}
     </Card>
+    <SectionHeading title="Volumen por músculo · 7 días"/>
+    {volume && volume.totalSets > 0
+      ? <Card>{volume.items.map((item) => <MuscleVolumeRow key={item.muscle} item={item} scaleMax={Math.max(22, ...volume.items.map((m) => m.sets))}/>)}<VolumeExplainer/></Card>
+      : <EmptyState icon="body-outline" title="Aún no hay series esta semana" detail="Registra series de trabajo y verás cuántas lleva cada músculo frente a una referencia general."/>}
     <SectionHeading title="Récords"/>
     {summary?.records.length ? <><RecordsExplainer/>{summary.records.map((record) => <RecordCard key={record.exerciseId} record={record}/>)}</> : <EmptyState icon="trophy-outline" title="Aún no hay récords" detail="Los récords aparecen cuando guardas una serie con peso. No estimamos valores faltantes."/>}
     <SectionHeading title="Mediciones corporales"/>

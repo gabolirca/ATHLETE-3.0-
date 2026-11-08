@@ -3,6 +3,7 @@ import { DEFAULT_REST_SECONDS, RestTimerBar, RestTimerFullScreen, useRestTimer }
 import { useStrictRest } from '@/settings/devicePrefs';
 import { exerciseProgress, isLoggedWorkingSet, nextStepLabel, workoutGuide, type ExerciseProgress, type ExerciseStatus } from '@/workout/guide';
 import { NewRecordBadge } from '@/progress/records';
+import { exerciseSuggestion, formatSuggestion } from '@/workout/coach';
 import { AppInput } from '@/components/AppInput';
 import { isPastWorkout } from '@/data/OfficialTrainingRepository';
 import { dayLabel, localDateOfDevice } from '@/lib/localDate';
@@ -56,7 +57,7 @@ export default function WorkoutScreen() {
       durationMinutes = n;
     }
     setFinishing(true); setFinishError('');
-    try { await repository.finishWorkout(sessionId, durationMinutes ? { durationMinutes } : {}); router.replace('/history'); }
+    try { await repository.finishWorkout(sessionId, durationMinutes ? { durationMinutes } : {}); router.replace(`/history/${sessionId}`); }
     catch (error) { setFinishError(error instanceof Error && error.message === 'WORKOUT_REQUIRES_RECORDED_SET' ? 'Registra al menos una serie con peso o repeticiones antes de finalizar.' : 'No pudimos finalizar la sesión. La información sigue guardada localmente.'); }
     finally { setFinishing(false); }
   }
@@ -84,6 +85,7 @@ export default function WorkoutScreen() {
       // Abierto: el actual, los libres o los que el usuario abrió. Plegados: los terminados y los que vienen.
       const open = toggled.has(exercise.id) ? status === 'done' || status === 'upcoming' : status === 'current' || status === 'free';
       const loggedSets = exercise.sets.filter(isLoggedWorkingSet);
+      const suggestion = detail.workout.state === 'active' ? exerciseSuggestion(exercise) : null;
       return <View key={exercise.id} style={s.exerciseBlock}>
       <Pressable accessibilityRole="button" accessibilityLabel={`${exercise.exerciseName}, ${statusLabel(status, progress)}`} accessibilityState={{ expanded: open }}
         onPress={() => setToggled((cur) => { const next = new Set(cur); if (next.has(exercise.id)) next.delete(exercise.id); else next.add(exercise.id); return next; })}>
@@ -105,10 +107,14 @@ export default function WorkoutScreen() {
       {exercise.previous ? <Text style={s.previous}>
         La vez pasada · {dayLabel(exercise.previous.localDate, localDateOfDevice(new Date()))}: {exercise.previous.sets.map((p) => `${p.weightKg ?? '—'}×${p.reps ?? '—'}`).join(' · ')}
       </Text> : null}
+      {suggestion ? <View style={s.suggestBox} accessibilityLabel={`Sugerencia de hoy: ${formatSuggestion(suggestion)}. ${suggestion.reason}`}>
+        <Text style={s.suggestTitle}>Sugerencia de hoy · {formatSuggestion(suggestion)}</Text>
+        <Text style={s.suggestReason}>{suggestion.reason}</Text>
+      </View> : null}
       <NewRecordBadge records={exercise.newRecords ?? []}/>
       {exercise.sets.filter((set) => !(progress.complete && set.reps === null && set.weightKg === null && !toggled.has(exercise.id))).map((set, index) => {
         const prev = exercise.previous?.sets[index] ?? null;
-        return <SetEditor key={set.id} set={set} targetRir={exercise.targetRir ?? null} previous={prev ? { weightKg: prev.weightKg, reps: prev.reps } : null} onSave={async (values) => {
+        return <SetEditor key={set.id} set={set} targetRir={exercise.targetRir ?? null} previous={prev ? { weightKg: prev.weightKg, reps: prev.reps } : null} suggestion={suggestion ? { weightKg: suggestion.weightKg, reps: suggestion.reps } : null} onSave={async (values) => {
           await repository?.saveSet(sessionId, set.id, values);
           const updated = repository ? await repository.getWorkout(sessionId) : null;
           if (updated) setDetail(updated);
@@ -141,4 +147,4 @@ function statusLabel(status: ExerciseStatus, p: ExerciseProgress): string {
   return `${p.done} series`;
 }
 
-const s=StyleSheet.create({root:{flex:1},guideTitle:{color:colors.text,fontSize:16,fontWeight:'800'},track:{height:8,borderRadius:4,backgroundColor:colors.surfaceRaised,overflow:'hidden'},fill:{height:8,borderRadius:4,backgroundColor:colors.blue},fillDone:{backgroundColor:colors.green},statusRow:{flexDirection:'row',alignItems:'center',gap:8,flexWrap:'wrap'},now:{color:'white',backgroundColor:colors.blue,fontSize:10,fontWeight:'800',paddingHorizontal:6,paddingVertical:2,borderRadius:6,overflow:'hidden'},doneTag:{color:colors.green,fontSize:10,fontWeight:'800'},upcoming:{color:colors.muted,fontSize:10,fontWeight:'800'},summary:{color:colors.secondary,fontSize:12,marginTop:4},previous:{color:'#9DBDFF',fontSize:12,lineHeight:17,paddingHorizontal:4},exerciseBlock:{gap:9},exerciseName:{color:colors.text,fontSize:18,fontWeight:'800',marginTop:5},detail:{color:colors.secondary,fontSize:11,lineHeight:16},addSet:{flexDirection:'row',alignItems:'center',gap:3,padding:7},addSetText:{color:colors.blue,fontSize:11,fontWeight:'800'},error:{color:colors.red,fontSize:12,lineHeight:18}});
+const s=StyleSheet.create({root:{flex:1},suggestBox:{borderWidth:1,borderColor:colors.green,backgroundColor:'#12291F',borderRadius:12,padding:10,gap:3},suggestTitle:{color:colors.green,fontSize:13,fontWeight:'800'},suggestReason:{color:colors.secondary,fontSize:11,lineHeight:16},guideTitle:{color:colors.text,fontSize:16,fontWeight:'800'},track:{height:8,borderRadius:4,backgroundColor:colors.surfaceRaised,overflow:'hidden'},fill:{height:8,borderRadius:4,backgroundColor:colors.blue},fillDone:{backgroundColor:colors.green},statusRow:{flexDirection:'row',alignItems:'center',gap:8,flexWrap:'wrap'},now:{color:'white',backgroundColor:colors.blue,fontSize:10,fontWeight:'800',paddingHorizontal:6,paddingVertical:2,borderRadius:6,overflow:'hidden'},doneTag:{color:colors.green,fontSize:10,fontWeight:'800'},upcoming:{color:colors.muted,fontSize:10,fontWeight:'800'},summary:{color:colors.secondary,fontSize:12,marginTop:4},previous:{color:'#9DBDFF',fontSize:12,lineHeight:17,paddingHorizontal:4},exerciseBlock:{gap:9},exerciseName:{color:colors.text,fontSize:18,fontWeight:'800',marginTop:5},detail:{color:colors.secondary,fontSize:11,lineHeight:16},addSet:{flexDirection:'row',alignItems:'center',gap:3,padding:7},addSetText:{color:colors.blue,fontSize:11,fontWeight:'800'},error:{color:colors.red,fontSize:12,lineHeight:18}});
