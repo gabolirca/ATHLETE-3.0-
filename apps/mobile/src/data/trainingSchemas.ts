@@ -18,6 +18,9 @@ export const LoggedSetSchema = z.object({
   reps: z.number().int().min(1).max(200).nullable(),
   rir: Rir.nullable(),
   isWarmup: z.boolean(),
+  /** Ejercicios por tiempo o distancia (remo 400 m, plancha 40 s). Opcionales: la fuerza no los usa. (0.7.0) */
+  durationSeconds: z.number().int().min(1, 'El tiempo debe ser mayor que cero').max(86_400).nullable().optional(),
+  distanceMeters: z.number().finite().positive('La distancia debe ser mayor que cero').max(1_000_000).nullable().optional(),
 });
 
 export const BodyMeasurementSchema = z.object({

@@ -1,5 +1,5 @@
 import type { CardioDraft } from '@/cardio/cardioForm';
-import type { BodyMeasurement, CardioEntry, Exercise, LocalAthletePreferences, ProgressSummary, Routine, WeeklyMuscleVolume, RoutineDraft, TrainingOverview, Workout, WorkoutDetail } from './trainingTypes';
+import type { BodyMeasurement, CardioEntry, Exercise, LocalAthletePreferences, Program, ProgramWeekStatus, ProgressSummary, Routine, WeeklyLoad, WeeklyMuscleVolume, RoutineDraft, TrainingOverview, Workout, WorkoutDetail } from './trainingTypes';
 import type { BodyMeasurementInput, LocalAthletePreferencesInput, LoggedSetInput } from './trainingSchemas';
 
 export interface TrainingRepository {
@@ -13,7 +13,18 @@ export interface TrainingRepository {
   addSet(sessionId: string, sessionExerciseId: string): Promise<string>;
   saveSet(sessionId: string, setId: string, input: LoggedSetInput): Promise<void>;
   /** En un entrenamiento pasado, `durationMinutes` fija la hora de fin (inicio + duración). */
-  finishWorkout(sessionId: string, options?: { durationMinutes?: number }): Promise<void>;
+  finishWorkout(sessionId: string, options?: { durationMinutes?: number; sessionRpe?: number | null }): Promise<void>;
+  // ---- Programa híbrido (0.7.0) ----
+  listPrograms(): Promise<Program[]>;
+  /** Crea el programa del usuario a partir de una plantilla (p. ej. `hybrid-athlete-1-0`). Devuelve su id. */
+  adoptProgramTemplate(slug: string): Promise<string>;
+  deleteProgram(planId: string): Promise<void>;
+  programWeekStatus(planId: string): Promise<ProgramWeekStatus>;
+  /** Inicia (o retoma) la sesión de un día del programa con sus ejercicios. */
+  startProgramDay(dayId: string): Promise<string>;
+  saveBlockResult(sessionId: string, blockId: string, result: { roundsCompleted: number | null; extraReps: number | null; durationSeconds: number | null }): Promise<void>;
+  /** Carga de sesión (RPE × minutos) por semana: fuerza, acondicionamiento y cardio. */
+  getWeeklyLoad(weeks?: number): Promise<WeeklyLoad>;
   tombstoneWorkout(sessionId: string): Promise<void>;
   getWorkout(sessionId: string): Promise<WorkoutDetail | null>;
   listHistory(): Promise<Workout[]>;

@@ -12,3 +12,4 @@ export * from './score';
 export * from './loadSuggestion';
 export * from './templates/types';
 export * from './templates/hybridAthlete';
+export * from './load';

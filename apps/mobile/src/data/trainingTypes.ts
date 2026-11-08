@@ -16,11 +16,26 @@ export type PreviousPerformance = { localDate: string; sets: Array<{ weightKg: n
 export type RoutineExercise = { exerciseId: string; exerciseName: string; sortOrder: number; sets: number | null; reps: number | null; restSeconds: number | null };
 export type Routine = { id: string; name: string; exercises: RoutineExercise[]; updatedAt: string };
 export type TrainingSet = LoggedSetInput & { id: string; setIndex: number };
+
 /** Récord que esta sesión supera (peso máximo o 1RM estimado). La primera vez que haces un ejercicio no cuenta como récord. */
 export type SessionRecord = { kind: 'max_weight' | 'best_e1rm'; value: number; weightKg: number | null; reps: number | null };
-export type SessionExercise = { id: string; exerciseId: string; exerciseName: string; sortOrder: number; setsTarget: number | null; repsTarget: number | null; restSeconds: number | null; targetRir?: number | null; sets: TrainingSet[]; newRecords?: SessionRecord[]; previous?: PreviousPerformance | null; /** Incremento para la carga sugerida; null = sin carga externa. */ incrementKg?: number | null };
+/** Bloque de la sesión (programa híbrido) con su resultado si ya se registró. */
+export type WorkoutBlock = {
+  id: string; name: string; kind: string; format: 'sets' | 'rounds' | 'amrap' | 'emom' | 'for_time' | 'intervals' | 'continuous';
+  rounds: number | null; timeCapSeconds: number | null; restSeconds: number | null; targetRpe: number | null; notes: string | null;
+  result: { id: string; roundsCompleted: number | null; extraReps: number | null; durationSeconds: number | null } | null;
+};
+export type SessionExercise = { id: string; exerciseId: string; exerciseName: string; sortOrder: number; setsTarget: number | null; repsTarget: number | null; restSeconds: number | null; targetRir?: number | null; sets: TrainingSet[]; newRecords?: SessionRecord[]; previous?: PreviousPerformance | null; /** Incremento para la carga sugerida; null = sin carga externa. */ incrementKg?: number | null;
+  /** 0.7.0 (programa): bloque, objetivos de tiempo/distancia, por lado y cómo se registra. */
+  blockId?: string | null; targetDurationSeconds?: number | null; targetDistanceMeters?: number | null; perSide?: boolean;
+  modality?: 'strength' | 'cardio'; loadType?: string; repsMax?: number | null; notes?: string | null;
+};
 export type Workout = { id: string; state: 'active' | 'completed'; startedAt: string; completedAt: string | null; localVersion: number | null; serverVersion: number | null; syncStatus: 'pending' | 'synced' | 'conflict' | 'failed'; exerciseCount: number; setCount: number; durationMinutes: number | null };
-export type WorkoutDetail = { workout: Workout; exercises: SessionExercise[] };
+export type WorkoutDetail = {
+  workout: Workout; exercises: SessionExercise[];
+  /** Programa híbrido: bloques del día (vacío en rutinas y sesiones libres), RPE de la sesión y día de origen. */
+  blocks?: WorkoutBlock[]; sessionRpe?: number | null; trainingDayId?: string | null; dayName?: string | null;
+};
 /** `sessionsThisWeek` = fuerza + cardio. `activityMinutesThisWeek` incluye la duración del cardio. */
 export type TrainingOverview = { sessionsThisWeek: number; strengthSessionsThisWeek: number; cardioSessionsThisWeek: number; activityMinutesThisWeek: number; pendingSyncCount: number; latestWorkout: Workout | null };
 export type OutboxOperation = { id: string; clientMutationId: string; aggregateType: string; aggregateId: string; operation: string; localVersion: number; baseServerVersion: number | null; payloadJson: string; status: 'pending' | 'syncing' | 'failed' | 'conflict' | 'acked'; attemptCount: number };
@@ -55,3 +70,23 @@ export type CardioEntry = Pick<CardioSession,
 
 /** Elemento del historial unificado de atleta híbrido. */
 export type HistoryItem = { kind: 'strength'; startedAt: string; workout: Workout } | { kind: 'cardio'; startedAt: string; cardio: CardioEntry };
+
+// ---------- Programa híbrido (0.7.0) ----------
+export type ProgramExercise = {
+  id: string; exerciseId: string; exerciseName: string; modality: 'strength' | 'cardio'; loadType: string;
+  sets: number | null; repsMin: number | null; repsMax: number | null; durationSeconds: number | null; distanceMeters: number | null;
+  restSeconds: number | null; perSide: boolean; targetRpe: number | null; notes: string | null;
+};
+export type ProgramBlock = {
+  id: string; name: string; kind: string; format: WorkoutBlock['format']; rounds: number | null; timeCapSeconds: number | null;
+  restSeconds: number | null; targetRpe: number | null; notes: string | null; exercises: ProgramExercise[];
+};
+export type SessionModality = 'strength' | 'conditioning' | 'swim' | 'run' | 'bike' | 'row' | 'mobility' | 'rest';
+export type ProgramDay = {
+  id: string; name: string; weekday: number | null; modality: SessionModality | null; targetRpe: number | null;
+  targetDurationMinutes: number | null; notes: string | null; blocks: ProgramBlock[];
+};
+export type Program = { id: string; name: string; templateSlug: string | null; days: ProgramDay[] };
+/** Lo hecho esta semana (lunes a domingo) por cada día del programa. */
+export type ProgramWeekStatus = Record<string, { workoutId?: string; cardioId?: string; active?: boolean }>;
+export type WeeklyLoad = { weeks: Array<{ weekStart: string; total: number; byKind: { strength: number; conditioning: number; cardio: number }; sessions: number; missingRpe: number }>; trend: { ratio: number | null; status: 'low_data' | 'ok' | 'spike' } };
