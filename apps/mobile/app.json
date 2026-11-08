@@ -34,7 +34,8 @@
       "expo-secure-store",
       "expo-font",
       "expo-status-bar",
-      "./plugins/withScriptSandboxingDisabled"
+      "./plugins/withScriptSandboxingDisabled",
+      "./plugins/withPodsExplicitModulesDisabled"
     ],
     "experiments": {
       "typedRoutes": true
