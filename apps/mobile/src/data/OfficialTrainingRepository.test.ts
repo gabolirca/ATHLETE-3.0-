@@ -32,9 +32,9 @@ function services() {
 test('routes exercise search to the bundled official catalog', async () => {
   const fake = services();
   const repository = new OfficialTrainingRepository(fake.data, () => '00000000-0000-7000-8000-000000000099');
-  await expect(repository.searchExercises('senta')).resolves.toEqual([
-    { id: fake.exercise.id, name: 'Sentadilla', muscleGroup: 'General', equipment: null, origin: 'sample' },
-  ]);
+  const found = await repository.searchExercises('senta');
+  expect(found).toHaveLength(1);
+  expect(found[0]).toMatchObject({ id: fake.exercise.id, name: 'Sentadilla', muscleGroup: 'General', equipment: null, origin: 'sample', isCustom: false, muscles: [] });
   expect(fake.services.exercises.list).toHaveBeenCalledWith({ search: 'senta', modality: 'strength' });
 });
 

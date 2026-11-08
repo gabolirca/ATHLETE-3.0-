@@ -7,7 +7,12 @@ import type { TrainingSet } from '@/data/trainingTypes';
 import { colors } from '@/theme/colors';
 import { rirLabel, rirOptions } from './rirOptions';
 
-export function SetEditor({ set, onSave, targetRir = null }: { set: TrainingSet; onSave: (input: LoggedSetInput) => Promise<void>; targetRir?: number | null }) {
+/** Lo que hiciste en esta misma serie la vez pasada (guía, no se guarda solo). */
+export type PreviousSet = { weightKg: number | null; reps: number | null };
+
+const fmt = (n: number | null) => (n === null ? '—' : String(n));
+
+export function SetEditor({ set, onSave, targetRir = null, previous = null }: { set: TrainingSet; onSave: (input: LoggedSetInput) => Promise<void>; targetRir?: number | null; previous?: PreviousSet | null }) {
   const [weight, setWeight] = useState(set.weightKg === null ? '' : String(set.weightKg));
   const [reps, setReps] = useState(set.reps === null ? '' : String(set.reps));
   const [rir, setRir] = useState<number | null>(set.rir);
@@ -16,6 +21,8 @@ export function SetEditor({ set, onSave, targetRir = null }: { set: TrainingSet;
   const [saving, setSaving] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [precise, setPrecise] = useState(false);
+  // Campos no controlados (arreglo del teclado de iOS 27): al cambiar el valor desde fuera se remontan con otra key.
+  const [inputKey, setInputKey] = useState(0);
   const lastSaved = useRef<LoggedSetInput>({ weightKg: set.weightKg, reps: set.reps, rir: set.rir, isWarmup: set.isWarmup });
   const rirIsOutOfRange = set.rir !== null && (set.rir < 0 || set.rir > 10 || !Number.isInteger(set.rir * 2));
   // Si el valor guardado es inválido, se despliega todo para poder corregirlo.
@@ -27,13 +34,16 @@ export function SetEditor({ set, onSave, targetRir = null }: { set: TrainingSet;
     setReps(set.reps === null ? '' : String(set.reps));
     setRir(set.rir);
     setWarmup(set.isWarmup);
+    setInputKey((k) => k + 1);
   }, [set.id, set.weightKg, set.reps, set.rir, set.isWarmup]);
 
-  async function persist(nextRir = rir, warmupValue = warmup) {
+  async function persist(nextRir = rir, warmupValue = warmup, values: { weight: string; reps: string } = { weight, reps }) {
     if (saving) return;
+    const w = values.weight.trim().replace(',', '.');
+    const r = values.reps.trim();
     const parsed = LoggedSetSchema.safeParse({
-      weightKg: weight.trim() === '' ? null : Number(weight),
-      reps: reps.trim() === '' ? null : Number(reps),
+      weightKg: w === '' ? null : Number(w),
+      reps: r === '' ? null : Number(r),
       rir: nextRir,
       isWarmup: warmupValue,
     });
@@ -42,6 +52,14 @@ export function SetEditor({ set, onSave, targetRir = null }: { set: TrainingSet;
     setError(''); setSaving(true);
     try { await onSave(parsed.data); lastSaved.current = parsed.data; } catch { setError('No se pudo guardar la serie localmente.'); }
     finally { setSaving(false); }
+  }
+
+  /** "Igual que la vez pasada": copia peso y reps de la misma serie anterior y guarda. */
+  function repeatPrevious() {
+    if (!previous) return;
+    const next = { weight: previous.weightKg === null ? '' : String(previous.weightKg), reps: previous.reps === null ? '' : String(previous.reps) };
+    setWeight(next.weight); setReps(next.reps); setInputKey((k) => k + 1);
+    void persist(rir, warmup, next);
   }
 
   function selectRir(value: number | null) {
@@ -56,9 +74,12 @@ export function SetEditor({ set, onSave, targetRir = null }: { set: TrainingSet;
       <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: warmup }} onPress={() => { const next = !warmup; setWarmup(next); void persist(rir, next); }} style={[styles.warmup, warmup && styles.warmupActive]}><Text style={[styles.warmupText, warmup && styles.warmupTextActive]}>Calentamiento</Text></Pressable>
     </View>
     <View style={styles.fields}>
-      <AppInput label="Peso (kg)" value={weight} onChangeText={setWeight} onBlur={() => { void persist(); }} keyboardType="decimal-pad" placeholder="—" returnKeyType="done" />
-      <AppInput label="Repeticiones" value={reps} onChangeText={setReps} onBlur={() => { void persist(); }} keyboardType="number-pad" placeholder="—" returnKeyType="done" />
+      <AppInput key={`w-${inputKey}`} label="Peso (kg)" defaultValue={weight} onChangeText={setWeight} onBlur={() => { void persist(); }} keyboardType="decimal-pad" placeholder={previous ? fmt(previous.weightKg) : '—'} returnKeyType="done" autoCorrect={false} spellCheck={false} />
+      <AppInput key={`r-${inputKey}`} label="Repeticiones" defaultValue={reps} onChangeText={setReps} onBlur={() => { void persist(); }} keyboardType="number-pad" placeholder={previous ? fmt(previous.reps) : '—'} returnKeyType="done" autoCorrect={false} spellCheck={false} />
     </View>
+    {previous && weight === '' && reps === '' ? <Pressable accessibilityRole="button" accessibilityLabel={`Igual que la vez pasada: ${fmt(previous.weightKg)} kilos por ${fmt(previous.reps)}`} onPress={repeatPrevious} style={styles.repeat}>
+      <Text style={styles.repeatText}>↻ Igual que la vez pasada · {fmt(previous.weightKg)} kg × {fmt(previous.reps)}</Text>
+    </Pressable> : null}
     {warmup ? null : <View style={styles.effortSection}>
       <Text style={styles.effortQuestion}>¿Cuántas repeticiones más podrías haber hecho?</Text>
       <View style={styles.choices} accessibilityLabel="Repeticiones adicionales posibles">
@@ -86,6 +107,8 @@ export function SetEditor({ set, onSave, targetRir = null }: { set: TrainingSet;
 }
 
 const styles=StyleSheet.create({
+  repeat:{alignSelf:'flex-start',paddingVertical:6,paddingHorizontal:10,borderRadius:10,borderWidth:1,borderColor:colors.border,backgroundColor:colors.surfaceRaised},
+  repeatText:{color:'#9DBDFF',fontSize:12,fontWeight:'700'},
   header:{flexDirection:'row',alignItems:'center',justifyContent:'space-between'},
   setLabel:{color:colors.secondary,fontSize:10,fontWeight:'800',letterSpacing:1},
   warmup:{minHeight:44,justifyContent:'center',borderRadius:12,borderWidth:1,borderColor:colors.border,paddingHorizontal:12,paddingVertical:8},
