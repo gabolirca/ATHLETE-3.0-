@@ -1,4 +1,5 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
+import { DEFAULT_REST_SECONDS, RestTimerBar, useRestTimer } from '@/components/RestTimer';
 import { NewRecordBadge } from '@/progress/records';
 import { AppInput } from '@/components/AppInput';
 import { isPastWorkout } from '@/data/OfficialTrainingRepository';
@@ -30,6 +31,8 @@ export default function WorkoutScreen() {
   const [actionError, setActionError] = useState('');
   const [finishing, setFinishing] = useState(false);
   const [duration, setDuration] = useState('60');
+  const timer = useRestTimer();
+  const timerStarted = useRef(new Set<string>());
 
   const refresh = useCallback(async (showLoading = true) => {
     if (!repository) return;
@@ -59,7 +62,7 @@ export default function WorkoutScreen() {
   if (!detail) return <Screen><Title>Sesión</Title><EmptyState title="Sesión no disponible" detail="Puede que se haya eliminado de este dispositivo." action="Ir a Entrenar" onAction={() => router.replace('/train')}/></Screen>;
 
   const past = isPastWorkout(detail.workout.startedAt);
-  return <Screen>
+  return <View style={s.root}><Screen>
     <View><Eyebrow>{past
       ? `${dayLabel(localDateOfDevice(new Date(detail.workout.startedAt)), localDateOfDevice(new Date()))} · ${new Date(detail.workout.startedAt).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}`.toUpperCase()
       : `INICIADA ${new Date(detail.workout.startedAt).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}`}</Eyebrow><Title>{past ? 'Entrenamiento pasado' : 'Entrenamiento'}</Title></View>
@@ -67,8 +70,22 @@ export default function WorkoutScreen() {
     {detail.exercises.length === 0 ? <EmptyState icon="barbell-outline" title="Agrega tu primer ejercicio" detail="Elige un ejercicio del catálogo local y registra tus series." action={showPicker ? undefined : 'Buscar ejercicios'} onAction={() => setShowPicker(true)}/> : null}
     {detail.exercises.map((exercise) => <View key={exercise.id} style={s.exerciseBlock}>
       <Card accent={colors.graphite}><Row><View style={{flex:1}}><Eyebrow>{exercise.setsTarget ? `${exercise.setsTarget} SERIES · OBJETIVO ${exercise.repsTarget} REPS` : 'EJERCICIO'}</Eyebrow><Text style={s.exerciseName}>{exercise.exerciseName}</Text></View><Pressable accessibilityRole="button" accessibilityLabel={`Agregar serie a ${exercise.exerciseName}`} onPress={async () => { try { await repository?.addSet(sessionId, exercise.id); setActionError(''); await refresh(false); } catch { setActionError('No se pudo agregar la serie. Intenta de nuevo.'); } }} style={s.addSet}><Ionicons name="add" size={18} color={colors.blue}/><Text style={s.addSetText}>Serie</Text></Pressable></Row>{exercise.restSeconds ? <Text style={s.detail}>Descanso objetivo: {exercise.restSeconds} s</Text> : null}</Card>
+      {exercise.previous ? <Text style={s.previous}>
+        La vez pasada · {dayLabel(exercise.previous.localDate, localDateOfDevice(new Date()))}: {exercise.previous.sets.map((p) => `${p.weightKg ?? '—'}×${p.reps ?? '—'}`).join(' · ')}
+      </Text> : null}
       <NewRecordBadge records={exercise.newRecords ?? []}/>
-      {exercise.sets.map((set) => <SetEditor key={set.id} set={set} targetRir={exercise.targetRir ?? null} onSave={async (values) => { await repository?.saveSet(sessionId, set.id, values); await refresh(false); }} />)}
+      {exercise.sets.map((set, index) => {
+        const prev = exercise.previous?.sets[index] ?? null;
+        return <SetEditor key={set.id} set={set} targetRir={exercise.targetRir ?? null} previous={prev ? { weightKg: prev.weightKg, reps: prev.reps } : null} onSave={async (values) => {
+          await repository?.saveSet(sessionId, set.id, values);
+          // El descanso arranca una sola vez por serie: cuando una serie de trabajo ya tiene repeticiones.
+          if (!values.isWarmup && values.reps !== null && !timerStarted.current.has(set.id)) {
+            timerStarted.current.add(set.id);
+            timer.start(exercise.restSeconds ?? DEFAULT_REST_SECONDS, `Siguiente: ${exercise.exerciseName}`);
+          }
+          await refresh(false);
+        }} />;
+      })}
     </View>)}
     {detail.exercises.length ? <ActionButton secondary onPress={() => setShowPicker((value) => !value)}>{showPicker ? 'Cerrar catálogo' : '＋ Agregar ejercicio'}</ActionButton> : null}
     {showPicker ? <ExercisePicker onSelect={async (exercise) => { try { await repository?.addExercise(sessionId, exercise.id); setActionError(''); setShowPicker(false); await refresh(false); } catch { setActionError('No se pudo agregar el ejercicio. Intenta de nuevo.'); } }} /> : null}
@@ -76,7 +93,8 @@ export default function WorkoutScreen() {
     {past && detail.workout.state === 'active' ? <AppInput label="¿Cuánto duró? (minutos)" defaultValue={duration} onChangeText={setDuration} keyboardType="number-pad" maxLength={3}/> : null}
     {finishError ? <Text accessibilityRole="alert" style={s.error}>{finishError}</Text> : null}
     <ActionButton onPress={finish} loading={finishing} disabled={detail.workout.state !== 'active'}>Finalizar y guardar sesión</ActionButton>
-  </Screen>;
+    {timer.active ? <View style={{ height: 84 }}/> : null}
+  </Screen><RestTimerBar timer={timer}/></View>;
 }
 
-const s=StyleSheet.create({exerciseBlock:{gap:9},exerciseName:{color:colors.text,fontSize:18,fontWeight:'800',marginTop:5},detail:{color:colors.secondary,fontSize:11,lineHeight:16},addSet:{flexDirection:'row',alignItems:'center',gap:3,padding:7},addSetText:{color:colors.blue,fontSize:11,fontWeight:'800'},error:{color:colors.red,fontSize:12,lineHeight:18}});
+const s=StyleSheet.create({root:{flex:1},previous:{color:'#9DBDFF',fontSize:12,lineHeight:17,paddingHorizontal:4},exerciseBlock:{gap:9},exerciseName:{color:colors.text,fontSize:18,fontWeight:'800',marginTop:5},detail:{color:colors.secondary,fontSize:11,lineHeight:16},addSet:{flexDirection:'row',alignItems:'center',gap:3,padding:7},addSetText:{color:colors.blue,fontSize:11,fontWeight:'800'},error:{color:colors.red,fontSize:12,lineHeight:18}});

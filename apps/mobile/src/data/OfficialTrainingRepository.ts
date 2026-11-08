@@ -4,7 +4,7 @@ import type { CardioDraft } from '@/cardio/cardioForm';
 import type { TrainingRepository } from './TrainingRepository';
 import { computePersonalRecords, newRecordsInSession, setVolumeKg, summarizeWeek } from '@athlete/domain';
 import type { BodyMeasurementInput, LocalAthletePreferencesInput, LoggedSetInput, RoutineInput } from './trainingSchemas';
-import type { BodyMeasurement, CardioEntry, Exercise, ExerciseRecord, LocalAthletePreferences, ProgressSummary, Routine, SessionRecord, TrainingOverview, Workout, WorkoutDetail, TrainingSet } from './trainingTypes';
+import type { BodyMeasurement, CardioEntry, Exercise, ExerciseRecord, LocalAthletePreferences, PreviousPerformance, ProgressSummary, Routine, SessionRecord, TrainingOverview, Workout, WorkoutDetail, TrainingSet } from './trainingTypes';
 
 type IdFactory = () => string;
 type SessionDetail = Awaited<ReturnType<OpenedAthleteData['sessions']['getDetail']>>;
@@ -64,13 +64,18 @@ export class OfficialTrainingRepository implements TrainingRepository {
     ]);
     const muscleNames = new Map(unwrap(groups).map((item) => [item.id, item.name]));
     const equipmentNames = new Map(unwrap(equipment).map((item) => [item.id, item.name]));
-    return unwrap(items).map((exercise) => ({
-      id: exercise.id,
-      name: exercise.name,
-      muscleGroup: exercise.primaryMuscleGroupIds.map((id) => muscleNames.get(id)).filter(Boolean).join(', ') || 'General',
-      equipment: exercise.equipmentIds.map((id) => equipmentNames.get(id)).filter(Boolean).join(', ') || null,
-      origin: exercise.ownerUserId ? 'server' : 'sample',
-    }));
+    return unwrap(items).map((exercise) => {
+      const muscles = exercise.primaryMuscleGroupIds.map((id) => muscleNames.get(id)).filter((x): x is string => Boolean(x));
+      const equipmentList = exercise.equipmentIds.map((id) => equipmentNames.get(id)).filter((x): x is string => Boolean(x));
+      return {
+        id: exercise.id,
+        name: exercise.name,
+        muscleGroup: muscles.join(', ') || 'General',
+        equipment: equipmentList.join(', ') || null,
+        origin: exercise.ownerUserId ? 'server' : 'sample',
+        muscles, equipmentList, tier: exercise.accessTier, isCustom: exercise.ownerUserId !== null, mechanics: exercise.mechanics,
+      };
+    });
   }
 
   async listRoutines(): Promise<Routine[]> {
@@ -215,20 +220,25 @@ export class OfficialTrainingRepository implements TrainingRepository {
         sortOrder: exercise.position, setsTarget: metadata?.targetSets ?? null,
         repsTarget: metadata?.targetRepsMin ?? null, restSeconds: metadata?.targetRestSeconds ?? null, targetRir: metadata?.targetRir ?? null,
         sets: displayedSets,
-        newRecords: await this.sessionRecords(exercise.exerciseId, sessionId, persisted.length > 0),
+        ...(await this.exerciseHistory(exercise.exerciseId, sessionId, persisted.length > 0)),
       };
     }));
     return { workout, exercises };
   }
 
-  /** Récords (peso máximo y 1RM estimado) que esta sesión supera frente a todo el historial del ejercicio. */
-  private async sessionRecords(exerciseId: string, sessionId: string, hasSets: boolean): Promise<SessionRecord[]> {
-    if (!hasSets) return [];
+  /**
+   * Con una sola consulta al historial del ejercicio: lo que hiciste la última vez (otra sesión) y los récords
+   * que esta sesión supera (peso máximo y 1RM estimado).
+   */
+  private async exerciseHistory(exerciseId: string, sessionId: string, hasSets: boolean): Promise<{ newRecords: SessionRecord[]; previous: PreviousPerformance | null }> {
     const history = await this.data.sessions.listSetsForExercise(exerciseId);
-    if (!history.ok) return [];
-    return newRecordsInSession(history.value, sessionId)
-      .filter((r) => r.kind === 'max_weight' || r.kind === 'best_e1rm')
-      .map((r) => ({ kind: r.kind as SessionRecord['kind'], value: r.value, weightKg: r.weightKg, reps: r.reps }));
+    if (!history.ok) return { newRecords: [], previous: null };
+    const newRecords = hasSets
+      ? newRecordsInSession(history.value, sessionId)
+        .filter((r) => r.kind === 'max_weight' || r.kind === 'best_e1rm')
+        .map((r) => ({ kind: r.kind as SessionRecord['kind'], value: r.value, weightKg: r.weightKg, reps: r.reps }))
+      : [];
+    return { newRecords, previous: previousPerformance(history.value, sessionId) };
   }
 
   private async findPlannedExercise(dayId: string | null, plannedId: string) {
@@ -371,4 +381,18 @@ export class OfficialTrainingRepository implements TrainingRepository {
 export const PAST_WORKOUT_MS = 12 * 3_600_000;
 export function isPastWorkout(startedAt: string, now: Date = new Date()): boolean {
   return now.getTime() - Date.parse(startedAt) > PAST_WORKOUT_MS;
+}
+
+type HistorySet = { sessionId: string; localDate: string; setType: string; weightKg: number | null; reps: number | null; rir: number | null; completedAt: string | null; position: number };
+
+/** Series de trabajo de la sesión más reciente (distinta de la actual) en la que hiciste el ejercicio. */
+export function previousPerformance(sets: readonly HistorySet[], currentSessionId: string): PreviousPerformance | null {
+  const others = sets.filter((s) => s.sessionId !== currentSessionId && s.setType !== 'warmup' && (s.weightKg !== null || s.reps !== null));
+  if (!others.length) return null;
+  const latest = others.reduce((a, b) => {
+    if (a.localDate !== b.localDate) return a.localDate > b.localDate ? a : b;
+    return (a.completedAt ?? '') >= (b.completedAt ?? '') ? a : b;
+  });
+  const sessionSets = others.filter((s) => s.sessionId === latest.sessionId).sort((a, b) => a.position - b.position);
+  return { localDate: latest.localDate, sets: sessionSets.map((s) => ({ weightKg: s.weightKg, reps: s.reps, rir: s.rir })) };
 }

@@ -1,13 +1,22 @@
 import type { CardioSession } from '@athlete/contracts';
 import type { LoggedSetInput, RoutineInput } from './trainingSchemas';
 
-export type Exercise = { id: string; name: string; muscleGroup: string; equipment: string | null; origin: 'sample' | 'server' };
+/**
+ * Ejercicio para la UI. `muscleGroup` y `equipment` son los nombres ya unidos para mostrar;
+ * `muscles`/`equipmentList` sirven para filtrar. `tier = 'pro'` se marca con la etiqueta PRO.
+ */
+export type Exercise = {
+  id: string; name: string; muscleGroup: string; equipment: string | null; origin: 'sample' | 'server';
+  muscles?: string[]; equipmentList?: string[]; tier?: 'free' | 'pro'; isCustom?: boolean; mechanics?: 'compound' | 'isolation' | null;
+};
+/** Lo que hiciste en este ejercicio la última vez (series de trabajo, sin calentamiento). */
+export type PreviousPerformance = { localDate: string; sets: Array<{ weightKg: number | null; reps: number | null; rir: number | null }> };
 export type RoutineExercise = { exerciseId: string; exerciseName: string; sortOrder: number; sets: number | null; reps: number | null; restSeconds: number | null };
 export type Routine = { id: string; name: string; exercises: RoutineExercise[]; updatedAt: string };
 export type TrainingSet = LoggedSetInput & { id: string; setIndex: number };
 /** Récord que esta sesión supera (peso máximo o 1RM estimado). La primera vez que haces un ejercicio no cuenta como récord. */
 export type SessionRecord = { kind: 'max_weight' | 'best_e1rm'; value: number; weightKg: number | null; reps: number | null };
-export type SessionExercise = { id: string; exerciseId: string; exerciseName: string; sortOrder: number; setsTarget: number | null; repsTarget: number | null; restSeconds: number | null; targetRir?: number | null; sets: TrainingSet[]; newRecords?: SessionRecord[] };
+export type SessionExercise = { id: string; exerciseId: string; exerciseName: string; sortOrder: number; setsTarget: number | null; repsTarget: number | null; restSeconds: number | null; targetRir?: number | null; sets: TrainingSet[]; newRecords?: SessionRecord[]; previous?: PreviousPerformance | null };
 export type Workout = { id: string; state: 'active' | 'completed'; startedAt: string; completedAt: string | null; localVersion: number | null; serverVersion: number | null; syncStatus: 'pending' | 'synced' | 'conflict' | 'failed'; exerciseCount: number; setCount: number; durationMinutes: number | null };
 export type WorkoutDetail = { workout: Workout; exercises: SessionExercise[] };
 /** `sessionsThisWeek` = fuerza + cardio. `activityMinutesThisWeek` incluye la duración del cardio. */
