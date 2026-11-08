@@ -10,6 +10,8 @@ import { LocalSaveBadge } from '@/components/SyncBadge';
 import { useTrainingRepository } from '@/data/MobileTrainingContext';
 import type { WorkoutDetail } from '@/data/trainingTypes';
 import { colors } from '@/theme/colors';
+import { ScoreCard } from '@/workout/ScoreCard';
+import { workoutScore } from '@/workout/coach';
 
 export function effortDescription(value: number | null): string {
   if (value === null) return '';
@@ -34,9 +36,11 @@ export default function HistoryDetailScreen() {
   }
   if (error) return <Screen><Title>Historial</Title><EmptyState icon="alert-circle-outline" title="No pudimos abrir esta sesión" detail="El registro local permanece guardado." action="Volver al historial" onAction={() => router.replace('/history')}/></Screen>;
   if (!detail) return <Screen><Title>Historial</Title><EmptyState title="Sesión no disponible" detail="Puede que ya no exista en este dispositivo." action="Volver al historial" onAction={() => router.replace('/history')}/></Screen>;
+  const score = detail.workout.state === 'completed' ? workoutScore(detail) : null;
   return <Screen>
     <View><Eyebrow>{new Date(detail.workout.startedAt).toLocaleString('es-MX', { dateStyle: 'long', timeStyle: 'short' })}</Eyebrow><Title>Entrenamiento</Title></View>
     <LocalSaveBadge status={detail.workout.syncStatus}/>
+    {score ? <ScoreCard score={score}/> : null}
     <Card><Row><View><Eyebrow>DURACIÓN</Eyebrow><Text style={s.number}>{detail.workout.durationMinutes ?? 0} min</Text></View><View><Eyebrow>RESUMEN</Eyebrow><Text style={s.number}>{detail.workout.exerciseCount} <Text style={s.unit}>ejercicios</Text></Text></View></Row><Text style={s.note}>{detail.workout.setCount} series registradas · datos locales</Text></Card>
     {detail.exercises.map((exercise) => <Card key={exercise.id}><Eyebrow>{exercise.sets.length} SERIES</Eyebrow><Label>{exercise.exerciseName}</Label>{exercise.sets.map((set) => <View key={set.id} style={s.setRow}><Text style={s.note}>Serie {set.setIndex + 1}{set.isWarmup ? ' · Calentamiento' : ''}</Text><Text style={s.value}>{set.weightKg === null ? '—' : `${set.weightKg} kg`} × {set.reps ?? '—'} reps{effortDescription(set.rir)}</Text></View>)}</Card>)}
     <Pressable accessibilityRole="button" onPress={() => Alert.alert('Eliminar sesión', 'Se ocultará de este dispositivo y se guardará una tombstone para la próxima sincronización.', [{ text: 'Cancelar', style: 'cancel' }, { text: 'Eliminar', style: 'destructive', onPress: () => void remove() }])}><Text style={s.delete}>Eliminar sesión de este dispositivo</Text></Pressable>

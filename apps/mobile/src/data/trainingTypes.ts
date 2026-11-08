@@ -16,7 +16,7 @@ export type Routine = { id: string; name: string; exercises: RoutineExercise[]; 
 export type TrainingSet = LoggedSetInput & { id: string; setIndex: number };
 /** Récord que esta sesión supera (peso máximo o 1RM estimado). La primera vez que haces un ejercicio no cuenta como récord. */
 export type SessionRecord = { kind: 'max_weight' | 'best_e1rm'; value: number; weightKg: number | null; reps: number | null };
-export type SessionExercise = { id: string; exerciseId: string; exerciseName: string; sortOrder: number; setsTarget: number | null; repsTarget: number | null; restSeconds: number | null; targetRir?: number | null; sets: TrainingSet[]; newRecords?: SessionRecord[]; previous?: PreviousPerformance | null };
+export type SessionExercise = { id: string; exerciseId: string; exerciseName: string; sortOrder: number; setsTarget: number | null; repsTarget: number | null; restSeconds: number | null; targetRir?: number | null; sets: TrainingSet[]; newRecords?: SessionRecord[]; previous?: PreviousPerformance | null; /** Incremento para la carga sugerida; null = sin carga externa. */ incrementKg?: number | null };
 export type Workout = { id: string; state: 'active' | 'completed'; startedAt: string; completedAt: string | null; localVersion: number | null; serverVersion: number | null; syncStatus: 'pending' | 'synced' | 'conflict' | 'failed'; exerciseCount: number; setCount: number; durationMinutes: number | null };
 export type WorkoutDetail = { workout: Workout; exercises: SessionExercise[] };
 /** `sessionsThisWeek` = fuerza + cardio. `activityMinutesThisWeek` incluye la duración del cardio. */

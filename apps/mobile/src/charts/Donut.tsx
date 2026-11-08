@@ -12,9 +12,9 @@ export const OTHERS_COLOR = '#4A5363';
  * Arcos de la dona: longitud y desplazamiento de cada segmento sobre la circunferencia.
  * Con más de un segmento deja una separación pequeña para que se distingan.
  */
-export function donutArcs(segments: readonly DonutSegment[], circumference: number, gap = 3) {
+export function donutArcs(segments: readonly DonutSegment[], circumference: number, gap = 3, outOf?: number) {
   const live = segments.filter((s) => s.value > 0);
-  const total = live.reduce((n, s) => n + s.value, 0);
+  const total = outOf ?? live.reduce((n, s) => n + s.value, 0);
   if (!total) return [];
   const sep = live.length > 1 ? gap : 0;
   let start = 0;
@@ -27,18 +27,20 @@ export function donutArcs(segments: readonly DonutSegment[], circumference: numb
 }
 
 /** Gráfica de dona con un texto al centro. Sin datos se dibuja solo el anillo vacío. */
-export function Donut({ segments, size = 112, thickness = 13, center, caption }: {
+export function Donut({ segments, size = 112, thickness = 13, center, caption, outOf }: {
   segments: readonly DonutSegment[]; size?: number; thickness?: number; center: string; caption?: string;
+  /** Si se da, la dona es un medidor: los segmentos llenan `valor / outOf` del anillo. */
+  outOf?: number;
 }) {
   const r = (size - thickness) / 2;
   const c = 2 * Math.PI * r;
-  const arcs = donutArcs(segments, c);
+  const arcs = donutArcs(segments, c, 3, outOf);
   return <View style={{ width: size, height: size }} accessibilityRole="image" accessibilityLabel={`${center}${caption ? ` ${caption}` : ''}`}>
     <Svg width={size} height={size}>
       <Circle cx={size / 2} cy={size / 2} r={r} stroke={colors.graphite} strokeWidth={thickness} fill="none"/>
       <G rotation={-90} origin={`${size / 2}, ${size / 2}`}>
         {arcs.map((a) => <Circle key={a.key} cx={size / 2} cy={size / 2} r={r} fill="none" stroke={a.color} strokeWidth={thickness}
-          strokeDasharray={`${a.length} ${c}`} strokeDashoffset={a.offset} strokeLinecap="butt"/>)}
+          strokeDasharray={`${a.length} ${c}`} strokeDashoffset={a.offset} strokeLinecap={outOf ? 'round' : 'butt'}/>)}
       </G>
     </Svg>
     <View style={s.center} pointerEvents="none">

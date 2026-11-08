@@ -8,3 +8,5 @@ export * from './sync';
 export * from './analytics';
 export * from './nutrition';
 export * from './volume';
+export * from './score';
+export * from './loadSuggestion';
