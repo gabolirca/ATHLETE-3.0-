@@ -12,6 +12,8 @@ import { SectionHeading } from '@/components/SectionHeading';
 import { useTrainingRepository } from '@/data/MobileTrainingContext';
 import type { Exercise, Routine, TrainingOverview } from '@/data/trainingTypes';
 import { routineFocus } from '@/routines/diagnosis';
+import { HybridCard } from '@/program/HybridCard';
+import { useProgram } from '@/program/useProgram';
 import { colors } from '@/theme/colors';
 
 export default function TrainScreen() {
@@ -21,6 +23,7 @@ export default function TrainScreen() {
   const [overview, setOverview] = useState<TrainingOverview | null>(null);
   const [loadError, setLoadError] = useState(false);
   const [catalog, setCatalog] = useState<Map<string, Exercise>>(new Map());
+  const hybrid = useProgram();
   useFocusEffect(useCallback(() => {
     let active = true;
     if (repository) Promise.all([repository.listRoutines(), repository.getOverview(), repository.searchExercises('').catch(() => [])]).then(([items, summary, exercises]) => {
@@ -31,6 +34,7 @@ export default function TrainScreen() {
 
   return <Screen>
     <View><Eyebrow>PLANIFICA Y REGISTRA</Eyebrow><Title>Entrenar</Title></View>
+    <HybridCard program={hybrid.program} status={hybrid.status} loaded={hybrid.loaded}/>
     <Card accent={colors.blue}>
       <Eyebrow>SESIÓN LOCAL</Eyebrow>
       <Text style={s.hero}>{overview?.latestWorkout?.state === 'active' ? 'Tienes una sesión en curso' : 'Empieza cuando quieras'}</Text>

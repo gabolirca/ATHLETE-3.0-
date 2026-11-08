@@ -79,6 +79,7 @@ test('al finalizar un entrenamiento pasado pide la duración y la envía', async
   await fireEvent.press(screen.getByText('Finalizar y guardar sesión'));
   await waitFor(() => expect(screen.getByText('Indica cuántos minutos duró (entre 1 y 600).')).toBeTruthy());
   await fireEvent.changeText(screen.getByLabelText('¿Cuánto duró? (minutos)'), '75');
+  await fireEvent.press(screen.getByLabelText('RPE 8')); // qué tan dura fue (carga de la semana)
   await fireEvent.press(screen.getByText('Finalizar y guardar sesión'));
-  await waitFor(() => expect(mockRepository.finishWorkout).toHaveBeenCalledWith('s1', { durationMinutes: 75 }));
+  await waitFor(() => expect(mockRepository.finishWorkout).toHaveBeenCalledWith('s1', { durationMinutes: 75, sessionRpe: 8 }));
 });

@@ -4,6 +4,10 @@ import { useStrictRest } from '@/settings/devicePrefs';
 import { exerciseProgress, isLoggedWorkingSet, nextStepLabel, workoutGuide, type ExerciseProgress, type ExerciseStatus } from '@/workout/guide';
 import { NewRecordBadge } from '@/progress/records';
 import { exerciseSuggestion, formatSuggestion } from '@/workout/coach';
+import { BlockHeader, isWholeBlock } from '@/workout/blocks';
+import { TimedSetEditor } from '@/components/TimedSetEditor';
+import { formatPrescription } from '@/program/format';
+import type { SessionExercise, WorkoutBlock } from '@/data/trainingTypes';
 import { AppInput } from '@/components/AppInput';
 import { isPastWorkout } from '@/data/OfficialTrainingRepository';
 import { dayLabel, localDateOfDevice } from '@/lib/localDate';
@@ -38,6 +42,7 @@ export default function WorkoutScreen() {
   const timerStarted = useRef(new Set<string>());
   const [toggled, setToggled] = useState<Set<string>>(new Set());
   const [strictRest] = useStrictRest();
+  const [sessionRpe, setSessionRpe] = useState<number | null>(null);
 
   const refresh = useCallback(async (showLoading = true) => {
     if (!repository) return;
@@ -57,7 +62,7 @@ export default function WorkoutScreen() {
       durationMinutes = n;
     }
     setFinishing(true); setFinishError('');
-    try { await repository.finishWorkout(sessionId, durationMinutes ? { durationMinutes } : {}); router.replace(`/history/${sessionId}`); }
+    try { await repository.finishWorkout(sessionId, { ...(durationMinutes ? { durationMinutes } : {}), sessionRpe }); router.replace(`/history/${sessionId}`); }
     catch (error) { setFinishError(error instanceof Error && error.message === 'WORKOUT_REQUIRES_RECORDED_SET' ? 'Registra al menos una serie con peso o repeticiones antes de finalizar.' : 'No pudimos finalizar la sesión. La información sigue guardada localmente.'); }
     finally { setFinishing(false); }
   }
@@ -68,18 +73,12 @@ export default function WorkoutScreen() {
 
   const past = isPastWorkout(detail.workout.startedAt);
   const guide = workoutGuide(detail.exercises);
-  return <View style={s.root}><Screen>
-    <View><Eyebrow>{past
-      ? `${dayLabel(localDateOfDevice(new Date(detail.workout.startedAt)), localDateOfDevice(new Date()))} · ${new Date(detail.workout.startedAt).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}`.toUpperCase()
-      : `INICIADA ${new Date(detail.workout.startedAt).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}`}</Eyebrow><Title>{past ? 'Entrenamiento pasado' : 'Entrenamiento'}</Title></View>
-    <LocalSaveBadge status={detail.workout.syncStatus}/>
-    {detail.exercises.length === 0 ? <EmptyState icon="barbell-outline" title="Agrega tu primer ejercicio" detail="Elige un ejercicio del catálogo local y registra tus series." action={showPicker ? undefined : 'Buscar ejercicios'} onAction={() => setShowPicker(true)}/> : null}
-    {guide.guided && detail.workout.state === 'active' ? <Card accent={guide.allComplete ? colors.green : colors.blue}>
-      <Text style={s.guideTitle}>{guide.allComplete ? '¡Rutina completa! Finaliza y guarda' : `Ejercicio ${(guide.currentIndex ?? 0) + 1} de ${detail.exercises.length}`}</Text>
-      <View style={s.track}><View style={[s.fill, { width: `${guide.setsTarget ? Math.round((guide.setsDone / guide.setsTarget) * 100) : 0}%` }, guide.allComplete && s.fillDone]}/></View>
-      <Text style={s.detail}>{guide.setsDone} de {guide.setsTarget} series</Text>
-    </Card> : null}
-    {detail.exercises.map((exercise, exIndex) => {
+  const blocks: WorkoutBlock[] = detail.blocks ?? [];
+  const hasBlocks = blocks.length > 0;
+  const active = detail.workout.state === 'active';
+  const prescription = (e: SessionExercise) => formatPrescription({ sets: e.setsTarget, repsMin: e.repsTarget, repsMax: e.repsMax ?? e.repsTarget, durationSeconds: e.targetDurationSeconds ?? null, distanceMeters: e.targetDistanceMeters ?? null, perSide: e.perSide ?? false });
+  const refreshQuiet = async () => { const updated = repository ? await repository.getWorkout(sessionId) : null; if (updated) setDetail(updated); };
+  const renderExercise = (exercise: SessionExercise, exIndex: number) => {
       const status = guide.statuses[exIndex] ?? 'free';
       const progress = exerciseProgress(exercise);
       // Abierto: el actual, los libres o los que el usuario abrió. Plegados: los terminados y los que vienen.
@@ -94,7 +93,7 @@ export default function WorkoutScreen() {
           {status === 'current' ? <Text style={s.now}>AHORA</Text> : null}
           {status === 'done' ? <Text style={s.doneTag}>✓ COMPLETADO</Text> : null}
           {status === 'upcoming' ? <Text style={s.upcoming}>DESPUÉS</Text> : null}
-          <Eyebrow>{exercise.setsTarget ? `${exercise.setsTarget} × ${exercise.repsTarget ?? '—'} REPS` : 'EJERCICIO'}</Eyebrow>
+          <Eyebrow>{hasBlocks ? (prescription(exercise) || 'EJERCICIO').toUpperCase() : exercise.setsTarget ? `${exercise.setsTarget} × ${exercise.repsTarget ?? '—'} REPS` : 'EJERCICIO'}</Eyebrow>
         </View>
         <Text style={s.exerciseName}>{exercise.exerciseName}</Text>
         <Text style={s.detail}>{progress.target !== null ? (progress.complete ? `${progress.done} de ${progress.target} series hechas` : `Serie ${progress.done + 1} de ${progress.target}`) : `${progress.done} ${progress.done === 1 ? 'serie' : 'series'}`}{exercise.restSeconds ? ` · descanso ${exercise.restSeconds} s` : ''}</Text>
@@ -112,7 +111,10 @@ export default function WorkoutScreen() {
         <Text style={s.suggestReason}>{suggestion.reason}</Text>
       </View> : null}
       <NewRecordBadge records={exercise.newRecords ?? []}/>
-      {exercise.sets.filter((set) => !(progress.complete && set.reps === null && set.weightKg === null && !toggled.has(exercise.id))).map((set, index) => {
+      {exercise.modality === 'cardio' || exercise.loadType === 'time' ? exercise.sets.filter((set, i) => i < Math.max(exercise.setsTarget ?? 1, exercise.sets.filter((x) => x.durationSeconds || x.distanceMeters).length + (active ? 1 : 0))).map((set, index) =>
+        <TimedSetEditor key={set.id} set={set} label={(exercise.setsTarget ?? 1) > 1 ? `SERIE ${index + 1}` : 'REGISTRO'} targetSeconds={exercise.targetDurationSeconds ?? null} targetMeters={exercise.targetDistanceMeters ?? null}
+          onSave={async (values) => { await repository?.saveSet(sessionId, set.id, values); await refreshQuiet(); }}/>)
+      : exercise.sets.filter((set) => !(progress.complete && set.reps === null && set.weightKg === null && !toggled.has(exercise.id))).map((set, index) => {
         const prev = exercise.previous?.sets[index] ?? null;
         return <SetEditor key={set.id} set={set} targetRir={exercise.targetRir ?? null} previous={prev ? { weightKg: prev.weightKg, reps: prev.reps } : null} suggestion={suggestion ? { weightKg: suggestion.weightKg, reps: suggestion.reps } : null} onSave={async (values) => {
           await repository?.saveSet(sessionId, set.id, values);
@@ -129,11 +131,40 @@ export default function WorkoutScreen() {
       })}
       </> : null}
     </View>;
-    })}
+  };
+  return <View style={s.root}><Screen>
+    <View><Eyebrow>{past
+      ? `${dayLabel(localDateOfDevice(new Date(detail.workout.startedAt)), localDateOfDevice(new Date()))} · ${new Date(detail.workout.startedAt).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}`.toUpperCase()
+      : `INICIADA ${new Date(detail.workout.startedAt).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}`}</Eyebrow><Title>{detail.dayName ?? (past ? 'Entrenamiento pasado' : 'Entrenamiento')}</Title></View>
+    <LocalSaveBadge status={detail.workout.syncStatus}/>
+    {detail.exercises.length === 0 ? <EmptyState icon="barbell-outline" title="Agrega tu primer ejercicio" detail="Elige un ejercicio del catálogo local y registra tus series." action={showPicker ? undefined : 'Buscar ejercicios'} onAction={() => setShowPicker(true)}/> : null}
+    {guide.guided && !hasBlocks && detail.workout.state === 'active' ? <Card accent={guide.allComplete ? colors.green : colors.blue}>
+      <Text style={s.guideTitle}>{guide.allComplete ? '¡Rutina completa! Finaliza y guarda' : `Ejercicio ${(guide.currentIndex ?? 0) + 1} de ${detail.exercises.length}`}</Text>
+      <View style={s.track}><View style={[s.fill, { width: `${guide.setsTarget ? Math.round((guide.setsDone / guide.setsTarget) * 100) : 0}%` }, guide.allComplete && s.fillDone]}/></View>
+      <Text style={s.detail}>{guide.setsDone} de {guide.setsTarget} series</Text>
+    </Card> : null}
+    {hasBlocks ? blocks.map((block) => {
+      const inBlock = detail.exercises.map((e, i) => [e, i] as const).filter(([e]) => e.blockId === block.id);
+      return <View key={block.id} style={s.block}>
+        <BlockHeader block={block} editable={active} onSaveResult={async (r) => { await repository?.saveBlockResult(sessionId, block.id, r); await refreshQuiet(); }}/>
+        {isWholeBlock(block.format)
+          ? <Card>{inBlock.map(([e]) => <View key={e.id} style={s.wodRow}><Text style={s.wodName}>{e.exerciseName}</Text><Text style={s.wodPresc}>{prescription(e)}</Text></View>)}</Card>
+          : inBlock.map(([e, i]) => renderExercise(e, i))}
+      </View>;
+    }) : detail.exercises.map((exercise, exIndex) => renderExercise(exercise, exIndex))}
+    {hasBlocks && detail.exercises.some((e) => !blocks.some((b) => b.id === e.blockId)) ? <>
+      <Eyebrow>OTROS EJERCICIOS</Eyebrow>
+      {detail.exercises.map((e, i) => [e, i] as const).filter(([e]) => !blocks.some((b) => b.id === e.blockId)).map(([e, i]) => renderExercise(e, i))}
+    </> : null}
     {detail.exercises.length ? <ActionButton secondary onPress={() => setShowPicker((value) => !value)}>{showPicker ? 'Cerrar catálogo' : '＋ Agregar ejercicio'}</ActionButton> : null}
     {showPicker ? <ExercisePicker onSelect={async (exercise) => { try { await repository?.addExercise(sessionId, exercise.id); setActionError(''); setShowPicker(false); await refresh(false); } catch { setActionError('No se pudo agregar el ejercicio. Intenta de nuevo.'); } }} /> : null}
     {actionError ? <Text accessibilityRole="alert" style={s.error}>{actionError}</Text> : null}
     {past && detail.workout.state === 'active' ? <AppInput label="¿Cuánto duró? (minutos)" defaultValue={duration} onChangeText={setDuration} keyboardType="number-pad" maxLength={3}/> : null}
+    {active ? <Card>
+      <Eyebrow>¿QUÉ TAN DURA FUE LA SESIÓN? (RPE)</Eyebrow>
+      <Text style={s.detail}>1 = muy fácil · 10 = esfuerzo máximo. Con esto se calcula tu carga de la semana.</Text>
+      <View style={s.rpeRow}>{[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => <Pressable key={n} accessibilityRole="button" accessibilityLabel={`RPE ${n}`} accessibilityState={{ selected: sessionRpe === n }} onPress={() => setSessionRpe(sessionRpe === n ? null : n)} style={[s.rpe, sessionRpe === n && s.rpeOn]}><Text style={[s.rpeText, sessionRpe === n && s.rpeTextOn]}>{n}</Text></Pressable>)}</View>
+    </Card> : null}
     {finishError ? <Text accessibilityRole="alert" style={s.error}>{finishError}</Text> : null}
     <ActionButton onPress={finish} loading={finishing} disabled={detail.workout.state !== 'active'}>Finalizar y guardar sesión</ActionButton>
     {timer.active ? <View style={{ height: 84 }}/> : null}
@@ -147,4 +178,4 @@ function statusLabel(status: ExerciseStatus, p: ExerciseProgress): string {
   return `${p.done} series`;
 }
 
-const s=StyleSheet.create({root:{flex:1},suggestBox:{borderWidth:1,borderColor:colors.green,backgroundColor:'#12291F',borderRadius:12,padding:10,gap:3},suggestTitle:{color:colors.green,fontSize:13,fontWeight:'800'},suggestReason:{color:colors.secondary,fontSize:11,lineHeight:16},guideTitle:{color:colors.text,fontSize:16,fontWeight:'800'},track:{height:8,borderRadius:4,backgroundColor:colors.surfaceRaised,overflow:'hidden'},fill:{height:8,borderRadius:4,backgroundColor:colors.blue},fillDone:{backgroundColor:colors.green},statusRow:{flexDirection:'row',alignItems:'center',gap:8,flexWrap:'wrap'},now:{color:'white',backgroundColor:colors.blue,fontSize:10,fontWeight:'800',paddingHorizontal:6,paddingVertical:2,borderRadius:6,overflow:'hidden'},doneTag:{color:colors.green,fontSize:10,fontWeight:'800'},upcoming:{color:colors.muted,fontSize:10,fontWeight:'800'},summary:{color:colors.secondary,fontSize:12,marginTop:4},previous:{color:'#9DBDFF',fontSize:12,lineHeight:17,paddingHorizontal:4},exerciseBlock:{gap:9},exerciseName:{color:colors.text,fontSize:18,fontWeight:'800',marginTop:5},detail:{color:colors.secondary,fontSize:11,lineHeight:16},addSet:{flexDirection:'row',alignItems:'center',gap:3,padding:7},addSetText:{color:colors.blue,fontSize:11,fontWeight:'800'},error:{color:colors.red,fontSize:12,lineHeight:18}});
+const s=StyleSheet.create({root:{flex:1},block:{gap:9},wodRow:{flexDirection:'row',justifyContent:'space-between',gap:10},wodName:{flex:1,color:colors.text,fontSize:13},wodPresc:{color:colors.text,fontSize:13,fontWeight:'800'},rpeRow:{flexDirection:'row',flexWrap:'wrap',gap:6},rpe:{width:40,height:40,borderRadius:11,borderWidth:1,borderColor:colors.border,alignItems:'center',justifyContent:'center',backgroundColor:colors.surfaceRaised},rpeOn:{borderColor:'#F5B841',backgroundColor:'#2A2410'},rpeText:{color:colors.secondary,fontSize:15,fontWeight:'800'},rpeTextOn:{color:'#F5B841'},suggestBox:{borderWidth:1,borderColor:colors.green,backgroundColor:'#12291F',borderRadius:12,padding:10,gap:3},suggestTitle:{color:colors.green,fontSize:13,fontWeight:'800'},suggestReason:{color:colors.secondary,fontSize:11,lineHeight:16},guideTitle:{color:colors.text,fontSize:16,fontWeight:'800'},track:{height:8,borderRadius:4,backgroundColor:colors.surfaceRaised,overflow:'hidden'},fill:{height:8,borderRadius:4,backgroundColor:colors.blue},fillDone:{backgroundColor:colors.green},statusRow:{flexDirection:'row',alignItems:'center',gap:8,flexWrap:'wrap'},now:{color:'white',backgroundColor:colors.blue,fontSize:10,fontWeight:'800',paddingHorizontal:6,paddingVertical:2,borderRadius:6,overflow:'hidden'},doneTag:{color:colors.green,fontSize:10,fontWeight:'800'},upcoming:{color:colors.muted,fontSize:10,fontWeight:'800'},summary:{color:colors.secondary,fontSize:12,marginTop:4},previous:{color:'#9DBDFF',fontSize:12,lineHeight:17,paddingHorizontal:4},exerciseBlock:{gap:9},exerciseName:{color:colors.text,fontSize:18,fontWeight:'800',marginTop:5},detail:{color:colors.secondary,fontSize:11,lineHeight:16},addSet:{flexDirection:'row',alignItems:'center',gap:3,padding:7},addSetText:{color:colors.blue,fontSize:11,fontWeight:'800'},error:{color:colors.red,fontSize:12,lineHeight:18}});

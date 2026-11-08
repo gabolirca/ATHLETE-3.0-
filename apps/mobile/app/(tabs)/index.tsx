@@ -13,6 +13,8 @@ import { useLocalDataReady, useTrainingRepository } from '@/data/MobileTrainingC
 import type { TrainingOverview, WeeklyMuscleVolume } from '@/data/trainingTypes';
 import { Donut } from '@/charts/Donut';
 import { formatSets, lowMuscles, muscleSegments } from '@/progress/muscleVolume';
+import { HybridCard } from '@/program/HybridCard';
+import { useProgram } from '@/program/useProgram';
 import { colors } from '@/theme/colors';
 
 /** "Buenos días" / "Buenas tardes" / "Buenas noches" según la hora del teléfono. */
@@ -34,6 +36,7 @@ export default function HomeScreen() {
   const [loadError, setLoadError] = useState(false);
   const [name, setName] = useState('');
   const [volume, setVolume] = useState<WeeklyMuscleVolume | null>(null);
+  const hybrid = useProgram();
 
   useFocusEffect(useCallback(() => {
     let active = true;
@@ -53,6 +56,7 @@ export default function HomeScreen() {
       <Pressable accessibilityRole="button" accessibilityLabel="Abrir perfil" onPress={() => router.push('/profile')} style={s.avatar}>
         {initials(name) ? <Text style={s.initials}>{initials(name)}</Text> : <Ionicons name="person" size={18} color={colors.secondary}/>}
       </Pressable></Row>
+    {hybrid.program ? <HybridCard program={hybrid.program} status={hybrid.status} loaded={hybrid.loaded}/> : null}
     <Card accent={colors.blue}>
       <Row><Eyebrow>ENTRENAMIENTO DE HOY</Eyebrow><View style={s.pill}><Text style={s.pillText}>LOCAL</Text></View></Row>
       <Text style={s.heroTitle}>{overview?.latestWorkout?.state === 'active' ? 'Sesión en curso' : 'Tu próximo movimiento'}</Text>
@@ -85,8 +89,7 @@ export default function HomeScreen() {
         {overview?.pendingSyncCount ? <LocalSaveBadge pendingCount={overview.pendingSyncCount}/> : null}
       </Card>
     </Pressable>
-    <SectionHeading title="Entrenamiento programado" />
-    <EmptyState icon="calendar-outline" title="Aún no tienes un plan" detail="Crea una rutina para organizar tu entrenamiento. Las sesiones que registres se guardarán localmente aunque no haya conexión." action="Crear rutina" onAction={() => router.push('/routines/new')} />
+    {hybrid.loaded && !hybrid.program ? <><SectionHeading title="Entrenamiento programado" /><HybridCard program={null} status={{}} loaded/></> : null}
     <SectionHeading title="Actividad reciente" action="Historial" onAction={() => router.push('/history')} />
     {overview?.latestWorkout ? <Card><Row><View><Label>{overview.latestWorkout.state === 'active' ? 'Sesión en curso' : 'Entrenamiento completado'}</Label><Text style={s.muted}>{new Date(overview.latestWorkout.startedAt).toLocaleString('es-MX', { dateStyle: 'medium', timeStyle: 'short' })}</Text></View><LocalSaveBadge status={overview.latestWorkout.syncStatus}/></Row><Text style={s.muted}>{overview.latestWorkout.exerciseCount} ejercicios · {overview.latestWorkout.setCount} series registradas</Text></Card> : <EmptyState icon="time-outline" title="Sin sesiones todavía" detail="Cuando termines tu primer entrenamiento aparecerá aquí." action="Ver historial" onAction={() => router.push('/history')} />}
   </Screen>;
