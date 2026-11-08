@@ -1,6 +1,6 @@
 import React from 'react';
 import { act, fireEvent, render, renderHook, waitFor } from '@testing-library/react-native';
-import { RestTimerFullScreen, useRestTimer } from '@/components/RestTimer';
+import { HoldToExit, RestTimerFullScreen, useRestTimer } from '@/components/RestTimer';
 import { exerciseProgress, nextStepLabel, workoutGuide } from './guide';
 
 const set = (reps: number | null, isWarmup = false) => ({ id: Math.random().toString(), setIndex: 0, weightKg: 80, reps, rir: null, isWarmup });
@@ -45,10 +45,23 @@ test('descanso obligatorio: pantalla completa, sin "Saltar"; solo +15 y salir ma
   expect(screen.getByText('Siguiente ejercicio: Prensa')).toBeTruthy();
   expect(screen.queryByText('Saltar')).toBeNull();
   expect(screen.getByText('+15 s')).toBeTruthy();
-  const exit = screen.getByLabelText('Salir del descanso (mantén presionado 3 segundos)');
-  expect(exit.props.delayLongPress ?? 3000).toBe(3000);
-  await fireEvent.press(exit); // un toque normal no sale
-  expect(result.current.active).toBe(true);
-  await fireEvent(exit, 'longPress');
-  await waitFor(() => expect(result.current.active).toBe(false));
+  expect(screen.getByLabelText('Salir del descanso (mantén presionado 3 segundos)')).toBeTruthy();
+});
+
+test('salir manteniendo 3 s: soltar antes cancela; mantener 3 s sale', async () => {
+  jest.useFakeTimers();
+  const onExit = jest.fn();
+  const screen = await render(<HoldToExit onExit={onExit}/>);
+  const button = screen.getByLabelText('Salir del descanso (mantén presionado 3 segundos)');
+  await fireEvent(button, 'pressIn');
+  await act(async () => { jest.advanceTimersByTime(1500); });
+  expect(screen.getByText(/Saliendo en 2 s/)).toBeTruthy();
+  await fireEvent(button, 'pressOut');
+  await act(async () => { jest.advanceTimersByTime(3000); });
+  expect(onExit).not.toHaveBeenCalled();
+  expect(screen.getByText('Mantén presionado 3 s para salir')).toBeTruthy();
+  await fireEvent(button, 'pressIn');
+  await act(async () => { jest.advanceTimersByTime(3100); });
+  expect(onExit).toHaveBeenCalledTimes(1);
+  jest.useRealTimers();
 });

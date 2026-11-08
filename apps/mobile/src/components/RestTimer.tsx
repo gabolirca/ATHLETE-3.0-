@@ -94,6 +94,38 @@ const s = StyleSheet.create({
   btnText: { color: colors.text, fontSize: 12, fontWeight: '800' },
 });
 
+export const HOLD_TO_EXIT_MS = 3000;
+
+/**
+ * Salida de emergencia del descanso obligatorio: hay que mantener el dedo 3 s. Se implementa a mano (pressIn →
+ * temporizador, pressOut → cancela) en vez de con onLongPress, que se cancelaba con el refresco del reloj o con
+ * un movimiento mínimo del dedo. La barra se llena para que se vea que está contando.
+ */
+export function HoldToExit({ onExit, holdMs = HOLD_TO_EXIT_MS }: { onExit: () => void; holdMs?: number }) {
+  const [startedAt, setStartedAt] = useState<number | null>(null);
+  const [progress, setProgress] = useState(0);
+  const exitRef = useRef(onExit);
+  exitRef.current = onExit;
+
+  useEffect(() => {
+    if (startedAt === null) { setProgress(0); return; }
+    const id = setInterval(() => {
+      const p = Math.min(1, (Date.now() - startedAt) / holdMs);
+      setProgress(p);
+      if (p >= 1) { clearInterval(id); setStartedAt(null); exitRef.current(); }
+    }, 50);
+    return () => clearInterval(id);
+  }, [startedAt, holdMs]);
+
+  const left = Math.ceil(((1 - progress) * holdMs) / 1000);
+  return <Pressable accessibilityRole="button" accessibilityLabel="Salir del descanso (mantén presionado 3 segundos)"
+    onPressIn={() => setStartedAt(Date.now())} onPressOut={() => setStartedAt(null)} pressRetentionOffset={{ top: 80, bottom: 80, left: 80, right: 80 }}
+    hitSlop={16} style={f.emergency}>
+    <View style={[f.emergencyFill, { width: `${Math.round(progress * 100)}%` }]}/>
+    <Text style={f.emergencyText}>{startedAt === null ? 'Mantén presionado 3 s para salir' : `Saliendo en ${left} s… (suelta para cancelar)`}</Text>
+  </Pressable>;
+}
+
 /**
  * Descanso obligatorio (preferencia del usuario): ocupa toda la pantalla y no se puede saltar.
  * Solo permite +15 s y, para emergencias, salir manteniendo presionado 3 segundos.
@@ -111,9 +143,7 @@ export function RestTimerFullScreen({ timer }: { timer: ReturnType<typeof useRes
         ? <Pressable accessibilityRole="button" onPress={timer.stop} style={f.primary}><Text style={f.primaryText}>Continuar</Text></Pressable>
         : <>
           <Pressable accessibilityRole="button" accessibilityLabel="Agregar 15 segundos" onPress={() => timer.add(15)} style={f.secondary}><Text style={f.secondaryText}>+15 s</Text></Pressable>
-          <Pressable accessibilityRole="button" accessibilityLabel="Salir del descanso (mantén presionado 3 segundos)" delayLongPress={3000} onLongPress={timer.stop} style={f.emergency}>
-            <Text style={f.emergencyText}>Mantén presionado 3 s para salir</Text>
-          </Pressable>
+          <HoldToExit onExit={timer.stop}/>
         </>}
     </View>
   </Modal>;
@@ -131,6 +161,7 @@ const f = StyleSheet.create({
   primaryText: { color: 'white', fontSize: 18, fontWeight: '800' },
   secondary: { minWidth: 160, alignItems: 'center', paddingVertical: 14, borderRadius: 14, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surfaceRaised },
   secondaryText: { color: colors.text, fontSize: 16, fontWeight: '800' },
-  emergency: { position: 'absolute', bottom: 48, paddingVertical: 12, paddingHorizontal: 18, borderRadius: 12 },
-  emergencyText: { color: colors.muted, fontSize: 12, fontWeight: '700' },
+  emergency: { position: 'absolute', bottom: 48, left: 28, right: 28, alignItems: 'center', paddingVertical: 16, borderRadius: 14, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' },
+  emergencyFill: { position: 'absolute', left: 0, top: 0, bottom: 0, backgroundColor: '#3A1D22' },
+  emergencyText: { color: colors.secondary, fontSize: 13, fontWeight: '700' },
 });
