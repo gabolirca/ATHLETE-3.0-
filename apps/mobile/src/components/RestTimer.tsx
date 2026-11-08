@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, Vibration, View } from 'react-native';
+import { Modal, Pressable, StyleSheet, Text, Vibration, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/theme/colors';
 
@@ -92,4 +92,45 @@ const s = StyleSheet.create({
   label: { color: colors.secondary, fontSize: 11 },
   btn: { paddingHorizontal: 10, paddingVertical: 8, borderRadius: 10, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
   btnText: { color: colors.text, fontSize: 12, fontWeight: '800' },
+});
+
+/**
+ * Descanso obligatorio (preferencia del usuario): ocupa toda la pantalla y no se puede saltar.
+ * Solo permite +15 s y, para emergencias, salir manteniendo presionado 3 segundos.
+ * El botón "atrás" de Android no lo cierra.
+ */
+export function RestTimerFullScreen({ timer }: { timer: ReturnType<typeof useRestTimer> }) {
+  const progress = timer.totalMs ? Math.min(1, Math.max(0, 1 - timer.remaining / timer.totalMs)) : 1;
+  return <Modal visible={timer.active} animationType="fade" presentationStyle="fullScreen" onRequestClose={() => undefined} statusBarTranslucent>
+    <View style={f.root}>
+      <Text style={f.eyebrow}>{timer.done ? 'DESCANSO TERMINADO' : 'DESCANSO OBLIGATORIO'}</Text>
+      <Text style={[f.clock, timer.done && f.clockDone]} accessibilityLabel={`Quedan ${formatClock(timer.remaining)}`}>{timer.done ? '¡A darle!' : formatClock(timer.remaining)}</Text>
+      <View style={f.track}><View style={[f.fill, { width: `${Math.round(progress * 100)}%` }]}/></View>
+      {timer.label ? <Text style={f.next}>{timer.label}</Text> : null}
+      {timer.done
+        ? <Pressable accessibilityRole="button" onPress={timer.stop} style={f.primary}><Text style={f.primaryText}>Continuar</Text></Pressable>
+        : <>
+          <Pressable accessibilityRole="button" accessibilityLabel="Agregar 15 segundos" onPress={() => timer.add(15)} style={f.secondary}><Text style={f.secondaryText}>+15 s</Text></Pressable>
+          <Pressable accessibilityRole="button" accessibilityLabel="Salir del descanso (mantén presionado 3 segundos)" delayLongPress={3000} onLongPress={timer.stop} style={f.emergency}>
+            <Text style={f.emergencyText}>Mantén presionado 3 s para salir</Text>
+          </Pressable>
+        </>}
+    </View>
+  </Modal>;
+}
+
+const f = StyleSheet.create({
+  root: { flex: 1, backgroundColor: colors.black, alignItems: 'center', justifyContent: 'center', padding: 28, gap: 22 },
+  eyebrow: { color: colors.secondary, fontSize: 13, fontWeight: '800', letterSpacing: 2 },
+  clock: { color: colors.text, fontSize: 96, fontWeight: '800', letterSpacing: -2, fontVariant: ['tabular-nums'] },
+  clockDone: { color: '#F5B841', fontSize: 64 },
+  track: { width: '100%', height: 10, borderRadius: 5, backgroundColor: colors.surfaceRaised, overflow: 'hidden' },
+  fill: { height: 10, borderRadius: 5, backgroundColor: colors.blue },
+  next: { color: '#9DBDFF', fontSize: 16, fontWeight: '700', textAlign: 'center' },
+  primary: { minWidth: 220, alignItems: 'center', paddingVertical: 16, borderRadius: 16, backgroundColor: colors.blue },
+  primaryText: { color: 'white', fontSize: 18, fontWeight: '800' },
+  secondary: { minWidth: 160, alignItems: 'center', paddingVertical: 14, borderRadius: 14, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surfaceRaised },
+  secondaryText: { color: colors.text, fontSize: 16, fontWeight: '800' },
+  emergency: { position: 'absolute', bottom: 48, paddingVertical: 12, paddingHorizontal: 18, borderRadius: 12 },
+  emergencyText: { color: colors.muted, fontSize: 12, fontWeight: '700' },
 });
