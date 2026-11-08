@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { diagnoseWeeklyVolume, volumeStatus, weeklySetsByMuscle } from './volume';
+import { diagnoseWeeklyVolume, plannedSetsByMuscle, volumeStatus, weeklySetsByMuscle } from './volume';
 
 const set = (over: Partial<{ setType: 'working' | 'warmup'; reps: number | null; completedAt: string | null; deletedAt: string | null }> = {}) => ({
   setType: 'working' as const, weightKg: 80, reps: 5, completedAt: '2026-11-08T10:00:00Z', deletedAt: null, ...over,
@@ -37,5 +37,13 @@ describe('diagnoseWeeklyVolume', () => {
     expect(d.find((m) => m.muscle === 'forearms')).toEqual({ muscle: 'forearms', sets: 2.5, status: 'untracked', range: null });
     expect(d.find((m) => m.muscle === 'quadriceps')).toMatchObject({ sets: 0, status: 'low' });
     expect(d.find((m) => m.muscle === 'adductors')).toBeUndefined();
+  });
+});
+
+describe('plannedSetsByMuscle', () => {
+  it('suma las series del plan por músculo y multiplica por la frecuencia semanal', () => {
+    const items = [{ exerciseId: 'bench', sets: 4 }, { exerciseId: 'dip', sets: 3 }, { exerciseId: 'x', sets: 3 }, { exerciseId: 'bench', sets: null }];
+    expect(Object.fromEntries(plannedSetsByMuscle(items, (id) => muscles[id]))).toEqual({ chest: 7, shoulders: 3.5, triceps: 5 });
+    expect(Object.fromEntries(plannedSetsByMuscle(items, (id) => muscles[id], 2))).toEqual({ chest: 14, shoulders: 7, triceps: 10 });
   });
 });

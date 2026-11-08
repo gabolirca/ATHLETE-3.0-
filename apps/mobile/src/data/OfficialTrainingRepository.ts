@@ -63,6 +63,8 @@ export class OfficialTrainingRepository implements TrainingRepository {
       this.data.exercises.listEquipment(),
     ]);
     const muscleNames = new Map(unwrap(groups).map((item) => [item.id, item.name]));
+    const muscleRef = new Map(unwrap(groups).map((item) => [item.id, { slug: item.slug, name: item.name }]));
+    const refs = (ids: string[]) => ids.map((id) => muscleRef.get(id)).filter((x): x is { slug: string; name: string } => Boolean(x));
     const equipmentNames = new Map(unwrap(equipment).map((item) => [item.id, item.name]));
     return unwrap(items).map((exercise) => {
       const muscles = exercise.primaryMuscleGroupIds.map((id) => muscleNames.get(id)).filter((x): x is string => Boolean(x));
@@ -73,7 +75,8 @@ export class OfficialTrainingRepository implements TrainingRepository {
         muscleGroup: muscles.join(', ') || 'General',
         equipment: equipmentList.join(', ') || null,
         origin: exercise.ownerUserId ? 'server' : 'sample',
-        muscles, equipmentList, tier: exercise.accessTier, isCustom: exercise.ownerUserId !== null, mechanics: exercise.mechanics,
+        muscles, equipmentList, tier: exercise.accessTier,
+        muscleRoles: { primary: refs(exercise.primaryMuscleGroupIds), secondary: refs(exercise.secondaryMuscleGroupIds) }, isCustom: exercise.ownerUserId !== null, mechanics: exercise.mechanics,
       };
     });
   }

@@ -62,3 +62,24 @@ export function diagnoseWeeklyVolume(setsByMuscle: ReadonlyMap<string, number>):
     .filter((m) => m.sets > 0 || m.range !== null)
     .sort((a, b) => b.sets - a.sets || a.muscle.localeCompare(b.muscle));
 }
+
+/**
+ * Series PLANEADAS por músculo de una rutina (lo que pide el plan, antes de entrenar), multiplicadas por
+ * cuántas veces a la semana se hace. Mismo conteo que el volumen real: principal 1, secundario 0.5.
+ */
+export function plannedSetsByMuscle(
+  items: ReadonlyArray<{ exerciseId: string; sets: number | null }>,
+  musclesOf: (exerciseId: string) => ExerciseMuscles | undefined,
+  timesPerWeek = 1,
+): Map<string, number> {
+  const out = new Map<string, number>();
+  const add = (muscle: string, amount: number) => out.set(muscle, (out.get(muscle) ?? 0) + amount);
+  for (const item of items) {
+    const muscles = musclesOf(item.exerciseId);
+    const sets = (item.sets ?? 0) * timesPerWeek;
+    if (!muscles || sets <= 0) continue;
+    for (const m of muscles.primary) add(m, sets);
+    for (const m of muscles.secondary) if (!muscles.primary.includes(m)) add(m, sets * SECONDARY_SET_WEIGHT);
+  }
+  return out;
+}

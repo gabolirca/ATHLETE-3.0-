@@ -7,7 +7,9 @@ import type { LoggedSetInput, RoutineInput } from './trainingSchemas';
  */
 export type Exercise = {
   id: string; name: string; muscleGroup: string; equipment: string | null; origin: 'sample' | 'server';
-  muscles?: string[]; equipmentList?: string[]; tier?: 'free' | 'pro'; isCustom?: boolean; mechanics?: 'compound' | 'isolation' | null;
+  muscles?: string[]; equipmentList?: string[];
+  /** Músculos por papel (slug + nombre), para diagnosticar rutinas. */
+  muscleRoles?: { primary: Array<{ slug: string; name: string }>; secondary: Array<{ slug: string; name: string }> }; tier?: 'free' | 'pro'; isCustom?: boolean; mechanics?: 'compound' | 'isolation' | null;
 };
 /** Lo que hiciste en este ejercicio la última vez (series de trabajo, sin calentamiento). */
 export type PreviousPerformance = { localDate: string; sets: Array<{ weightKg: number | null; reps: number | null; rir: number | null }> };
