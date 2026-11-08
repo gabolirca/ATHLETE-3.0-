@@ -2,9 +2,9 @@ import type { CardioSession } from '@athlete/contracts';
 import type { OpenedAthleteData } from '@athlete/data';
 import type { CardioDraft } from '@/cardio/cardioForm';
 import type { TrainingRepository } from './TrainingRepository';
-import { computePersonalRecords, newRecordsInSession, setVolumeKg, summarizeWeek } from '@athlete/domain';
+import { computePersonalRecords, diagnoseWeeklyVolume, isEffectiveSet, newRecordsInSession, setVolumeKg, summarizeWeek, weeklySetsByMuscle, type ExerciseMuscles } from '@athlete/domain';
 import type { BodyMeasurementInput, LocalAthletePreferencesInput, LoggedSetInput, RoutineInput } from './trainingSchemas';
-import type { BodyMeasurement, CardioEntry, Exercise, ExerciseRecord, LocalAthletePreferences, PreviousPerformance, ProgressSummary, Routine, SessionRecord, TrainingOverview, Workout, WorkoutDetail, TrainingSet } from './trainingTypes';
+import type { BodyMeasurement, CardioEntry, Exercise, ExerciseRecord, LocalAthletePreferences, PreviousPerformance, ProgressSummary, Routine, SessionRecord, WeeklyMuscleVolume, TrainingOverview, Workout, WorkoutDetail, TrainingSet } from './trainingTypes';
 
 type IdFactory = () => string;
 type SessionDetail = Awaited<ReturnType<OpenedAthleteData['sessions']['getDetail']>>;
@@ -310,6 +310,35 @@ export class OfficialTrainingRepository implements TrainingRepository {
       sessionsThisMonth: history.filter((item) => item.startedAt.slice(0, 7) === today.slice(0, 7)).length,
       dailyVolumeKg, records, measurements,
     };
+  }
+
+  async getWeeklyMuscleVolume(): Promise<WeeklyMuscleVolume> {
+    const from = localDate(new Date(Date.now() - 6 * 86_400_000));
+    const [active, history, groups] = await Promise.all([
+      this.data.sessions.getActive(),
+      this.data.sessions.listHistory({ status: ['completed'] }, { limit: 100 }),
+      this.data.exercises.listMuscleGroups(),
+    ]);
+    const recent = unwrap(history).items.filter((item) => item.localDate >= from);
+    const details = (await Promise.all(recent.map((item) => this.data.sessions.getDetail(item.sessionId))))
+      .filter((item) => item.ok).map((item) => item.value);
+    const current = unwrap(active);
+    if (current && current.localDate >= from && !details.some((d) => d.id === current.id)) details.push(current);
+
+    const groupList = unwrap(groups);
+    const slugOf = new Map(groupList.map((g) => [g.id, g.slug]));
+    const nameOf = new Map(groupList.map((g) => [g.slug, g.name]));
+    const muscles = new Map<string, ExerciseMuscles>();
+    for (const exerciseId of new Set(details.flatMap((d) => d.exercises.map((e) => e.exerciseId)))) {
+      const exercise = await this.data.exercises.getById(exerciseId);
+      if (!exercise.ok) continue;
+      const toSlugs = (ids: string[]) => ids.map((id) => slugOf.get(id)).filter((x): x is string => Boolean(x));
+      muscles.set(exerciseId, { primary: toSlugs(exercise.value.primaryMuscleGroupIds), secondary: toSlugs(exercise.value.secondaryMuscleGroupIds) });
+    }
+    const sets = weeklySetsByMuscle(details, (id) => muscles.get(id));
+    const items = diagnoseWeeklyVolume(sets).map((m) => ({ ...m, name: nameOf.get(m.muscle) ?? m.muscle }));
+    const totalSets = details.reduce((n, d) => n + d.exercises.reduce((k, e) => k + e.sets.filter(isEffectiveSet).length, 0), 0);
+    return { items, totalSets, sessions: details.length };
   }
 
   async addBodyMeasurement(input: BodyMeasurementInput): Promise<string> {

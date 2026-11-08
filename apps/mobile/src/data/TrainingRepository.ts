@@ -1,5 +1,5 @@
 import type { CardioDraft } from '@/cardio/cardioForm';
-import type { BodyMeasurement, CardioEntry, Exercise, LocalAthletePreferences, ProgressSummary, Routine, RoutineDraft, TrainingOverview, Workout, WorkoutDetail } from './trainingTypes';
+import type { BodyMeasurement, CardioEntry, Exercise, LocalAthletePreferences, ProgressSummary, Routine, WeeklyMuscleVolume, RoutineDraft, TrainingOverview, Workout, WorkoutDetail } from './trainingTypes';
 import type { BodyMeasurementInput, LocalAthletePreferencesInput, LoggedSetInput } from './trainingSchemas';
 
 export interface TrainingRepository {
@@ -19,6 +19,8 @@ export interface TrainingRepository {
   listHistory(): Promise<Workout[]>;
   getOverview(): Promise<TrainingOverview>;
   getProgress(): Promise<ProgressSummary>;
+  /** Series por músculo de los últimos 7 días (incluye la sesión en curso). */
+  getWeeklyMuscleVolume(): Promise<WeeklyMuscleVolume>;
   addBodyMeasurement(input: BodyMeasurementInput): Promise<string>;
   listBodyMeasurements(): Promise<BodyMeasurement[]>;
   tombstoneBodyMeasurement(measurementId: string): Promise<void>;

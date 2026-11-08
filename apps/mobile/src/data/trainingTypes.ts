@@ -36,6 +36,12 @@ export type ExerciseRecord = {
   e1rm: { valueKg: number; weightKg: number; reps: number; localDate: string } | null;
 };
 export type ProgressSummary = { weeklyVolumeKg: number; sessionsThisMonth: number; dailyVolumeKg: Array<{ label: string; volumeKg: number }>; records: ExerciseRecord[]; measurements: BodyMeasurement[] };
+/**
+ * Series efectivas por músculo en los últimos 7 días (incluye la sesión en curso). Principal = 1, secundario = 0.5.
+ * `status` compara con una referencia general de hipertrofia; `untracked` = músculo que no se diagnostica.
+ */
+export type MuscleVolumeItem = { muscle: string; name: string; sets: number; status: 'low' | 'ok' | 'high' | 'untracked'; range: readonly [number, number] | null };
+export type WeeklyMuscleVolume = { items: MuscleVolumeItem[]; totalSets: number; sessions: number };
 export type LocalAthletePreferences = { displayName: string; unitSystem: 'metric' | 'imperial'; preferredSport: 'strength' | 'hybrid' | 'running' | 'swimming'; sports?: Array<'strength' | 'running' | 'swimming' | 'cycling' | 'rowing' | 'functional_fitness' | 'other'>; timezone: string };
 
 export type RoutineDraft = RoutineInput;
