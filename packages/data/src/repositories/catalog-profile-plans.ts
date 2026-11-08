@@ -25,6 +25,11 @@ import { Repository, checkPosition, guard, input, toServerScale } from './base';
 
 // ---------------- Ejercicios ----------------
 
+/** Minúsculas y sin acentos, para buscar como escribe la gente en el teléfono. */
+export function foldText(s: string): string {
+  return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+}
+
 export class LocalExerciseRepository extends Repository implements ExerciseRepository {
   list(query: ExerciseQuery = {}): Promise<Result<Exercise[]>> {
     return guard(async () => {
@@ -33,13 +38,19 @@ export class LocalExerciseRepository extends Repository implements ExerciseRepos
       const params: string[] = [this.store.ctx.userId];
       if (!q.includeArchived) where.push('archived_at IS NULL');
       if (q.modality) { where.push('modality = ?'); params.push(q.modality); }
-      if (q.search) { where.push("lower(name) LIKE ? ESCAPE '\\'"); params.push(`%${q.search.toLowerCase().replace(/[\\%_]/g, (c) => `\\${c}`)}%`); }
+      if (q.movementPattern) { where.push('movement_pattern = ?'); params.push(q.movementPattern); }
+      if (q.accessTier) { where.push('access_tier = ?'); params.push(q.accessTier); }
+      if (q.equipmentId) { where.push('equipment_ids LIKE ?'); params.push(`%"${q.equipmentId}"%`); }
       if (q.muscleGroupId) {
         where.push('(primary_muscle_group_ids LIKE ? OR secondary_muscle_group_ids LIKE ?)');
         params.push(`%"${q.muscleGroupId}"%`, `%"${q.muscleGroupId}"%`);
       }
-      return (await this.store.select('exercise', `WHERE ${where.join(' AND ')} ORDER BY name`, params))
+      const rows = (await this.store.select('exercise', `WHERE ${where.join(' AND ')} ORDER BY name`, params))
         .map((r) => this.store.toContract<Exercise>('exercise', r));
+      if (!q.search) return rows;
+      // Búsqueda sin acentos ni mayúsculas ("jalon" encuentra "Jalón"); todas las palabras deben aparecer.
+      const words = foldText(q.search).split(/\s+/).filter(Boolean);
+      return rows.filter((e) => { const name = foldText(e.name); return words.every((w) => name.includes(w)); });
     });
   }
 
@@ -78,6 +89,7 @@ export class LocalExerciseRepository extends Repository implements ExerciseRepos
       const row = await this.store.upsert('exercise', i.id, {
         slug: null, name: i.name, modality: i.modality, load_type: i.loadType, primary_muscle_group_ids: i.primaryMuscleGroupIds,
         secondary_muscle_group_ids: i.secondaryMuscleGroupIds, equipment_ids: i.equipmentIds, instructions: i.instructions, archived_at: null,
+        movement_pattern: i.movementPattern, mechanics: i.mechanics, is_unilateral: i.isUnilateral, access_tier: 'free',
       }, tx);
       return this.store.toContract<Exercise>('exercise', row);
     }));
@@ -90,6 +102,7 @@ export class LocalExerciseRepository extends Repository implements ExerciseRepos
       const map: Record<string, string> = {
         name: 'name', modality: 'modality', loadType: 'load_type', primaryMuscleGroupIds: 'primary_muscle_group_ids',
         secondaryMuscleGroupIds: 'secondary_muscle_group_ids', equipmentIds: 'equipment_ids', instructions: 'instructions',
+        movementPattern: 'movement_pattern', mechanics: 'mechanics', isUnilateral: 'is_unilateral',
       };
       const changes: Record<string, unknown> = {};
       for (const [k, col] of Object.entries(map)) if (k in (raw as object)) changes[col] = (i as Record<string, unknown>)[k];

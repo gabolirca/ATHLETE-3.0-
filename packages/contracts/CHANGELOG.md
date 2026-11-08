@@ -4,6 +4,19 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 Mientras la versión sea `0.x`, los contratos son **borrador**: pueden cambiar sin incremento mayor,
 pero todo cambio debe registrarse aquí y revisarse con Codex (ADR-0001, regla 4).
 
+## [0.6.0] — 2026-11-08 — Catálogo con rasgos y nivel de acceso (Claude, aprobado por el propietario)
+
+Cambio aditivo.
+
+### Añadido
+- `exercises`: `MovementPattern` (24 patrones), `Mechanics` (`compound` | `isolation`) y `AccessTier` (`free` | `pro`).
+- `Exercise.movementPattern`, `.mechanics`, `.isUnilateral`, `.accessTier`. Son rasgos para el modelo de carga
+  sugerida y para el volumen por patrón; el nivel decide qué ejercicios incluye el plan gratis
+  (decisión del 8-nov-2026: Gratis = Fuerza básica con catálogo limitado).
+- `CreateCustomExerciseInput`: `movementPattern`, `mechanics` e `isUnilateral` opcionales. Los personalizados son `free`.
+- `ExerciseQuery`: filtros `equipmentId`, `movementPattern` y `accessTier`.
+- Servidor: migración `20261108000100` (columnas nuevas y catálogo de 13 a 105 ejercicios).
+
 ## [0.5.0] — 2026-11-07 — Metas nutricionales con origen (Claude, aprobado por el propietario)
 
 Cambio aditivo.

@@ -28,11 +28,13 @@ describe('contratos 0.3.0 contra el servidor', () => {
       id: e.id, slug: e.slug, name: e.name, modality: e.modality, load_type: e.load_type, user_id: e.user_id ?? null,
       primary: [...(e.primary_muscle_group_ids as string[])].sort(), secondary: [...(e.secondary_muscle_group_ids as string[])].sort(),
       equipment: [...(e.equipment_ids as string[])].sort(), instructions: e.instructions ?? null, archived_at: e.archived_at ?? null,
+      movement_pattern: e.movement_pattern, mechanics: e.mechanics, is_unilateral: e.is_unilateral, access_tier: e.access_tier,
     });
     const byId = <T extends { id: unknown }>(xs: T[]) => [...xs].sort((a, b) => String(a.id).localeCompare(String(b.id)));
     expect(byId(server.exercises.filter((e) => e.user_id == null).map(pick))).toEqual(byId(BUNDLED_CATALOG.exercises.map(pick)));
     expect(byId(server.muscleGroups)).toEqual(byId(BUNDLED_CATALOG.muscleGroups));
     expect(byId(server.equipment)).toEqual(byId(BUNDLED_CATALOG.equipment));
+    expect(BUNDLED_CATALOG.exercises).toHaveLength(105);
   });
 
   it('sin cuenta → ciclo offline → iniciar sesión → adoptar → sincronizar: 0 rechazos y datos del usuario correcto', async () => {

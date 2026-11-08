@@ -6,7 +6,7 @@ import { ENTITIES, allColumns, type ColumnKind } from './entities';
  * Las tablas de negocio replican las de `athlete3` (mismas columnas snake_case). Las reglas de
  * negocio se validan con Zod/dominio antes de escribir y el servidor las vuelve a validar.
  */
-const sqlType: Record<ColumnKind, string> = { text: 'TEXT', int: 'INTEGER', real: 'REAL', json: 'TEXT' };
+const sqlType: Record<ColumnKind, string> = { text: 'TEXT', int: 'INTEGER', real: 'REAL', json: 'TEXT', bool: 'INTEGER' };
 
 function entityTable(meta: (typeof ENTITIES)[keyof typeof ENTITIES]): string {
   const cols = Object.entries(allColumns(meta)).map(([name, kind]) =>
@@ -89,6 +89,17 @@ const MIGRATIONS: ReadonlyArray<Migration> = [
   async (tx) => {
     await addColumnIfMissing(tx, 'nutrition_targets', 'source', 'TEXT');
     await tx.exec("UPDATE nutrition_targets SET source = 'manual' WHERE source IS NULL");
+  },
+  // v5 (contratos 0.6.0): rasgos y nivel de acceso de los ejercicios. Se olvida el catálogo aplicado para que se
+  // aplique el incluido nuevo (105 ejercicios) y la siguiente sync vuelva a descargar el del servidor.
+  async (tx) => {
+    await addColumnIfMissing(tx, 'exercises', 'movement_pattern', 'TEXT');
+    await addColumnIfMissing(tx, 'exercises', 'mechanics', 'TEXT');
+    await addColumnIfMissing(tx, 'exercises', 'is_unilateral', 'INTEGER');
+    await addColumnIfMissing(tx, 'exercises', 'access_tier', 'TEXT');
+    await tx.exec("UPDATE exercises SET is_unilateral = 0 WHERE is_unilateral IS NULL");
+    await tx.exec("UPDATE exercises SET access_tier = 'free' WHERE access_tier IS NULL");
+    await tx.exec("DELETE FROM sync_state WHERE key IN ('catalog_at', 'catalog_bundled')");
   },
 ];
 

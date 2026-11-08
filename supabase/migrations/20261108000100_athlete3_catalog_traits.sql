@@ -1,0 +1,373 @@
+-- =====================================================================================
+-- ATHLETE 3.0 · Contratos 0.6.0: catálogo con rasgos y nivel de acceso (Claude, 2026-11-08)
+--
+-- Aditiva:
+--   1. athlete3.exercises: movement_pattern, mechanics, is_unilateral, access_tier.
+--      - Rasgos para el modelo de carga sugerida (generaliza por patrón/músculo/equipo) y para el volumen.
+--      - access_tier: 'free' | 'pro' (decisión del 8-nov-2026: Gratis = Fuerza básica con catálogo limitado).
+--        Los ejercicios personalizados siempre son 'free'.
+--   2. Catálogo global: 4 grupos musculares, 8 equipos y 92 ejercicios nuevos (13 → 105), más los rasgos
+--      de los 13 existentes. SQL generado por scripts/catalog-sql.ts desde catalog-data.ts (fuente única
+--      que también usa la app sin conexión).
+--   3. La sync de ejercicios personalizados incluye las columnas nuevas sola (sync_writable_columns).
+-- El nivel de acceso NO se aplica con RLS: el catálogo completo se puede leer; qué se puede USAR lo decide
+-- el plan del usuario (derechos de suscripción, fase de cobro).
+-- Repite el cierre de privilegios de 0900.
+-- =====================================================================================
+
+alter table athlete3.exercises
+  add column movement_pattern text
+    constraint exercises_movement_pattern_valid check (movement_pattern is null or movement_pattern in (
+    'squat', 'hinge', 'lunge', 'horizontal_push', 'vertical_push', 'horizontal_pull', 'vertical_pull',
+    'chest_fly', 'shoulder_raise', 'elbow_flexion', 'elbow_extension', 'knee_extension', 'knee_flexion',
+    'hip_extension', 'hip_abduction', 'hip_adduction', 'calf_raise', 'shrug', 'wrist',
+    'core_anti_extension', 'core_flexion', 'core_rotation', 'carry', 'power')),
+  add column mechanics text
+    constraint exercises_mechanics_valid check (mechanics is null or mechanics in ('compound', 'isolation')),
+  add column is_unilateral boolean not null default false,
+  add column access_tier text not null default 'free'
+    constraint exercises_access_tier_valid check (access_tier in ('free', 'pro'));
+
+alter table athlete3.exercises
+  add constraint exercises_custom_are_free check (user_id is null or access_tier = 'free');
+
+create index exercises_pattern_idx on athlete3.exercises (movement_pattern) where user_id is null;
+
+-- ---------------------------------------------------------------------------------
+-- Catálogo
+-- ---------------------------------------------------------------------------------
+-- Generado por scripts/catalog-sql.ts desde catalog-data.ts. No editar a mano.
+insert into athlete3.muscle_groups (id, slug, name) values
+  ('10000000-0000-4000-8000-000000000001', 'chest', 'Pecho'),
+  ('10000000-0000-4000-8000-000000000002', 'back', 'Espalda'),
+  ('10000000-0000-4000-8000-000000000003', 'shoulders', 'Hombros'),
+  ('10000000-0000-4000-8000-000000000004', 'biceps', 'Bíceps'),
+  ('10000000-0000-4000-8000-000000000005', 'triceps', 'Tríceps'),
+  ('10000000-0000-4000-8000-000000000006', 'forearms', 'Antebrazos'),
+  ('10000000-0000-4000-8000-000000000007', 'core', 'Core'),
+  ('10000000-0000-4000-8000-000000000008', 'quadriceps', 'Cuádriceps'),
+  ('10000000-0000-4000-8000-000000000009', 'hamstrings', 'Isquiotibiales'),
+  ('10000000-0000-4000-8000-000000000010', 'glutes', 'Glúteos'),
+  ('10000000-0000-4000-8000-000000000011', 'calves', 'Pantorrillas'),
+  ('10000000-0000-4000-8000-000000000012', 'full-body', 'Cuerpo completo'),
+  ('10000000-0000-4000-8000-000000000013', 'traps', 'Trapecio'),
+  ('10000000-0000-4000-8000-000000000014', 'lower-back', 'Espalda baja'),
+  ('10000000-0000-4000-8000-000000000015', 'adductors', 'Aductores'),
+  ('10000000-0000-4000-8000-000000000016', 'abductors', 'Abductores')
+on conflict (id) do nothing;
+insert into athlete3.equipment (id, slug, name) values
+  ('20000000-0000-4000-8000-000000000001', 'barbell', 'Barra'),
+  ('20000000-0000-4000-8000-000000000002', 'dumbbell', 'Mancuernas'),
+  ('20000000-0000-4000-8000-000000000003', 'machine', 'Máquina'),
+  ('20000000-0000-4000-8000-000000000004', 'cable', 'Polea'),
+  ('20000000-0000-4000-8000-000000000005', 'bodyweight', 'Peso corporal'),
+  ('20000000-0000-4000-8000-000000000006', 'kettlebell', 'Kettlebell'),
+  ('20000000-0000-4000-8000-000000000007', 'pull-up-bar', 'Barra de dominadas'),
+  ('20000000-0000-4000-8000-000000000008', 'bench', 'Banco'),
+  ('20000000-0000-4000-8000-000000000009', 'smith-machine', 'Máquina Smith'),
+  ('20000000-0000-4000-8000-000000000010', 'ez-bar', 'Barra Z'),
+  ('20000000-0000-4000-8000-000000000011', 'resistance-band', 'Banda elástica'),
+  ('20000000-0000-4000-8000-000000000012', 'trap-bar', 'Barra hexagonal'),
+  ('20000000-0000-4000-8000-000000000013', 'landmine', 'Landmine'),
+  ('20000000-0000-4000-8000-000000000014', 'medicine-ball', 'Balón medicinal'),
+  ('20000000-0000-4000-8000-000000000015', 'box', 'Cajón'),
+  ('20000000-0000-4000-8000-000000000016', 'ab-wheel', 'Rueda abdominal')
+on conflict (id) do nothing;
+insert into athlete3.exercises (id, slug, name, modality, load_type, primary_muscle_group_ids, secondary_muscle_group_ids, equipment_ids,
+  movement_pattern, mechanics, is_unilateral, access_tier) values
+  ('30000000-0000-4000-8000-000000000001', 'back-squat', 'Sentadilla trasera', 'strength', 'external', '{10000000-0000-4000-8000-000000000008,10000000-0000-4000-8000-000000000010}', '{10000000-0000-4000-8000-000000000009,10000000-0000-4000-8000-000000000007}', '{20000000-0000-4000-8000-000000000001}', 'squat', 'compound', false, 'free'),
+  ('30000000-0000-4000-8000-000000000002', 'bench-press', 'Press de banca', 'strength', 'external', '{10000000-0000-4000-8000-000000000001}', '{10000000-0000-4000-8000-000000000003,10000000-0000-4000-8000-000000000005}', '{20000000-0000-4000-8000-000000000001,20000000-0000-4000-8000-000000000008}', 'horizontal_push', 'compound', false, 'free'),
+  ('30000000-0000-4000-8000-000000000003', 'deadlift', 'Peso muerto', 'strength', 'external', '{10000000-0000-4000-8000-000000000009,10000000-0000-4000-8000-000000000010,10000000-0000-4000-8000-000000000002}', '{10000000-0000-4000-8000-000000000006,10000000-0000-4000-8000-000000000007}', '{20000000-0000-4000-8000-000000000001}', 'hinge', 'compound', false, 'free'),
+  ('30000000-0000-4000-8000-000000000004', 'overhead-press', 'Press militar', 'strength', 'external', '{10000000-0000-4000-8000-000000000003}', '{10000000-0000-4000-8000-000000000005,10000000-0000-4000-8000-000000000007}', '{20000000-0000-4000-8000-000000000001}', 'vertical_push', 'compound', false, 'free'),
+  ('30000000-0000-4000-8000-000000000005', 'barbell-row', 'Remo con barra', 'strength', 'external', '{10000000-0000-4000-8000-000000000002}', '{10000000-0000-4000-8000-000000000004}', '{20000000-0000-4000-8000-000000000001}', 'horizontal_pull', 'compound', false, 'free'),
+  ('30000000-0000-4000-8000-000000000006', 'pull-up', 'Dominadas', 'strength', 'bodyweight', '{10000000-0000-4000-8000-000000000002}', '{10000000-0000-4000-8000-000000000004}', '{20000000-0000-4000-8000-000000000007}', 'vertical_pull', 'compound', false, 'free'),
+  ('30000000-0000-4000-8000-000000000007', 'dip', 'Fondos', 'strength', 'bodyweight', '{10000000-0000-4000-8000-000000000005,10000000-0000-4000-8000-000000000001}', '{10000000-0000-4000-8000-000000000003}', '{20000000-0000-4000-8000-000000000005}', 'vertical_push', 'compound', false, 'free'),
+  ('30000000-0000-4000-8000-000000000008', 'romanian-deadlift', 'Peso muerto rumano', 'strength', 'external', '{10000000-0000-4000-8000-000000000009}', '{10000000-0000-4000-8000-000000000010}', '{20000000-0000-4000-8000-000000000001}', 'hinge', 'compound', false, 'free'),
+  ('30000000-0000-4000-8000-000000000009', 'dumbbell-curl', 'Curl con mancuernas', 'strength', 'external', '{10000000-0000-4000-8000-000000000004}', '{10000000-0000-4000-8000-000000000006}', '{20000000-0000-4000-8000-000000000002}', 'elbow_flexion', 'isolation', false, 'free'),
+  ('30000000-0000-4000-8000-000000000010', 'leg-press', 'Prensa de piernas', 'strength', 'external', '{10000000-0000-4000-8000-000000000008}', '{10000000-0000-4000-8000-000000000010}', '{20000000-0000-4000-8000-000000000003}', 'squat', 'compound', false, 'free'),
+  ('30000000-0000-4000-8000-000000000011', 'lat-pulldown', 'Jalón al pecho', 'strength', 'external', '{10000000-0000-4000-8000-000000000002}', '{10000000-0000-4000-8000-000000000004}', '{20000000-0000-4000-8000-000000000004}', 'vertical_pull', 'compound', false, 'free'),
+  ('30000000-0000-4000-8000-000000000012', 'plank', 'Plancha', 'strength', 'time', '{10000000-0000-4000-8000-000000000007}', '{}', '{20000000-0000-4000-8000-000000000005}', 'core_anti_extension', 'isolation', false, 'free'),
+  ('30000000-0000-4000-8000-000000000013', 'seated-cable-row', 'Remo sentado en polea', 'strength', 'external', '{10000000-0000-4000-8000-000000000002}', '{10000000-0000-4000-8000-000000000004}', '{20000000-0000-4000-8000-000000000004}', 'horizontal_pull', 'compound', false, 'free'),
+  ('30000000-0000-4000-8000-000000000014', 'incline-bench-press', 'Press inclinado con barra', 'strength', 'external', '{10000000-0000-4000-8000-000000000001}', '{10000000-0000-4000-8000-000000000003,10000000-0000-4000-8000-000000000005}', '{20000000-0000-4000-8000-000000000001,20000000-0000-4000-8000-000000000008}', 'horizontal_push', 'compound', false, 'free'),
+  ('30000000-0000-4000-8000-000000000015', 'decline-bench-press', 'Press declinado con barra', 'strength', 'external', '{10000000-0000-4000-8000-000000000001}', '{10000000-0000-4000-8000-000000000005}', '{20000000-0000-4000-8000-000000000001,20000000-0000-4000-8000-000000000008}', 'horizontal_push', 'compound', false, 'pro'),
+  ('30000000-0000-4000-8000-000000000016', 'dumbbell-bench-press', 'Press de banca con mancuernas', 'strength', 'external', '{10000000-0000-4000-8000-000000000001}', '{10000000-0000-4000-8000-000000000003,10000000-0000-4000-8000-000000000005}', '{20000000-0000-4000-8000-000000000002,20000000-0000-4000-8000-000000000008}', 'horizontal_push', 'compound', false, 'free'),
+  ('30000000-0000-4000-8000-000000000017', 'incline-dumbbell-press', 'Press inclinado con mancuernas', 'strength', 'external', '{10000000-0000-4000-8000-000000000001}', '{10000000-0000-4000-8000-000000000003,10000000-0000-4000-8000-000000000005}', '{20000000-0000-4000-8000-000000000002,20000000-0000-4000-8000-000000000008}', 'horizontal_push', 'compound', false, 'free'),
+  ('30000000-0000-4000-8000-000000000018', 'machine-chest-press', 'Press de pecho en máquina', 'strength', 'external', '{10000000-0000-4000-8000-000000000001}', '{10000000-0000-4000-8000-000000000003,10000000-0000-4000-8000-000000000005}', '{20000000-0000-4000-8000-000000000003}', 'horizontal_push', 'compound', false, 'free'),
+  ('30000000-0000-4000-8000-000000000019', 'smith-bench-press', 'Press de banca en Smith', 'strength', 'external', '{10000000-0000-4000-8000-000000000001}', '{10000000-0000-4000-8000-000000000003,10000000-0000-4000-8000-000000000005}', '{20000000-0000-4000-8000-000000000009,20000000-0000-4000-8000-000000000008}', 'horizontal_push', 'compound', false, 'pro'),
+  ('30000000-0000-4000-8000-000000000020', 'dumbbell-fly', 'Aperturas con mancuernas', 'strength', 'external', '{10000000-0000-4000-8000-000000000001}', '{10000000-0000-4000-8000-000000000003}', '{20000000-0000-4000-8000-000000000002,20000000-0000-4000-8000-000000000008}', 'chest_fly', 'isolation', false, 'free'),
+  ('30000000-0000-4000-8000-000000000021', 'cable-crossover', 'Cruce de poleas', 'strength', 'external', '{10000000-0000-4000-8000-000000000001}', '{10000000-0000-4000-8000-000000000003}', '{20000000-0000-4000-8000-000000000004}', 'chest_fly', 'isolation', false, 'pro'),
+  ('30000000-0000-4000-8000-000000000022', 'pec-deck', 'Aperturas en máquina (pec deck)', 'strength', 'external', '{10000000-0000-4000-8000-000000000001}', '{10000000-0000-4000-8000-000000000003}', '{20000000-0000-4000-8000-000000000003}', 'chest_fly', 'isolation', false, 'free'),
+  ('30000000-0000-4000-8000-000000000023', 'push-up', 'Lagartijas', 'strength', 'bodyweight', '{10000000-0000-4000-8000-000000000001}', '{10000000-0000-4000-8000-000000000005,10000000-0000-4000-8000-000000000003,10000000-0000-4000-8000-000000000007}', '{20000000-0000-4000-8000-000000000005}', 'horizontal_push', 'compound', false, 'free'),
+  ('30000000-0000-4000-8000-000000000024', 'low-cable-fly', 'Aperturas en polea baja', 'strength', 'external', '{10000000-0000-4000-8000-000000000001}', '{10000000-0000-4000-8000-000000000003}', '{20000000-0000-4000-8000-000000000004}', 'chest_fly', 'isolation', false, 'pro'),
+  ('30000000-0000-4000-8000-000000000025', 'close-grip-bench-press', 'Press de banca agarre cerrado', 'strength', 'external', '{10000000-0000-4000-8000-000000000005}', '{10000000-0000-4000-8000-000000000001,10000000-0000-4000-8000-000000000003}', '{20000000-0000-4000-8000-000000000001,20000000-0000-4000-8000-000000000008}', 'horizontal_push', 'compound', false, 'pro'),
+  ('30000000-0000-4000-8000-000000000026', 'chin-up', 'Dominadas supinas', 'strength', 'bodyweight', '{10000000-0000-4000-8000-000000000002}', '{10000000-0000-4000-8000-000000000004}', '{20000000-0000-4000-8000-000000000007}', 'vertical_pull', 'compound', false, 'free'),
+  ('30000000-0000-4000-8000-000000000027', 'assisted-pull-up', 'Dominadas asistidas en máquina', 'strength', 'assisted', '{10000000-0000-4000-8000-000000000002}', '{10000000-0000-4000-8000-000000000004}', '{20000000-0000-4000-8000-000000000003}', 'vertical_pull', 'compound', false, 'free'),
+  ('30000000-0000-4000-8000-000000000028', 'one-arm-dumbbell-row', 'Remo con mancuerna a una mano', 'strength', 'external', '{10000000-0000-4000-8000-000000000002}', '{10000000-0000-4000-8000-000000000004}', '{20000000-0000-4000-8000-000000000002,20000000-0000-4000-8000-000000000008}', 'horizontal_pull', 'compound', true, 'free'),
+  ('30000000-0000-4000-8000-000000000029', 't-bar-row', 'Remo en T', 'strength', 'external', '{10000000-0000-4000-8000-000000000002}', '{10000000-0000-4000-8000-000000000004,10000000-0000-4000-8000-000000000013}', '{20000000-0000-4000-8000-000000000013}', 'horizontal_pull', 'compound', false, 'pro'),
+  ('30000000-0000-4000-8000-000000000030', 'pendlay-row', 'Remo Pendlay', 'strength', 'external', '{10000000-0000-4000-8000-000000000002}', '{10000000-0000-4000-8000-000000000004,10000000-0000-4000-8000-000000000014}', '{20000000-0000-4000-8000-000000000001}', 'horizontal_pull', 'compound', false, 'pro'),
+  ('30000000-0000-4000-8000-000000000031', 'chest-supported-row', 'Remo con pecho apoyado', 'strength', 'external', '{10000000-0000-4000-8000-000000000002}', '{10000000-0000-4000-8000-000000000004}', '{20000000-0000-4000-8000-000000000002,20000000-0000-4000-8000-000000000008}', 'horizontal_pull', 'compound', false, 'pro'),
+  ('30000000-0000-4000-8000-000000000032', 'machine-row', 'Remo en máquina', 'strength', 'external', '{10000000-0000-4000-8000-000000000002}', '{10000000-0000-4000-8000-000000000004}', '{20000000-0000-4000-8000-000000000003}', 'horizontal_pull', 'compound', false, 'free'),
+  ('30000000-0000-4000-8000-000000000033', 'close-grip-lat-pulldown', 'Jalón agarre cerrado', 'strength', 'external', '{10000000-0000-4000-8000-000000000002}', '{10000000-0000-4000-8000-000000000004}', '{20000000-0000-4000-8000-000000000004}', 'vertical_pull', 'compound', false, 'pro'),
+  ('30000000-0000-4000-8000-000000000034', 'straight-arm-pulldown', 'Pullover en polea', 'strength', 'external', '{10000000-0000-4000-8000-000000000002}', '{10000000-0000-4000-8000-000000000003}', '{20000000-0000-4000-8000-000000000004}', 'vertical_pull', 'isolation', false, 'pro'),
+  ('30000000-0000-4000-8000-000000000035', 'inverted-row', 'Remo invertido', 'strength', 'bodyweight', '{10000000-0000-4000-8000-000000000002}', '{10000000-0000-4000-8000-000000000004,10000000-0000-4000-8000-000000000007}', '{20000000-0000-4000-8000-000000000005}', 'horizontal_pull', 'compound', false, 'pro'),
+  ('30000000-0000-4000-8000-000000000036', 'face-pull', 'Face pull', 'strength', 'external', '{10000000-0000-4000-8000-000000000003}', '{10000000-0000-4000-8000-000000000013,10000000-0000-4000-8000-000000000002}', '{20000000-0000-4000-8000-000000000004}', 'horizontal_pull', 'isolation', false, 'free'),
+  ('30000000-0000-4000-8000-000000000037', 'barbell-shrug', 'Encogimientos con barra', 'strength', 'external', '{10000000-0000-4000-8000-000000000013}', '{10000000-0000-4000-8000-000000000006}', '{20000000-0000-4000-8000-000000000001}', 'shrug', 'isolation', false, 'pro'),
+  ('30000000-0000-4000-8000-000000000038', 'dumbbell-shrug', 'Encogimientos con mancuernas', 'strength', 'external', '{10000000-0000-4000-8000-000000000013}', '{10000000-0000-4000-8000-000000000006}', '{20000000-0000-4000-8000-000000000002}', 'shrug', 'isolation', false, 'free'),
+  ('30000000-0000-4000-8000-000000000039', 'back-extension', 'Hiperextensiones', 'strength', 'bodyweight', '{10000000-0000-4000-8000-000000000014}', '{10000000-0000-4000-8000-000000000010,10000000-0000-4000-8000-000000000009}', '{20000000-0000-4000-8000-000000000008}', 'hinge', 'isolation', false, 'pro'),
+  ('30000000-0000-4000-8000-000000000040', 'rack-pull', 'Rack pull', 'strength', 'external', '{10000000-0000-4000-8000-000000000002,10000000-0000-4000-8000-000000000014}', '{10000000-0000-4000-8000-000000000010,10000000-0000-4000-8000-000000000009,10000000-0000-4000-8000-000000000013}', '{20000000-0000-4000-8000-000000000001}', 'hinge', 'compound', false, 'pro'),
+  ('30000000-0000-4000-8000-000000000041', 'dumbbell-shoulder-press', 'Press de hombro con mancuernas', 'strength', 'external', '{10000000-0000-4000-8000-000000000003}', '{10000000-0000-4000-8000-000000000005}', '{20000000-0000-4000-8000-000000000002,20000000-0000-4000-8000-000000000008}', 'vertical_push', 'compound', false, 'free'),
+  ('30000000-0000-4000-8000-000000000042', 'arnold-press', 'Press Arnold', 'strength', 'external', '{10000000-0000-4000-8000-000000000003}', '{10000000-0000-4000-8000-000000000005}', '{20000000-0000-4000-8000-000000000002,20000000-0000-4000-8000-000000000008}', 'vertical_push', 'compound', false, 'pro'),
+  ('30000000-0000-4000-8000-000000000043', 'machine-shoulder-press', 'Press de hombro en máquina', 'strength', 'external', '{10000000-0000-4000-8000-000000000003}', '{10000000-0000-4000-8000-000000000005}', '{20000000-0000-4000-8000-000000000003}', 'vertical_push', 'compound', false, 'free'),
+  ('30000000-0000-4000-8000-000000000044', 'lateral-raise', 'Elevaciones laterales con mancuernas', 'strength', 'external', '{10000000-0000-4000-8000-000000000003}', '{10000000-0000-4000-8000-000000000013}', '{20000000-0000-4000-8000-000000000002}', 'shoulder_raise', 'isolation', false, 'free'),
+  ('30000000-0000-4000-8000-000000000045', 'cable-lateral-raise', 'Elevación lateral en polea', 'strength', 'external', '{10000000-0000-4000-8000-000000000003}', '{10000000-0000-4000-8000-000000000013}', '{20000000-0000-4000-8000-000000000004}', 'shoulder_raise', 'isolation', true, 'pro'),
+  ('30000000-0000-4000-8000-000000000046', 'front-raise', 'Elevaciones frontales', 'strength', 'external', '{10000000-0000-4000-8000-000000000003}', '{10000000-0000-4000-8000-000000000001}', '{20000000-0000-4000-8000-000000000002}', 'shoulder_raise', 'isolation', false, 'pro'),
+  ('30000000-0000-4000-8000-000000000047', 'rear-delt-fly', 'Pájaros (deltoide posterior)', 'strength', 'external', '{10000000-0000-4000-8000-000000000003}', '{10000000-0000-4000-8000-000000000013,10000000-0000-4000-8000-000000000002}', '{20000000-0000-4000-8000-000000000002}', 'shoulder_raise', 'isolation', false, 'pro'),
+  ('30000000-0000-4000-8000-000000000048', 'reverse-pec-deck', 'Aperturas inversas en máquina', 'strength', 'external', '{10000000-0000-4000-8000-000000000003}', '{10000000-0000-4000-8000-000000000013,10000000-0000-4000-8000-000000000002}', '{20000000-0000-4000-8000-000000000003}', 'shoulder_raise', 'isolation', false, 'pro'),
+  ('30000000-0000-4000-8000-000000000049', 'upright-row', 'Remo al mentón', 'strength', 'external', '{10000000-0000-4000-8000-000000000003,10000000-0000-4000-8000-000000000013}', '{10000000-0000-4000-8000-000000000004}', '{20000000-0000-4000-8000-000000000001}', 'vertical_pull', 'compound', false, 'pro'),
+  ('30000000-0000-4000-8000-000000000050', 'push-press', 'Push press', 'strength', 'external', '{10000000-0000-4000-8000-000000000003}', '{10000000-0000-4000-8000-000000000008,10000000-0000-4000-8000-000000000005,10000000-0000-4000-8000-000000000007}', '{20000000-0000-4000-8000-000000000001}', 'power', 'compound', false, 'pro'),
+  ('30000000-0000-4000-8000-000000000051', 'landmine-press', 'Press landmine', 'strength', 'external', '{10000000-0000-4000-8000-000000000003,10000000-0000-4000-8000-000000000001}', '{10000000-0000-4000-8000-000000000005,10000000-0000-4000-8000-000000000007}', '{20000000-0000-4000-8000-000000000013}', 'vertical_push', 'compound', true, 'pro'),
+  ('30000000-0000-4000-8000-000000000052', 'barbell-curl', 'Curl con barra', 'strength', 'external', '{10000000-0000-4000-8000-000000000004}', '{10000000-0000-4000-8000-000000000006}', '{20000000-0000-4000-8000-000000000001}', 'elbow_flexion', 'isolation', false, 'free'),
+  ('30000000-0000-4000-8000-000000000053', 'ez-bar-curl', 'Curl con barra Z', 'strength', 'external', '{10000000-0000-4000-8000-000000000004}', '{10000000-0000-4000-8000-000000000006}', '{20000000-0000-4000-8000-000000000010}', 'elbow_flexion', 'isolation', false, 'pro'),
+  ('30000000-0000-4000-8000-000000000054', 'hammer-curl', 'Curl martillo', 'strength', 'external', '{10000000-0000-4000-8000-000000000004,10000000-0000-4000-8000-000000000006}', '{}', '{20000000-0000-4000-8000-000000000002}', 'elbow_flexion', 'isolation', false, 'free'),
+  ('30000000-0000-4000-8000-000000000055', 'incline-dumbbell-curl', 'Curl inclinado con mancuernas', 'strength', 'external', '{10000000-0000-4000-8000-000000000004}', '{}', '{20000000-0000-4000-8000-000000000002,20000000-0000-4000-8000-000000000008}', 'elbow_flexion', 'isolation', false, 'pro'),
+  ('30000000-0000-4000-8000-000000000056', 'preacher-curl', 'Curl predicador', 'strength', 'external', '{10000000-0000-4000-8000-000000000004}', '{}', '{20000000-0000-4000-8000-000000000010,20000000-0000-4000-8000-000000000008}', 'elbow_flexion', 'isolation', false, 'pro'),
+  ('30000000-0000-4000-8000-000000000057', 'cable-curl', 'Curl en polea', 'strength', 'external', '{10000000-0000-4000-8000-000000000004}', '{10000000-0000-4000-8000-000000000006}', '{20000000-0000-4000-8000-000000000004}', 'elbow_flexion', 'isolation', false, 'pro'),
+  ('30000000-0000-4000-8000-000000000058', 'concentration-curl', 'Curl concentrado', 'strength', 'external', '{10000000-0000-4000-8000-000000000004}', '{}', '{20000000-0000-4000-8000-000000000002}', 'elbow_flexion', 'isolation', true, 'pro'),
+  ('30000000-0000-4000-8000-000000000059', 'triceps-pushdown', 'Extensión de tríceps en polea', 'strength', 'external', '{10000000-0000-4000-8000-000000000005}', '{}', '{20000000-0000-4000-8000-000000000004}', 'elbow_extension', 'isolation', false, 'free'),
+  ('30000000-0000-4000-8000-000000000060', 'rope-pushdown', 'Extensión de tríceps con cuerda', 'strength', 'external', '{10000000-0000-4000-8000-000000000005}', '{}', '{20000000-0000-4000-8000-000000000004}', 'elbow_extension', 'isolation', false, 'pro'),
+  ('30000000-0000-4000-8000-000000000061', 'overhead-triceps-extension', 'Extensión de tríceps sobre la cabeza', 'strength', 'external', '{10000000-0000-4000-8000-000000000005}', '{}', '{20000000-0000-4000-8000-000000000002}', 'elbow_extension', 'isolation', false, 'free'),
+  ('30000000-0000-4000-8000-000000000062', 'skull-crusher', 'Press francés', 'strength', 'external', '{10000000-0000-4000-8000-000000000005}', '{}', '{20000000-0000-4000-8000-000000000010,20000000-0000-4000-8000-000000000008}', 'elbow_extension', 'isolation', false, 'pro'),
+  ('30000000-0000-4000-8000-000000000063', 'bench-dip', 'Fondos en banco', 'strength', 'bodyweight', '{10000000-0000-4000-8000-000000000005}', '{10000000-0000-4000-8000-000000000001,10000000-0000-4000-8000-000000000003}', '{20000000-0000-4000-8000-000000000008}', 'vertical_push', 'compound', false, 'pro'),
+  ('30000000-0000-4000-8000-000000000064', 'triceps-kickback', 'Patada de tríceps', 'strength', 'external', '{10000000-0000-4000-8000-000000000005}', '{}', '{20000000-0000-4000-8000-000000000002}', 'elbow_extension', 'isolation', true, 'pro'),
+  ('30000000-0000-4000-8000-000000000065', 'cable-overhead-triceps-extension', 'Extensión de tríceps en polea sobre la cabeza', 'strength', 'external', '{10000000-0000-4000-8000-000000000005}', '{}', '{20000000-0000-4000-8000-000000000004}', 'elbow_extension', 'isolation', false, 'pro'),
+  ('30000000-0000-4000-8000-000000000066', 'wrist-curl', 'Curl de muñeca', 'strength', 'external', '{10000000-0000-4000-8000-000000000006}', '{}', '{20000000-0000-4000-8000-000000000001,20000000-0000-4000-8000-000000000002}', 'wrist', 'isolation', false, 'pro'),
+  ('30000000-0000-4000-8000-000000000067', 'reverse-curl', 'Curl invertido', 'strength', 'external', '{10000000-0000-4000-8000-000000000006,10000000-0000-4000-8000-000000000004}', '{}', '{20000000-0000-4000-8000-000000000001,20000000-0000-4000-8000-000000000010}', 'elbow_flexion', 'isolation', false, 'pro'),
+  ('30000000-0000-4000-8000-000000000068', 'front-squat', 'Sentadilla frontal', 'strength', 'external', '{10000000-0000-4000-8000-000000000008}', '{10000000-0000-4000-8000-000000000010,10000000-0000-4000-8000-000000000007}', '{20000000-0000-4000-8000-000000000001}', 'squat', 'compound', false, 'pro'),
+  ('30000000-0000-4000-8000-000000000069', 'goblet-squat', 'Sentadilla goblet', 'strength', 'external', '{10000000-0000-4000-8000-000000000008,10000000-0000-4000-8000-000000000010}', '{10000000-0000-4000-8000-000000000007}', '{20000000-0000-4000-8000-000000000002,20000000-0000-4000-8000-000000000006}', 'squat', 'compound', false, 'free'),
+  ('30000000-0000-4000-8000-000000000070', 'hack-squat', 'Sentadilla hack', 'strength', 'external', '{10000000-0000-4000-8000-000000000008}', '{10000000-0000-4000-8000-000000000010}', '{20000000-0000-4000-8000-000000000003}', 'squat', 'compound', false, 'pro'),
+  ('30000000-0000-4000-8000-000000000071', 'smith-squat', 'Sentadilla en Smith', 'strength', 'external', '{10000000-0000-4000-8000-000000000008,10000000-0000-4000-8000-000000000010}', '{10000000-0000-4000-8000-000000000009}', '{20000000-0000-4000-8000-000000000009}', 'squat', 'compound', false, 'pro'),
+  ('30000000-0000-4000-8000-000000000072', 'leg-extension', 'Extensión de cuádriceps', 'strength', 'external', '{10000000-0000-4000-8000-000000000008}', '{}', '{20000000-0000-4000-8000-000000000003}', 'knee_extension', 'isolation', false, 'free'),
+  ('30000000-0000-4000-8000-000000000073', 'bulgarian-split-squat', 'Sentadilla búlgara', 'strength', 'external', '{10000000-0000-4000-8000-000000000008,10000000-0000-4000-8000-000000000010}', '{10000000-0000-4000-8000-000000000009,10000000-0000-4000-8000-000000000015}', '{20000000-0000-4000-8000-000000000002,20000000-0000-4000-8000-000000000008}', 'lunge', 'compound', true, 'free'),
+  ('30000000-0000-4000-8000-000000000074', 'walking-lunge', 'Zancadas caminando', 'strength', 'external', '{10000000-0000-4000-8000-000000000008,10000000-0000-4000-8000-000000000010}', '{10000000-0000-4000-8000-000000000009,10000000-0000-4000-8000-000000000015}', '{20000000-0000-4000-8000-000000000002}', 'lunge', 'compound', true, 'free'),
+  ('30000000-0000-4000-8000-000000000075', 'reverse-lunge', 'Zancada hacia atrás', 'strength', 'external', '{10000000-0000-4000-8000-000000000008,10000000-0000-4000-8000-000000000010}', '{10000000-0000-4000-8000-000000000009}', '{20000000-0000-4000-8000-000000000002}', 'lunge', 'compound', true, 'pro'),
+  ('30000000-0000-4000-8000-000000000076', 'step-up', 'Subidas al cajón', 'strength', 'external', '{10000000-0000-4000-8000-000000000008,10000000-0000-4000-8000-000000000010}', '{10000000-0000-4000-8000-000000000009}', '{20000000-0000-4000-8000-000000000015,20000000-0000-4000-8000-000000000002}', 'lunge', 'compound', true, 'pro'),
+  ('30000000-0000-4000-8000-000000000077', 'bodyweight-squat', 'Sentadilla con peso corporal', 'strength', 'bodyweight', '{10000000-0000-4000-8000-000000000008,10000000-0000-4000-8000-000000000010}', '{}', '{20000000-0000-4000-8000-000000000005}', 'squat', 'compound', false, 'free'),
+  ('30000000-0000-4000-8000-000000000078', 'pistol-squat', 'Sentadilla a una pierna (pistol)', 'strength', 'bodyweight', '{10000000-0000-4000-8000-000000000008,10000000-0000-4000-8000-000000000010}', '{10000000-0000-4000-8000-000000000007}', '{20000000-0000-4000-8000-000000000005}', 'squat', 'compound', true, 'pro'),
+  ('30000000-0000-4000-8000-000000000079', 'sumo-deadlift', 'Peso muerto sumo', 'strength', 'external', '{10000000-0000-4000-8000-000000000010,10000000-0000-4000-8000-000000000009,10000000-0000-4000-8000-000000000015}', '{10000000-0000-4000-8000-000000000002,10000000-0000-4000-8000-000000000008}', '{20000000-0000-4000-8000-000000000001}', 'hinge', 'compound', false, 'pro'),
+  ('30000000-0000-4000-8000-000000000080', 'trap-bar-deadlift', 'Peso muerto con barra hexagonal', 'strength', 'external', '{10000000-0000-4000-8000-000000000010,10000000-0000-4000-8000-000000000008,10000000-0000-4000-8000-000000000009}', '{10000000-0000-4000-8000-000000000002,10000000-0000-4000-8000-000000000013}', '{20000000-0000-4000-8000-000000000012}', 'hinge', 'compound', false, 'pro'),
+  ('30000000-0000-4000-8000-000000000081', 'dumbbell-romanian-deadlift', 'Peso muerto rumano con mancuernas', 'strength', 'external', '{10000000-0000-4000-8000-000000000009}', '{10000000-0000-4000-8000-000000000010}', '{20000000-0000-4000-8000-000000000002}', 'hinge', 'compound', false, 'free'),
+  ('30000000-0000-4000-8000-000000000082', 'single-leg-romanian-deadlift', 'Peso muerto rumano a una pierna', 'strength', 'external', '{10000000-0000-4000-8000-000000000009,10000000-0000-4000-8000-000000000010}', '{10000000-0000-4000-8000-000000000007}', '{20000000-0000-4000-8000-000000000002}', 'hinge', 'compound', true, 'pro'),
+  ('30000000-0000-4000-8000-000000000083', 'good-morning', 'Buenos días con barra', 'strength', 'external', '{10000000-0000-4000-8000-000000000009}', '{10000000-0000-4000-8000-000000000014,10000000-0000-4000-8000-000000000010}', '{20000000-0000-4000-8000-000000000001}', 'hinge', 'compound', false, 'pro'),
+  ('30000000-0000-4000-8000-000000000084', 'lying-leg-curl', 'Curl femoral acostado', 'strength', 'external', '{10000000-0000-4000-8000-000000000009}', '{10000000-0000-4000-8000-000000000011}', '{20000000-0000-4000-8000-000000000003}', 'knee_flexion', 'isolation', false, 'free'),
+  ('30000000-0000-4000-8000-000000000085', 'seated-leg-curl', 'Curl femoral sentado', 'strength', 'external', '{10000000-0000-4000-8000-000000000009}', '{}', '{20000000-0000-4000-8000-000000000003}', 'knee_flexion', 'isolation', false, 'free'),
+  ('30000000-0000-4000-8000-000000000086', 'nordic-curl', 'Curl nórdico', 'strength', 'bodyweight', '{10000000-0000-4000-8000-000000000009}', '{}', '{20000000-0000-4000-8000-000000000005}', 'knee_flexion', 'isolation', false, 'pro'),
+  ('30000000-0000-4000-8000-000000000087', 'hip-thrust', 'Hip thrust con barra', 'strength', 'external', '{10000000-0000-4000-8000-000000000010}', '{10000000-0000-4000-8000-000000000009}', '{20000000-0000-4000-8000-000000000001,20000000-0000-4000-8000-000000000008}', 'hip_extension', 'compound', false, 'free'),
+  ('30000000-0000-4000-8000-000000000088', 'glute-bridge', 'Puente de glúteo', 'strength', 'bodyweight', '{10000000-0000-4000-8000-000000000010}', '{10000000-0000-4000-8000-000000000009}', '{20000000-0000-4000-8000-000000000005}', 'hip_extension', 'isolation', false, 'free'),
+  ('30000000-0000-4000-8000-000000000089', 'cable-kickback', 'Patada de glúteo en polea', 'strength', 'external', '{10000000-0000-4000-8000-000000000010}', '{10000000-0000-4000-8000-000000000009}', '{20000000-0000-4000-8000-000000000004}', 'hip_extension', 'isolation', true, 'pro'),
+  ('30000000-0000-4000-8000-000000000090', 'hip-abduction-machine', 'Abducción de cadera en máquina', 'strength', 'external', '{10000000-0000-4000-8000-000000000016,10000000-0000-4000-8000-000000000010}', '{}', '{20000000-0000-4000-8000-000000000003}', 'hip_abduction', 'isolation', false, 'free'),
+  ('30000000-0000-4000-8000-000000000091', 'hip-adduction-machine', 'Aducción de cadera en máquina', 'strength', 'external', '{10000000-0000-4000-8000-000000000015}', '{}', '{20000000-0000-4000-8000-000000000003}', 'hip_adduction', 'isolation', false, 'pro'),
+  ('30000000-0000-4000-8000-000000000092', 'kettlebell-swing', 'Kettlebell swing', 'strength', 'external', '{10000000-0000-4000-8000-000000000010,10000000-0000-4000-8000-000000000009}', '{10000000-0000-4000-8000-000000000014,10000000-0000-4000-8000-000000000007}', '{20000000-0000-4000-8000-000000000006}', 'power', 'compound', false, 'pro'),
+  ('30000000-0000-4000-8000-000000000093', 'standing-calf-raise', 'Elevación de pantorrillas de pie', 'strength', 'external', '{10000000-0000-4000-8000-000000000011}', '{}', '{20000000-0000-4000-8000-000000000003}', 'calf_raise', 'isolation', false, 'free'),
+  ('30000000-0000-4000-8000-000000000094', 'seated-calf-raise', 'Elevación de pantorrillas sentado', 'strength', 'external', '{10000000-0000-4000-8000-000000000011}', '{}', '{20000000-0000-4000-8000-000000000003}', 'calf_raise', 'isolation', false, 'pro'),
+  ('30000000-0000-4000-8000-000000000095', 'leg-press-calf-raise', 'Pantorrillas en prensa', 'strength', 'external', '{10000000-0000-4000-8000-000000000011}', '{}', '{20000000-0000-4000-8000-000000000003}', 'calf_raise', 'isolation', false, 'pro'),
+  ('30000000-0000-4000-8000-000000000096', 'side-plank', 'Plancha lateral', 'strength', 'time', '{10000000-0000-4000-8000-000000000007}', '{10000000-0000-4000-8000-000000000016}', '{20000000-0000-4000-8000-000000000005}', 'core_anti_extension', 'isolation', true, 'pro'),
+  ('30000000-0000-4000-8000-000000000097', 'dead-bug', 'Dead bug', 'strength', 'bodyweight', '{10000000-0000-4000-8000-000000000007}', '{}', '{20000000-0000-4000-8000-000000000005}', 'core_anti_extension', 'isolation', false, 'free'),
+  ('30000000-0000-4000-8000-000000000098', 'crunch', 'Crunch abdominal', 'strength', 'bodyweight', '{10000000-0000-4000-8000-000000000007}', '{}', '{20000000-0000-4000-8000-000000000005}', 'core_flexion', 'isolation', false, 'free'),
+  ('30000000-0000-4000-8000-000000000099', 'hanging-leg-raise', 'Elevación de piernas colgado', 'strength', 'bodyweight', '{10000000-0000-4000-8000-000000000007}', '{10000000-0000-4000-8000-000000000006}', '{20000000-0000-4000-8000-000000000007}', 'core_flexion', 'isolation', false, 'pro'),
+  ('30000000-0000-4000-8000-000000000100', 'cable-crunch', 'Crunch en polea', 'strength', 'external', '{10000000-0000-4000-8000-000000000007}', '{}', '{20000000-0000-4000-8000-000000000004}', 'core_flexion', 'isolation', false, 'pro'),
+  ('30000000-0000-4000-8000-000000000101', 'ab-wheel-rollout', 'Rueda abdominal', 'strength', 'bodyweight', '{10000000-0000-4000-8000-000000000007}', '{10000000-0000-4000-8000-000000000002,10000000-0000-4000-8000-000000000003}', '{20000000-0000-4000-8000-000000000016}', 'core_anti_extension', 'isolation', false, 'pro'),
+  ('30000000-0000-4000-8000-000000000102', 'russian-twist', 'Giros rusos', 'strength', 'external', '{10000000-0000-4000-8000-000000000007}', '{}', '{20000000-0000-4000-8000-000000000014,20000000-0000-4000-8000-000000000005}', 'core_rotation', 'isolation', false, 'pro'),
+  ('30000000-0000-4000-8000-000000000103', 'pallof-press', 'Press Pallof', 'strength', 'external', '{10000000-0000-4000-8000-000000000007}', '{}', '{20000000-0000-4000-8000-000000000004,20000000-0000-4000-8000-000000000011}', 'core_rotation', 'isolation', true, 'pro'),
+  ('30000000-0000-4000-8000-000000000104', 'farmers-carry', 'Caminata del granjero', 'strength', 'external', '{10000000-0000-4000-8000-000000000006,10000000-0000-4000-8000-000000000013}', '{10000000-0000-4000-8000-000000000007,10000000-0000-4000-8000-000000000010}', '{20000000-0000-4000-8000-000000000002,20000000-0000-4000-8000-000000000006}', 'carry', 'compound', false, 'pro'),
+  ('30000000-0000-4000-8000-000000000105', 'hollow-hold', 'Hollow hold', 'strength', 'time', '{10000000-0000-4000-8000-000000000007}', '{}', '{20000000-0000-4000-8000-000000000005}', 'core_anti_extension', 'isolation', false, 'pro')
+on conflict (id) do nothing;
+-- Rasgos de los ejercicios que ya existían (solo si difieren).
+update athlete3.exercises e set movement_pattern = v.pattern, mechanics = v.mechanics, is_unilateral = v.unilateral, access_tier = v.tier
+from (values
+  ('30000000-0000-4000-8000-000000000001'::uuid, 'squat', 'compound', false, 'free'),
+  ('30000000-0000-4000-8000-000000000002'::uuid, 'horizontal_push', 'compound', false, 'free'),
+  ('30000000-0000-4000-8000-000000000003'::uuid, 'hinge', 'compound', false, 'free'),
+  ('30000000-0000-4000-8000-000000000004'::uuid, 'vertical_push', 'compound', false, 'free'),
+  ('30000000-0000-4000-8000-000000000005'::uuid, 'horizontal_pull', 'compound', false, 'free'),
+  ('30000000-0000-4000-8000-000000000006'::uuid, 'vertical_pull', 'compound', false, 'free'),
+  ('30000000-0000-4000-8000-000000000007'::uuid, 'vertical_push', 'compound', false, 'free'),
+  ('30000000-0000-4000-8000-000000000008'::uuid, 'hinge', 'compound', false, 'free'),
+  ('30000000-0000-4000-8000-000000000009'::uuid, 'elbow_flexion', 'isolation', false, 'free'),
+  ('30000000-0000-4000-8000-000000000010'::uuid, 'squat', 'compound', false, 'free'),
+  ('30000000-0000-4000-8000-000000000011'::uuid, 'vertical_pull', 'compound', false, 'free'),
+  ('30000000-0000-4000-8000-000000000012'::uuid, 'core_anti_extension', 'isolation', false, 'free'),
+  ('30000000-0000-4000-8000-000000000013'::uuid, 'horizontal_pull', 'compound', false, 'free'),
+  ('30000000-0000-4000-8000-000000000014'::uuid, 'horizontal_push', 'compound', false, 'free'),
+  ('30000000-0000-4000-8000-000000000015'::uuid, 'horizontal_push', 'compound', false, 'pro'),
+  ('30000000-0000-4000-8000-000000000016'::uuid, 'horizontal_push', 'compound', false, 'free'),
+  ('30000000-0000-4000-8000-000000000017'::uuid, 'horizontal_push', 'compound', false, 'free'),
+  ('30000000-0000-4000-8000-000000000018'::uuid, 'horizontal_push', 'compound', false, 'free'),
+  ('30000000-0000-4000-8000-000000000019'::uuid, 'horizontal_push', 'compound', false, 'pro'),
+  ('30000000-0000-4000-8000-000000000020'::uuid, 'chest_fly', 'isolation', false, 'free'),
+  ('30000000-0000-4000-8000-000000000021'::uuid, 'chest_fly', 'isolation', false, 'pro'),
+  ('30000000-0000-4000-8000-000000000022'::uuid, 'chest_fly', 'isolation', false, 'free'),
+  ('30000000-0000-4000-8000-000000000023'::uuid, 'horizontal_push', 'compound', false, 'free'),
+  ('30000000-0000-4000-8000-000000000024'::uuid, 'chest_fly', 'isolation', false, 'pro'),
+  ('30000000-0000-4000-8000-000000000025'::uuid, 'horizontal_push', 'compound', false, 'pro'),
+  ('30000000-0000-4000-8000-000000000026'::uuid, 'vertical_pull', 'compound', false, 'free'),
+  ('30000000-0000-4000-8000-000000000027'::uuid, 'vertical_pull', 'compound', false, 'free'),
+  ('30000000-0000-4000-8000-000000000028'::uuid, 'horizontal_pull', 'compound', true, 'free'),
+  ('30000000-0000-4000-8000-000000000029'::uuid, 'horizontal_pull', 'compound', false, 'pro'),
+  ('30000000-0000-4000-8000-000000000030'::uuid, 'horizontal_pull', 'compound', false, 'pro'),
+  ('30000000-0000-4000-8000-000000000031'::uuid, 'horizontal_pull', 'compound', false, 'pro'),
+  ('30000000-0000-4000-8000-000000000032'::uuid, 'horizontal_pull', 'compound', false, 'free'),
+  ('30000000-0000-4000-8000-000000000033'::uuid, 'vertical_pull', 'compound', false, 'pro'),
+  ('30000000-0000-4000-8000-000000000034'::uuid, 'vertical_pull', 'isolation', false, 'pro'),
+  ('30000000-0000-4000-8000-000000000035'::uuid, 'horizontal_pull', 'compound', false, 'pro'),
+  ('30000000-0000-4000-8000-000000000036'::uuid, 'horizontal_pull', 'isolation', false, 'free'),
+  ('30000000-0000-4000-8000-000000000037'::uuid, 'shrug', 'isolation', false, 'pro'),
+  ('30000000-0000-4000-8000-000000000038'::uuid, 'shrug', 'isolation', false, 'free'),
+  ('30000000-0000-4000-8000-000000000039'::uuid, 'hinge', 'isolation', false, 'pro'),
+  ('30000000-0000-4000-8000-000000000040'::uuid, 'hinge', 'compound', false, 'pro'),
+  ('30000000-0000-4000-8000-000000000041'::uuid, 'vertical_push', 'compound', false, 'free'),
+  ('30000000-0000-4000-8000-000000000042'::uuid, 'vertical_push', 'compound', false, 'pro'),
+  ('30000000-0000-4000-8000-000000000043'::uuid, 'vertical_push', 'compound', false, 'free'),
+  ('30000000-0000-4000-8000-000000000044'::uuid, 'shoulder_raise', 'isolation', false, 'free'),
+  ('30000000-0000-4000-8000-000000000045'::uuid, 'shoulder_raise', 'isolation', true, 'pro'),
+  ('30000000-0000-4000-8000-000000000046'::uuid, 'shoulder_raise', 'isolation', false, 'pro'),
+  ('30000000-0000-4000-8000-000000000047'::uuid, 'shoulder_raise', 'isolation', false, 'pro'),
+  ('30000000-0000-4000-8000-000000000048'::uuid, 'shoulder_raise', 'isolation', false, 'pro'),
+  ('30000000-0000-4000-8000-000000000049'::uuid, 'vertical_pull', 'compound', false, 'pro'),
+  ('30000000-0000-4000-8000-000000000050'::uuid, 'power', 'compound', false, 'pro'),
+  ('30000000-0000-4000-8000-000000000051'::uuid, 'vertical_push', 'compound', true, 'pro'),
+  ('30000000-0000-4000-8000-000000000052'::uuid, 'elbow_flexion', 'isolation', false, 'free'),
+  ('30000000-0000-4000-8000-000000000053'::uuid, 'elbow_flexion', 'isolation', false, 'pro'),
+  ('30000000-0000-4000-8000-000000000054'::uuid, 'elbow_flexion', 'isolation', false, 'free'),
+  ('30000000-0000-4000-8000-000000000055'::uuid, 'elbow_flexion', 'isolation', false, 'pro'),
+  ('30000000-0000-4000-8000-000000000056'::uuid, 'elbow_flexion', 'isolation', false, 'pro'),
+  ('30000000-0000-4000-8000-000000000057'::uuid, 'elbow_flexion', 'isolation', false, 'pro'),
+  ('30000000-0000-4000-8000-000000000058'::uuid, 'elbow_flexion', 'isolation', true, 'pro'),
+  ('30000000-0000-4000-8000-000000000059'::uuid, 'elbow_extension', 'isolation', false, 'free'),
+  ('30000000-0000-4000-8000-000000000060'::uuid, 'elbow_extension', 'isolation', false, 'pro'),
+  ('30000000-0000-4000-8000-000000000061'::uuid, 'elbow_extension', 'isolation', false, 'free'),
+  ('30000000-0000-4000-8000-000000000062'::uuid, 'elbow_extension', 'isolation', false, 'pro'),
+  ('30000000-0000-4000-8000-000000000063'::uuid, 'vertical_push', 'compound', false, 'pro'),
+  ('30000000-0000-4000-8000-000000000064'::uuid, 'elbow_extension', 'isolation', true, 'pro'),
+  ('30000000-0000-4000-8000-000000000065'::uuid, 'elbow_extension', 'isolation', false, 'pro'),
+  ('30000000-0000-4000-8000-000000000066'::uuid, 'wrist', 'isolation', false, 'pro'),
+  ('30000000-0000-4000-8000-000000000067'::uuid, 'elbow_flexion', 'isolation', false, 'pro'),
+  ('30000000-0000-4000-8000-000000000068'::uuid, 'squat', 'compound', false, 'pro'),
+  ('30000000-0000-4000-8000-000000000069'::uuid, 'squat', 'compound', false, 'free'),
+  ('30000000-0000-4000-8000-000000000070'::uuid, 'squat', 'compound', false, 'pro'),
+  ('30000000-0000-4000-8000-000000000071'::uuid, 'squat', 'compound', false, 'pro'),
+  ('30000000-0000-4000-8000-000000000072'::uuid, 'knee_extension', 'isolation', false, 'free'),
+  ('30000000-0000-4000-8000-000000000073'::uuid, 'lunge', 'compound', true, 'free'),
+  ('30000000-0000-4000-8000-000000000074'::uuid, 'lunge', 'compound', true, 'free'),
+  ('30000000-0000-4000-8000-000000000075'::uuid, 'lunge', 'compound', true, 'pro'),
+  ('30000000-0000-4000-8000-000000000076'::uuid, 'lunge', 'compound', true, 'pro'),
+  ('30000000-0000-4000-8000-000000000077'::uuid, 'squat', 'compound', false, 'free'),
+  ('30000000-0000-4000-8000-000000000078'::uuid, 'squat', 'compound', true, 'pro'),
+  ('30000000-0000-4000-8000-000000000079'::uuid, 'hinge', 'compound', false, 'pro'),
+  ('30000000-0000-4000-8000-000000000080'::uuid, 'hinge', 'compound', false, 'pro'),
+  ('30000000-0000-4000-8000-000000000081'::uuid, 'hinge', 'compound', false, 'free'),
+  ('30000000-0000-4000-8000-000000000082'::uuid, 'hinge', 'compound', true, 'pro'),
+  ('30000000-0000-4000-8000-000000000083'::uuid, 'hinge', 'compound', false, 'pro'),
+  ('30000000-0000-4000-8000-000000000084'::uuid, 'knee_flexion', 'isolation', false, 'free'),
+  ('30000000-0000-4000-8000-000000000085'::uuid, 'knee_flexion', 'isolation', false, 'free'),
+  ('30000000-0000-4000-8000-000000000086'::uuid, 'knee_flexion', 'isolation', false, 'pro'),
+  ('30000000-0000-4000-8000-000000000087'::uuid, 'hip_extension', 'compound', false, 'free'),
+  ('30000000-0000-4000-8000-000000000088'::uuid, 'hip_extension', 'isolation', false, 'free'),
+  ('30000000-0000-4000-8000-000000000089'::uuid, 'hip_extension', 'isolation', true, 'pro'),
+  ('30000000-0000-4000-8000-000000000090'::uuid, 'hip_abduction', 'isolation', false, 'free'),
+  ('30000000-0000-4000-8000-000000000091'::uuid, 'hip_adduction', 'isolation', false, 'pro'),
+  ('30000000-0000-4000-8000-000000000092'::uuid, 'power', 'compound', false, 'pro'),
+  ('30000000-0000-4000-8000-000000000093'::uuid, 'calf_raise', 'isolation', false, 'free'),
+  ('30000000-0000-4000-8000-000000000094'::uuid, 'calf_raise', 'isolation', false, 'pro'),
+  ('30000000-0000-4000-8000-000000000095'::uuid, 'calf_raise', 'isolation', false, 'pro'),
+  ('30000000-0000-4000-8000-000000000096'::uuid, 'core_anti_extension', 'isolation', true, 'pro'),
+  ('30000000-0000-4000-8000-000000000097'::uuid, 'core_anti_extension', 'isolation', false, 'free'),
+  ('30000000-0000-4000-8000-000000000098'::uuid, 'core_flexion', 'isolation', false, 'free'),
+  ('30000000-0000-4000-8000-000000000099'::uuid, 'core_flexion', 'isolation', false, 'pro'),
+  ('30000000-0000-4000-8000-000000000100'::uuid, 'core_flexion', 'isolation', false, 'pro'),
+  ('30000000-0000-4000-8000-000000000101'::uuid, 'core_anti_extension', 'isolation', false, 'pro'),
+  ('30000000-0000-4000-8000-000000000102'::uuid, 'core_rotation', 'isolation', false, 'pro'),
+  ('30000000-0000-4000-8000-000000000103'::uuid, 'core_rotation', 'isolation', true, 'pro'),
+  ('30000000-0000-4000-8000-000000000104'::uuid, 'carry', 'compound', false, 'pro'),
+  ('30000000-0000-4000-8000-000000000105'::uuid, 'core_anti_extension', 'isolation', false, 'pro')
+) as v (id, pattern, mechanics, unilateral, tier)
+where e.id = v.id and e.user_id is null
+  and (e.movement_pattern is distinct from v.pattern or e.mechanics is distinct from v.mechanics
+       or e.is_unilateral is distinct from v.unilateral or e.access_tier is distinct from v.tier);
+
+-- Verificación: el catálogo global quedó completo y con rasgos.
+do $$
+begin
+  if (select count(*) from athlete3.exercises where user_id is null and deleted_at is null) < 105 then
+    raise exception 'Catálogo incompleto';
+  end if;
+  if exists (select 1 from athlete3.exercises where user_id is null and (movement_pattern is null or mechanics is null)) then
+    raise exception 'Ejercicio global sin rasgos';
+  end if;
+end $$;
+
+-- ---------------------------------------------------------------------------------
+-- Cierre de privilegios y verificación (copia de 0900)
+-- ---------------------------------------------------------------------------------
+revoke execute on all functions in schema athlete3 from public, anon;
+revoke execute on all functions in schema athlete3_private from public, anon;
+revoke all on all tables in schema athlete3 from public, anon;
+revoke all on all tables in schema athlete3_private from public, anon;
+revoke all on all sequences in schema athlete3 from public, anon;
+revoke all on all sequences in schema athlete3_private from public, anon;
+
+do $$
+declare
+  r record;
+begin
+  -- 1) Toda tabla con RLS habilitado y forzado.
+  for r in
+    select n.nspname, c.relname from pg_class c join pg_namespace n on n.oid = c.relnamespace
+    where n.nspname in ('athlete3', 'athlete3_private') and c.relkind in ('r', 'p')
+      and not (c.relrowsecurity and c.relforcerowsecurity)
+  loop
+    raise exception 'Tabla sin RLS forzado: %.%', r.nspname, r.relname;
+  end loop;
+
+  -- 2) Ninguna tabla accesible por anon.
+  for r in
+    select n.nspname, c.relname from pg_class c join pg_namespace n on n.oid = c.relnamespace
+    where n.nspname in ('athlete3', 'athlete3_private') and c.relkind in ('r', 'p', 'v', 'm')
+      and (has_table_privilege('anon', c.oid, 'select, insert, update, delete, truncate, references, trigger'))
+  loop
+    raise exception 'Tabla accesible por anon: %.%', r.nspname, r.relname;
+  end loop;
+
+  -- 3) Ninguna función ejecutable por anon (cubre también PUBLIC).
+  for r in
+    select n.nspname, p.proname from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname in ('athlete3', 'athlete3_private') and has_function_privilege('anon', p.oid, 'execute')
+  loop
+    raise exception 'Función ejecutable por anon: %.%', r.nspname, r.proname;
+  end loop;
+
+  -- 4) Ningún privilegio DELETE/TRUNCATE para authenticated (el borrado es lógico).
+  for r in
+    select n.nspname, c.relname from pg_class c join pg_namespace n on n.oid = c.relnamespace
+    where n.nspname in ('athlete3', 'athlete3_private') and c.relkind in ('r', 'p')
+      and (has_table_privilege('authenticated', c.oid, 'delete') or has_table_privilege('authenticated', c.oid, 'truncate'))
+  loop
+    raise exception 'authenticated puede borrar físicamente: %.%', r.nspname, r.relname;
+  end loop;
+
+  -- 5) Toda función SECURITY DEFINER con search_path fijado.
+  for r in
+    select n.nspname, p.proname from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname in ('athlete3', 'athlete3_private') and p.prosecdef
+      and not exists (select 1 from unnest(coalesce(p.proconfig, '{}')) cfg where cfg like 'search_path=%')
+  loop
+    raise exception 'SECURITY DEFINER sin search_path: %.%', r.nspname, r.proname;
+  end loop;
+
+  -- 6) Nada nuevo en public creado por estas migraciones (heurística: objetos con prefijo athlete).
+  for r in
+    select c.relname from pg_class c join pg_namespace n on n.oid = c.relnamespace
+    where n.nspname = 'public' and c.relname ilike 'athlete%'
+  loop
+    raise exception 'Objeto ATHLETE en public: %', r.relname;
+  end loop;
+end $$;

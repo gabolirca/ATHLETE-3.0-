@@ -12,6 +12,26 @@ export type ExerciseModality = z.infer<typeof ExerciseModality>;
 export const LoadType = z.enum(['external', 'bodyweight', 'assisted', 'time', 'none']);
 export type LoadType = z.infer<typeof LoadType>;
 
+/**
+ * Patrón de movimiento (contratos 0.6.0). Es el rasgo principal con el que el modelo de carga sugerida
+ * generaliza a ejercicios que no ha visto, y con el que se agrupa el volumen.
+ */
+export const MovementPattern = z.enum([
+  'squat', 'hinge', 'lunge', 'horizontal_push', 'vertical_push', 'horizontal_pull', 'vertical_pull',
+  'chest_fly', 'shoulder_raise', 'elbow_flexion', 'elbow_extension', 'knee_extension', 'knee_flexion',
+  'hip_extension', 'hip_abduction', 'hip_adduction', 'calf_raise', 'shrug', 'wrist',
+  'core_anti_extension', 'core_flexion', 'core_rotation', 'carry', 'power',
+]);
+export type MovementPattern = z.infer<typeof MovementPattern>;
+
+/** Compuesto (varias articulaciones) o aislamiento (0.6.0). */
+export const Mechanics = z.enum(['compound', 'isolation']);
+export type Mechanics = z.infer<typeof Mechanics>;
+
+/** Plan que da acceso al ejercicio del catálogo global (0.6.0). Los personalizados siempre son `free`. */
+export const AccessTier = z.enum(['free', 'pro']);
+export type AccessTier = z.infer<typeof AccessTier>;
+
 /** Clave estable legible para catálogos globales (no cambia aunque cambie el nombre). */
 export const CatalogSlug = z
   .string()
@@ -49,6 +69,11 @@ export const Exercise = z.object({
   secondaryMuscleGroupIds: z.array(Uuid),
   equipmentIds: z.array(Uuid),
   instructions: Notes.nullable(),
+  /** 0.6.0: rasgos del ejercicio (null en personalizados que no los indiquen). */
+  movementPattern: MovementPattern.nullable(),
+  mechanics: Mechanics.nullable(),
+  isUnilateral: z.boolean(),
+  accessTier: AccessTier,
   archivedAt: IsoDateTime.nullable(),
   createdAt: IsoDateTime,
   updatedAt: IsoDateTime,
@@ -66,6 +91,9 @@ export const CreateCustomExerciseInput = z.object({
   secondaryMuscleGroupIds: z.array(Uuid).default([]),
   equipmentIds: z.array(Uuid).default([]),
   instructions: Notes.nullable().default(null),
+  movementPattern: MovementPattern.nullable().default(null),
+  mechanics: Mechanics.nullable().default(null),
+  isUnilateral: z.boolean().default(false),
 });
 export type CreateCustomExerciseInput = z.input<typeof CreateCustomExerciseInput>;
 
@@ -76,6 +104,9 @@ export const ExerciseQuery = z.object({
   search: z.string().trim().max(120).optional(),
   modality: ExerciseModality.optional(),
   muscleGroupId: Uuid.optional(),
+  equipmentId: Uuid.optional(),
+  movementPattern: MovementPattern.optional(),
+  accessTier: AccessTier.optional(),
   includeArchived: z.boolean().default(false),
 });
 export type ExerciseQuery = z.input<typeof ExerciseQuery>;
