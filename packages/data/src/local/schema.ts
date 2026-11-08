@@ -101,6 +101,24 @@ const MIGRATIONS: ReadonlyArray<Migration> = [
     await tx.exec("UPDATE exercises SET access_tier = 'free' WHERE access_tier IS NULL");
     await tx.exec("DELETE FROM sync_state WHERE key IN ('catalog_at', 'catalog_bundled')");
   },
+  // v6 (contratos 0.7.0, motor híbrido): programas con semana tipo, bloques, RPE de sesión y resultado de bloques.
+  async (tx) => {
+    await addColumnIfMissing(tx, 'training_plans', 'kind', 'TEXT');
+    await addColumnIfMissing(tx, 'training_plans', 'template_slug', 'TEXT');
+    await tx.exec("UPDATE training_plans SET kind = 'routine' WHERE kind IS NULL");
+    for (const [column, type] of [['weekday', 'INTEGER'], ['modality', 'TEXT'], ['target_rpe', 'REAL'], ['target_duration_minutes', 'INTEGER']] as const) {
+      await addColumnIfMissing(tx, 'training_days', column, type);
+    }
+    await addColumnIfMissing(tx, 'training_day_exercises', 'block_id', 'TEXT');
+    await addColumnIfMissing(tx, 'training_day_exercises', 'per_side', 'INTEGER');
+    await addColumnIfMissing(tx, 'training_day_exercises', 'target_rpe', 'REAL');
+    await tx.exec('UPDATE training_day_exercises SET per_side = 0 WHERE per_side IS NULL');
+    await addColumnIfMissing(tx, 'workout_sessions', 'session_rpe', 'REAL');
+    await tx.exec(entityTable(ENTITIES.training_block));
+    await tx.exec(entityTable(ENTITIES.session_block_result));
+    await tx.exec('CREATE INDEX IF NOT EXISTS training_blocks_day_idx ON training_blocks (training_day_id);');
+    await tx.exec('CREATE INDEX IF NOT EXISTS session_block_results_session_idx ON session_block_results (session_id);');
+  },
 ];
 
 export const LOCAL_SCHEMA_VERSION = MIGRATIONS.length;

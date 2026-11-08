@@ -21,9 +21,11 @@ import type {
 } from './exercises';
 import type { Profile, UpdateProfileInput } from './profile';
 import type {
+  CreateTrainingBlockInput,
   CreateTrainingDayExerciseInput,
   CreateTrainingDayInput,
   CreateTrainingPlanInput,
+  TrainingBlock,
   TrainingDay,
   TrainingDayExercise,
   TrainingPlan,
@@ -33,6 +35,8 @@ import type {
   CompleteSessionInput,
   DiscardSessionInput,
   ReorderSessionExercisesInput,
+  SaveBlockResultInput,
+  SessionBlockResult,
   SessionExercise,
   SessionHistoryQuery,
   StartFromTrainingDayInput,
@@ -79,7 +83,7 @@ export interface ExerciseRepository {
 
 export interface TrainingPlanRepository {
   listPlans(): Promise<Result<TrainingPlan[]>>;
-  getPlan(id: Uuid): Promise<Result<{ plan: TrainingPlan; days: Array<TrainingDay & { exercises: TrainingDayExercise[] }> }>>;
+  getPlan(id: Uuid): Promise<Result<{ plan: TrainingPlan; days: Array<TrainingDay & { exercises: TrainingDayExercise[]; blocks: TrainingBlock[] }> }>>;
   createPlan(input: CreateTrainingPlanInput): Promise<Result<TrainingPlan>>;
   updatePlan(id: Uuid, input: Partial<Omit<CreateTrainingPlanInput, 'id'>>): Promise<Result<TrainingPlan>>;
   deletePlan(id: Uuid): Promise<Result<void>>;
@@ -92,6 +96,10 @@ export interface TrainingPlanRepository {
     input: Partial<Omit<CreateTrainingDayExerciseInput, 'id' | 'trainingDayId'>>,
   ): Promise<Result<TrainingDayExercise>>;
   deleteDayExercise(id: Uuid): Promise<Result<void>>;
+  /** Bloques de un día (0.7.0). */
+  addBlock(input: CreateTrainingBlockInput): Promise<Result<TrainingBlock>>;
+  updateBlock(id: Uuid, input: Partial<Omit<CreateTrainingBlockInput, 'id' | 'trainingDayId'>>): Promise<Result<TrainingBlock>>;
+  deleteBlock(id: Uuid): Promise<Result<void>>;
 }
 
 /**
@@ -123,6 +131,10 @@ export interface WorkoutSessionRepository {
   logSet(input: LogSetInput): Promise<Result<StrengthSet>>;
   updateSet(input: UpdateSetInput): Promise<Result<StrengthSet>>;
   deleteSet(setId: Uuid): Promise<Result<void>>;
+
+  /** Resultado de un bloque (AMRAP, por tiempo…). Crea o reemplaza por `id`. (0.7.0) */
+  saveBlockResult(input: SaveBlockResultInput): Promise<Result<SessionBlockResult>>;
+  listBlockResults(sessionId: Uuid): Promise<Result<SessionBlockResult[]>>;
 
   /** Series efectivas históricas de un ejercicio (para récords y comparación entre sesiones). */
   listSetsForExercise(exerciseId: Uuid, range?: DateRange): Promise<Result<Array<StrengthSet & { sessionId: Uuid; localDate: LocalDate }>>>;

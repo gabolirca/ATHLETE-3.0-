@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { DataSource, IsoDateTime, LocalDate, Notes, Position, SyncedRecord, TimeZone, Uuid } from './common';
-import { StrengthSet } from './sets';
+import { Rpe, StrengthSet } from './sets';
+import { BlockFormat } from './programs';
 
 /**
  * Ciclo de vida de una sesión de fuerza:
@@ -25,6 +26,8 @@ export const WorkoutSession = SyncedRecord.extend({
   localDate: LocalDate,
   source: DataSource,
   notes: Notes.nullable(),
+  /** RPE de toda la sesión (1–10) al terminar. Carga de sesión = RPE × minutos (Foster). (0.7.0) */
+  sessionRpe: Rpe.nullable(),
 });
 export type WorkoutSession = z.infer<typeof WorkoutSession>;
 
@@ -80,6 +83,7 @@ export const CompleteSessionInput = z.object({
   sessionId: Uuid,
   endedAt: IsoDateTime,
   notes: Notes.nullable().optional(),
+  sessionRpe: Rpe.nullable().optional(),
 });
 export type CompleteSessionInput = z.infer<typeof CompleteSessionInput>;
 
@@ -93,6 +97,7 @@ export const UpdateSessionInput = z.object({
   startedAt: IsoDateTime.optional(),
   endedAt: IsoDateTime.nullable().optional(),
   notes: Notes.nullable().optional(),
+  sessionRpe: Rpe.nullable().optional(),
 });
 export type UpdateSessionInput = z.infer<typeof UpdateSessionInput>;
 
@@ -103,6 +108,28 @@ export const SessionHistoryQuery = z.object({
   status: z.array(WorkoutSessionStatus).default(['completed']),
 });
 export type SessionHistoryQuery = z.input<typeof SessionHistoryQuery>;
+
+/**
+ * Resultado de un bloque con formato (AMRAP: rondas + reps; por tiempo: segundos; rondas/intervalos: rondas hechas).
+ * Las series de cada ejercicio siguen en `StrengthSet`; esto guarda el resultado del bloque como un todo. (0.7.0)
+ */
+export const SessionBlockResult = SyncedRecord.extend({
+  sessionId: Uuid,
+  /** Bloque planificado; null si se borró el programa. */
+  trainingBlockId: Uuid.nullable(),
+  position: Position,
+  /** Copia del nombre y formato del bloque: el historial no depende de que el programa siga existiendo. */
+  name: z.string().trim().min(1).max(120),
+  format: BlockFormat,
+  roundsCompleted: z.int().min(0).max(1000).nullable(),
+  extraReps: z.int().min(0).max(10_000).nullable(),
+  durationSeconds: z.int().min(1).max(86_400).nullable(),
+  notes: Notes.nullable(),
+});
+export type SessionBlockResult = z.infer<typeof SessionBlockResult>;
+
+export const SaveBlockResultInput = SessionBlockResult.omit({ userId: true, createdAt: true, updatedAt: true, deletedAt: true, revision: true });
+export type SaveBlockResultInput = z.infer<typeof SaveBlockResultInput>;
 
 // ---------- Lecturas compuestas ----------
 
