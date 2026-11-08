@@ -2,6 +2,7 @@ import React from 'react';
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
 
 const mockNavigation = { push: jest.fn() };
+const mockScreens: Array<Record<string, unknown>> = [];
 const mockRepository = {
   searchExercises: jest.fn().mockResolvedValue([]),
   listRoutines: jest.fn().mockResolvedValue([]),
@@ -11,7 +12,7 @@ const mockRepository = {
 jest.mock('expo-router', () => {
   const ReactModule = require('react');
   const { View, Text } = require('react-native');
-  const Screen = ({ options }: { options: { title: string } }) => <Text>{options.title}</Text>;
+  const Screen = ({ options }: { options: { title: string } }) => { mockScreens.push(options); return <Text>{options.title}</Text>; };
   const Tabs = ({ children }: { children: React.ReactNode }) => <View>{children}</View>;
   Tabs.Screen = Screen;
   return { Tabs, useRouter: () => mockNavigation, useFocusEffect: (callback: () => void | (() => void)) => ReactModule.useEffect(callback, [callback]) };
@@ -22,11 +23,12 @@ jest.mock('./data/MobileTrainingContext', () => ({ useTrainingRepository: () => 
 import TabLayout from '../app/(tabs)/_layout';
 import TrainScreen from '../app/(tabs)/train';
 
-test('registers all five persistent main tabs with the intended labels', async () => {
+test('barra: Inicio · Entrenar · ＋ · Progreso · Nutrición; Perfil sale de la barra (se abre desde el avatar)', async () => {
   const screen = await render(<TabLayout />);
-  for (const title of ['Inicio', 'Entrenar', 'Progreso', 'Nutrición', 'Perfil']) {
-    expect(screen.getByText(title)).toBeTruthy();
-  }
+  const titles = screen.getAllByText(/.+/).map((t) => t.props.children);
+  expect(titles).toEqual(['Inicio', 'Entrenar', 'Registrar', 'Progreso', 'Nutrición', 'Perfil']);
+  expect(mockScreens.find((o) => o.title === 'Perfil')).toMatchObject({ href: null });
+  expect(typeof mockScreens.find((o) => o.title === 'Registrar')?.tabBarButton).toBe('function');
 });
 
 test('the free workout action navigates to the real session start route', async () => {

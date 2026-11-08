@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Card } from '@/components/Card';
 import { ActionButton } from '@/components/ActionButton';
 import { EmptyState } from '@/components/EmptyState';
@@ -13,15 +13,28 @@ import { useLocalDataReady, useTrainingRepository } from '@/data/MobileTrainingC
 import type { TrainingOverview } from '@/data/trainingTypes';
 import { colors } from '@/theme/colors';
 
+/** "Buenos días" / "Buenas tardes" / "Buenas noches" según la hora del teléfono. */
+export function greeting(now: Date): string {
+  const h = now.getHours();
+  return h >= 5 && h < 12 ? 'Buenos días' : h >= 12 && h < 19 ? 'Buenas tardes' : 'Buenas noches';
+}
+
+/** Iniciales para el avatar (hasta 2). Vacío si no hay nombre. */
+export function initials(name: string): string {
+  return name.trim().split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]!.toUpperCase()).join('');
+}
+
 export default function HomeScreen() {
   const router = useRouter();
   const repository = useTrainingRepository();
   const { ready, error } = useLocalDataReady();
   const [overview, setOverview] = useState<TrainingOverview | null>(null);
   const [loadError, setLoadError] = useState(false);
+  const [name, setName] = useState('');
 
   useFocusEffect(useCallback(() => {
     let active = true;
+    if (repository) repository.getPreferences().then((p) => { if (active) setName(p.displayName); }).catch(() => undefined);
     if (repository) repository.getOverview().then((value) => { if (active) { setOverview(value); setLoadError(false); } }).catch(() => { if (active) setLoadError(true); });
     return () => { active = false; };
   }, [repository]));
@@ -30,7 +43,10 @@ export default function HomeScreen() {
   if (error || loadError) return <Screen><Title>Inicio</Title><EmptyState icon="cloud-offline-outline" title="No pudimos leer tus datos locales" detail="Tus sesiones siguen guardadas. Vuelve a intentar en un momento." action="Reintentar" onAction={() => repository?.getOverview().then(setOverview).catch(() => setLoadError(true))} /></Screen>;
 
   return <Screen>
-    <Row><View><Eyebrow>{date}</Eyebrow><Title>Buen día, atleta</Title></View><View style={s.avatar}><Ionicons name="person" size={18} color={colors.secondary}/></View></Row>
+    <Row><View style={s.flex}><Eyebrow>{date}</Eyebrow><Title>{greeting(new Date())}{name ? `, ${name.split(' ')[0]}` : ''}</Title></View>
+      <Pressable accessibilityRole="button" accessibilityLabel="Abrir perfil" onPress={() => router.push('/profile')} style={s.avatar}>
+        {initials(name) ? <Text style={s.initials}>{initials(name)}</Text> : <Ionicons name="person" size={18} color={colors.secondary}/>}
+      </Pressable></Row>
     <Card accent={colors.blue}>
       <Row><Eyebrow>ENTRENAMIENTO DE HOY</Eyebrow><View style={s.pill}><Text style={s.pillText}>LOCAL</Text></View></Row>
       <Text style={s.heroTitle}>{overview?.latestWorkout?.state === 'active' ? 'Sesión en curso' : 'Tu próximo movimiento'}</Text>
@@ -39,6 +55,7 @@ export default function HomeScreen() {
         {overview?.latestWorkout?.state === 'active' ? 'Continuar sesión' : 'Iniciar entrenamiento'}
       </ActionButton>
       <ActionButton secondary onPress={() => router.push('/cardio/new')}>Registrar cardio</ActionButton>
+      <Text style={s.hint}>Tip: el botón ＋ de abajo registra fuerza, cardio, comida o peso desde cualquier pantalla.</Text>
     </Card>
     <SectionHeading title="Esta semana · este dispositivo" action="Ver historial" />
     <Card>
@@ -55,4 +72,4 @@ export default function HomeScreen() {
   </Screen>;
 }
 
-const s = StyleSheet.create({ avatar: { width: 42, height: 42, borderRadius: 15, backgroundColor: colors.graphite, alignItems: 'center', justifyContent: 'center' }, pill: { backgroundColor: '#172849', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6 }, pillText: { color: '#9DBDFF', fontWeight: '800', fontSize: 10, letterSpacing: 1 }, heroTitle: { color: colors.text, fontSize: 22, fontWeight: '800', letterSpacing: -0.5 }, muted: { color: colors.secondary, fontSize: 12, lineHeight: 18 }, bigNumber: { color: colors.text, fontSize: 25, fontWeight: '800', marginTop: 7 } });
+const s = StyleSheet.create({ flex: { flex: 1 }, initials: { color: colors.text, fontSize: 15, fontWeight: '800' }, hint: { color: colors.muted, fontSize: 11, lineHeight: 16 }, avatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.graphite, borderWidth: 2, borderColor: colors.blue, alignItems: 'center', justifyContent: 'center' }, pill: { backgroundColor: '#172849', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6 }, pillText: { color: '#9DBDFF', fontWeight: '800', fontSize: 10, letterSpacing: 1 }, heroTitle: { color: colors.text, fontSize: 22, fontWeight: '800', letterSpacing: -0.5 }, muted: { color: colors.secondary, fontSize: 12, lineHeight: 18 }, bigNumber: { color: colors.text, fontSize: 25, fontWeight: '800', marginTop: 7 } });
