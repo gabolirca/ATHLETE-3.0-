@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 import { ActionButton } from '@/components/ActionButton';
@@ -9,7 +9,7 @@ import { DateField } from '@/components/DatePicker';
 import { localDateOfDevice } from '@/lib/localDate';
 import { Eyebrow, Title } from '@/components/Typography';
 import { Screen } from '@/components/Screen';
-import { ACTIVITIES, EMPTY_FORM, STROKES, describeCardio, fieldsFor, parseCardioForm, type CardioFormErrors, type CardioFormValues, type UnitSystem } from '@/cardio/cardioForm';
+import { ACTIVITIES, EMPTY_FORM, STROKES, describeCardio, fieldsFor, formFromEntry, parseCardioForm, type CardioFormErrors, type CardioFormValues, type UnitSystem } from '@/cardio/cardioForm';
 import { useTrainingRepository } from '@/data/MobileTrainingContext';
 import { colors } from '@/theme/colors';
 
@@ -22,13 +22,23 @@ function Chip({ label, selected, onPress, icon }: { label: string; selected: boo
 
 export default function NewCardioScreen() {
   const router = useRouter();
+  const { edit } = useLocalSearchParams<{ edit?: string }>();
   const repository = useTrainingRepository();
   const [values, setValues] = useState<CardioFormValues>(EMPTY_FORM);
   const [errors, setErrors] = useState<CardioFormErrors>({});
   const [unitSystem, setUnitSystem] = useState<UnitSystem>('metric');
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => { repository?.getPreferences().then((p) => setUnitSystem(p.unitSystem)).catch(() => undefined); }, [repository]);
+  useEffect(() => {
+    if (!repository) return;
+    // Al editar, el formulario se llena con la actividad guardada (en las unidades del usuario).
+    Promise.all([repository.getPreferences().catch(() => null), edit ? repository.getCardio(edit).catch(() => null) : Promise.resolve(null)])
+      .then(([prefs, entry]) => {
+        const units = prefs?.unitSystem ?? 'metric';
+        setUnitSystem(units);
+        if (entry) setValues(formFromEntry(entry, units));
+      });
+  }, [repository, edit]);
 
   const set = <K extends keyof CardioFormValues>(key: K, value: CardioFormValues[K]) => setValues((v) => ({ ...v, [key]: value }));
   const fields = fieldsFor(values.activity);
@@ -48,8 +58,8 @@ export default function NewCardioScreen() {
     setErrors({});
     setSaving(true);
     try {
-      const id = await repository.logCardio(parsed.draft);
-      router.replace(`/cardio/${id}`);
+      if (edit) { await repository.updateCardio(edit, parsed.draft); router.replace(`/cardio/${edit}`); }
+      else { const id = await repository.logCardio(parsed.draft); router.replace(`/cardio/${id}`); }
     } catch (cause) {
       setErrors({ form: cause instanceof Error ? cause.message : 'No se pudo guardar la actividad.' });
     } finally {
@@ -60,7 +70,7 @@ export default function NewCardioScreen() {
   const distanceLabel = values.activity === 'swim' ? 'Distancia (m, opcional)' : `Distancia (${unitSystem === 'imperial' ? 'mi' : 'km'}, opcional)`;
 
   return <Screen>
-    <View><Eyebrow>CARDIO Y RESISTENCIA</Eyebrow><Title>Registrar actividad</Title></View>
+    <View><Eyebrow>CARDIO Y RESISTENCIA</Eyebrow><Title>{edit ? 'Editar actividad' : 'Registrar actividad'}</Title></View>
 
     <Card>
       <Eyebrow>ACTIVIDAD</Eyebrow>
@@ -113,7 +123,7 @@ export default function NewCardioScreen() {
     </Card> : null}
 
     {errors.form ? <Text accessibilityRole="alert" style={s.error}>{errors.form}</Text> : null}
-    <ActionButton onPress={() => void save()} loading={saving} disabled={!repository}>Guardar actividad</ActionButton>
+    <ActionButton onPress={() => void save()} loading={saving} disabled={!repository}>{edit ? 'Guardar cambios' : 'Guardar actividad'}</ActionButton>
   </Screen>;
 }
 

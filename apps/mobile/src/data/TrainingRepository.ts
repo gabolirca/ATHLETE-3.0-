@@ -27,6 +27,7 @@ export interface TrainingRepository {
   getPreferences(): Promise<LocalAthletePreferences>;
   savePreferences(input: LocalAthletePreferencesInput): Promise<void>;
   logCardio(input: CardioDraft): Promise<string>;
+  updateCardio(id: string, input: CardioDraft): Promise<void>;
   /** Más recientes primero. */
   listCardio(): Promise<CardioEntry[]>;
   getCardio(id: string): Promise<CardioEntry | null>;

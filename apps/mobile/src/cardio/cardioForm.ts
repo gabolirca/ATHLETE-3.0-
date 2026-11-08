@@ -216,3 +216,38 @@ export function describeCardio(c: CardioLike, unitSystem: UnitSystem) {
   }
   return { label: activityLabel(c.activity), duration: formatDuration(c.durationSeconds), distance, pace };
 }
+
+/** Valores del formulario a partir de una actividad guardada (para editarla). */
+export function formFromEntry(entry: {
+  activity: CardioActivity; startedAt: string; localDate: string; durationSeconds: number; distanceMeters: number | null; rounds: number | null;
+  rpe: number | null; avgHeartRateBpm: number | null; maxHeartRateBpm: number | null; swim: CardioDraft['swim'] | null; notes: string | null;
+}, unitSystem: UnitSystem): CardioFormValues {
+  const start = new Date(entry.startedAt);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const d = entry.durationSeconds;
+  const trim = (n: number) => String(Number(n.toFixed(2)));
+  const distance = entry.distanceMeters === null ? ''
+    : entry.activity === 'swim' ? trim(entry.distanceMeters)
+    : trim(entry.distanceMeters / (unitSystem === 'imperial' ? METERS_PER_MILE : 1000));
+  return {
+    activity: entry.activity, date: entry.localDate, startTime: `${pad(start.getHours())}:${pad(start.getMinutes())}`,
+    hours: Math.floor(d / 3600) ? String(Math.floor(d / 3600)) : '', minutes: String(Math.floor((d % 3600) / 60)), seconds: d % 60 ? String(d % 60) : '',
+    distance, rounds: entry.rounds === null ? '' : String(entry.rounds), rpe: entry.rpe,
+    avgHeartRate: entry.avgHeartRateBpm === null ? '' : String(entry.avgHeartRateBpm), maxHeartRate: entry.maxHeartRateBpm === null ? '' : String(entry.maxHeartRateBpm),
+    poolLength: entry.swim?.poolLengthMeters != null ? String(entry.swim.poolLengthMeters) : '25', laps: entry.swim?.laps != null ? String(entry.swim.laps) : '',
+    stroke: entry.swim?.stroke ?? null, openWater: entry.swim?.poolType === 'open_water', notes: entry.notes ?? '',
+  };
+}
+
+/** Distancia para mostrar ("12.40 km", "1500 m"). */
+export function formatDistance(activity: CardioActivity, meters: number, unitSystem: UnitSystem): string {
+  if (activity === 'swim') return `${Math.round(meters)} m`;
+  return unitSystem === 'imperial' ? `${(meters / METERS_PER_MILE).toFixed(2)} mi` : `${(meters / 1000).toFixed(2)} km`;
+}
+
+/** Ritmo para mostrar: s/100 m en natación, km/h en bici, min/km (o /mi) en lo demás. */
+export function formatPace(activity: CardioActivity, secondsPerUnit: number, unitSystem: UnitSystem): string {
+  if (activity === 'swim') return `${formatDuration(secondsPerUnit)} /100 m`;
+  if (activity === 'bike') { const kmh = 3600 / secondsPerUnit; return unitSystem === 'imperial' ? `${(kmh / 1.609344).toFixed(1)} mi/h` : `${kmh.toFixed(1)} km/h`; }
+  return unitSystem === 'imperial' ? `${formatDuration(secondsPerUnit * 1.609344)} /mi` : `${formatDuration(secondsPerUnit)} /km`;
+}

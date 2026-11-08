@@ -394,6 +394,10 @@ export class OfficialTrainingRepository implements TrainingRepository {
     return id;
   }
 
+  async updateCardio(id: string, input: CardioDraft): Promise<void> {
+    unwrap(await this.data.cardio.update(id, input));
+  }
+
   async listCardio(): Promise<CardioEntry[]> {
     const items: CardioEntry[] = [];
     let cursor: string | null = null;

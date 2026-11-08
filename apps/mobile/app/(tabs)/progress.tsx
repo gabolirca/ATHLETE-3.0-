@@ -12,6 +12,7 @@ import { SectionHeading } from '@/components/SectionHeading';
 import { useTrainingRepository } from '@/data/MobileTrainingContext';
 import type { BodyMeasurement, ProgressSummary, WeeklyMuscleVolume } from '@/data/trainingTypes';
 import { MuscleVolumeRow, VolumeExplainer } from '@/progress/muscleVolume';
+import { CardioProgress } from '@/progress/CardioProgress';
 import { BodyMeasurementSchema } from '@/data/trainingSchemas';
 import { colors } from '@/theme/colors';
 
@@ -66,6 +67,8 @@ export default function ProgressScreen() {
     {volume && volume.totalSets > 0
       ? <Card>{volume.items.map((item) => <MuscleVolumeRow key={item.muscle} item={item} scaleMax={Math.max(22, ...volume.items.map((m) => m.sets))}/>)}<VolumeExplainer/></Card>
       : <EmptyState icon="body-outline" title="Aún no hay series esta semana" detail="Registra series de trabajo y verás cuántas lleva cada músculo frente a una referencia general."/>}
+    <SectionHeading title="Cardio"/>
+    <CardioProgress/>
     <SectionHeading title="Récords"/>
     {summary?.records.length ? <><RecordsExplainer/>{summary.records.map((record) => <RecordCard key={record.exerciseId} record={record}/>)}</> : <EmptyState icon="trophy-outline" title="Aún no hay récords" detail="Los récords aparecen cuando guardas una serie con peso. No estimamos valores faltantes."/>}
     <SectionHeading title="Mediciones corporales"/>
