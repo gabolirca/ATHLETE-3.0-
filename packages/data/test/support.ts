@@ -28,6 +28,7 @@ export const CATALOG: CatalogSnapshot = {
     id: '30000000-0000-4000-8000-000000000001', user_id: null, slug: 'back-squat', name: 'Sentadilla trasera', modality: 'strength',
     load_type: 'external', primary_muscle_group_ids: ['10000000-0000-4000-8000-000000000008'], secondary_muscle_group_ids: [],
     equipment_ids: ['20000000-0000-4000-8000-000000000001'], instructions: null, archived_at: null,
+    movement_pattern: 'squat', mechanics: 'compound', is_unilateral: false, access_tier: 'free',
     created_at: '2026-11-01T00:00:00+00:00', updated_at: '2026-11-01T00:00:00+00:00', deleted_at: null, revision: 1,
   }],
 };

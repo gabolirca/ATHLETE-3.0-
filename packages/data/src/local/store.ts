@@ -96,6 +96,7 @@ export class LocalStore {
       names.push(name);
       if (v === undefined || v === null) values.push(null);
       else if (kind === 'json') values.push(JSON.stringify(v));
+      else if (kind === 'bool') values.push(v === true || v === 1 || v === '1' ? 1 : 0);
       else if (kind === 'int' || kind === 'real') values.push(Number(v));
       else values.push(String(v));
     }
@@ -106,7 +107,10 @@ export class LocalStore {
     const out: Record<string, unknown> = {};
     for (const [name, kind] of Object.entries(allColumns(meta))) {
       const v = raw[name];
-      out[name] = v === undefined ? null : kind === 'json' && typeof v === 'string' ? JSON.parse(v) : v;
+      if (v === undefined || v === null) out[name] = null;
+      else if (kind === 'json' && typeof v === 'string') out[name] = JSON.parse(v);
+      else if (kind === 'bool') out[name] = Number(v) === 1;
+      else out[name] = v;
     }
     return out as LocalRow;
   }

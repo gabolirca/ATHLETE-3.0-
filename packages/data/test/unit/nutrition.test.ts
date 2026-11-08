@@ -92,7 +92,7 @@ describe('nutrición (local)', () => {
     await d2.close();
     const check = await openNodeSqlite(path);
     expect((await check.get<{ user_version: number }>('PRAGMA user_version'))?.user_version).toBe(LOCAL_SCHEMA_VERSION);
-    expect(LOCAL_SCHEMA_VERSION).toBe(4);
+    expect(LOCAL_SCHEMA_VERSION).toBe(5);
     await check.close();
   });
 });

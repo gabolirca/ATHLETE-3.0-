@@ -25,7 +25,8 @@ import type { z } from 'zod';
  * Una prueba de integración verifica que `columns` coincide exactamente con
  * `athlete3_private.sync_writable_columns` de cada tabla del servidor.
  */
-export type ColumnKind = 'text' | 'int' | 'real' | 'json';
+/** `bool` se guarda como INTEGER 0/1 en SQLite y se lee como boolean. */
+export type ColumnKind = 'text' | 'int' | 'real' | 'json' | 'bool';
 
 /** Fila local decodificada (valores JS; arrays ya parseados). */
 export type LocalRow = Record<string, unknown> & { id: string };
@@ -76,8 +77,13 @@ export const ENTITIES: Readonly<Record<SyncEntity, EntityMeta>> = {
     columns: {
       slug: 'text', name: 'text', modality: 'text', load_type: 'text', primary_muscle_group_ids: 'json',
       secondary_muscle_group_ids: 'json', equipment_ids: 'json', instructions: 'text', archived_at: 'text',
+      movement_pattern: 'text', mechanics: 'text', is_unilateral: 'bool', access_tier: 'text',
     },
-    toContract: parseWith(Exercise, { user_id: 'ownerUserId' }),
+    // Valores seguros si una fila llega sin los rasgos de 0.6.0 (p. ej. un servidor aún sin migrar):
+    // una fila incompleta no debe romper toda la lista de ejercicios.
+    toContract: (row) => parseWith(Exercise, { user_id: 'ownerUserId' })({
+      ...row, is_unilateral: row.is_unilateral ?? false, access_tier: row.access_tier ?? 'free',
+    }),
   },
   training_plan: {
     entity: 'training_plan',
