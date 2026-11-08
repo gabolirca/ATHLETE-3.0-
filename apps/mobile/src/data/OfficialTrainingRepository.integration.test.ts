@@ -218,3 +218,46 @@ test('volumen por músculo: cuenta series efectivas de la semana con el catálog
   expect((await repository.getWeeklyMuscleVolume()).totalSets).toBe(3);
   await data.close?.();
 });
+
+test('modo híbrido: adoptar Hybrid Athlete 1.0 → entrenar el sábado por bloques → AMRAP, RPE, semana y carga', async () => {
+  const { data, repository, sessionId } = await setup({ catalog: true });
+  await repository.finishWorkout(sessionId); // la sesión libre del setup no estorba
+  expect(await repository.listRoutines()).toHaveLength(0);
+
+  const planId = await repository.adoptProgramTemplate('hybrid-athlete-1-0');
+  const [program] = await repository.listPrograms();
+  expect(program).toMatchObject({ id: planId, name: 'Hybrid Athlete 1.0', templateSlug: 'hybrid-athlete-1-0' });
+  expect(program!.days.map((d) => d.weekday)).toEqual([1, 1, 2, 3, 3, 4, 5, 5, 6, 7]);
+  expect(await repository.listRoutines()).toHaveLength(0); // el programa no aparece como rutina
+  const saturday = program!.days.find((d) => d.weekday === 6)!;
+  expect(saturday.blocks.map((b) => [b.name, b.format])).toEqual([['A · Activación', 'continuous'], ['B · Fuerza funcional', 'sets'], ['C · AMRAP 15 min', 'amrap'], ['D · Vuelta a la calma', 'continuous']]);
+  expect(saturday.blocks[2]!.exercises.map((e) => e.exerciseName)).toEqual(['Wall ball', 'Burpees', 'Kettlebell swing', 'Subidas al cajón', 'Remo ergómetro']);
+  expect(saturday.blocks[2]!.exercises[4]).toMatchObject({ modality: 'cardio', distanceMeters: 200 });
+
+  const id = await repository.startProgramDay(saturday.id);
+  expect(await repository.startProgramDay(saturday.id)).toBe(id); // retoma la misma
+  const workout = (await repository.getWorkout(id))!;
+  expect(workout.dayName).toBe('Hybrid Conditioning');
+  expect(workout.blocks?.map((b) => b.format)).toEqual(['continuous', 'sets', 'amrap', 'continuous']);
+  const row = workout.exercises.find((e) => e.exerciseName === 'Remo ergómetro' && e.targetDistanceMeters === 200)!;
+  expect(row).toMatchObject({ blockId: workout.blocks![2]!.id, modality: 'cardio', loadType: 'time' });
+
+  // Serie por tiempo/distancia y resultado del AMRAP
+  await repository.saveSet(id, row.sets[0]!.id, { weightKg: null, reps: null, rir: null, isWarmup: false, durationSeconds: 52, distanceMeters: 200 });
+  await repository.saveBlockResult(id, workout.blocks![2]!.id, { roundsCompleted: 5, extraReps: 14, durationSeconds: 900 });
+  await repository.saveBlockResult(id, workout.blocks![2]!.id, { roundsCompleted: 6, extraReps: 0, durationSeconds: 900 }); // corrige
+  const after = (await repository.getWorkout(id))!;
+  expect(after.exercises.find((e) => e.id === row.id)!.sets[0]).toMatchObject({ durationSeconds: 52, distanceMeters: 200 });
+  expect(after.blocks![2]!.result).toMatchObject({ roundsCompleted: 6, extraReps: 0 });
+
+  await repository.finishWorkout(id, { sessionRpe: 8 });
+  expect((await repository.getWorkout(id))!.sessionRpe).toBe(8);
+  expect(await repository.programWeekStatus(planId)).toEqual({ [saturday.id]: { workoutId: id } });
+  const load = await repository.getWeeklyLoad(4);
+  expect(load.weeks).toHaveLength(4);
+  expect(load.weeks[3]!.sessions).toBe(2); // la libre y la del programa (duran 0 min en la prueba: no suman carga)
+
+  await repository.deleteProgram(planId);
+  expect(await repository.listPrograms()).toEqual([]);
+  await data.close?.();
+});

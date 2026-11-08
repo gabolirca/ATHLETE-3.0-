@@ -26,6 +26,8 @@ export const SyncEntity = z.enum([
   'body_measurement',
   'meal_entry',
   'nutrition_target',
+  'training_block',
+  'session_block_result',
 ]);
 export type SyncEntity = z.infer<typeof SyncEntity>;
 

@@ -8,7 +8,7 @@
  *  - actualiza nombre y rasgos de los ejercicios globales cuyo valor difiera.
  * Pégalo dentro de una migración nueva (las migraciones ya aplicadas no se editan).
  */
-import { EQUIPMENT, EXERCISES, MUSCLE_GROUPS } from '../packages/data/src/catalog/catalog-data.ts';
+import { EQUIPMENT, EXERCISES, MUSCLE_GROUPS, modalityOf } from '../packages/data/src/catalog/catalog-data.ts';
 
 const mg = (n: number) => `10000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
 const eq = (n: number) => `20000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
@@ -25,9 +25,10 @@ out.push(EQUIPMENT.map(([n, slug, name]) => `  ('${eq(n)}', ${q(slug)}, ${q(name
 
 out.push(`insert into athlete3.exercises (id, slug, name, modality, load_type, primary_muscle_group_ids, secondary_muscle_group_ids, equipment_ids,
   movement_pattern, mechanics, is_unilateral, access_tier) values`);
-out.push(EXERCISES.map(([n, slug, name, loadType, primary, secondary, equipment, pattern, mechanics, unilateral, tier]) =>
-  `  ('${ex(n)}', ${q(slug)}, ${q(name)}, 'strength', '${loadType}', ${uuids(primary, mg)}, ${uuids(secondary, mg)}, ${uuids(equipment, eq)}, '${pattern}', '${mechanics}', ${unilateral === 1}, '${tier}')`,
-).join(',\n') + '\non conflict (id) do nothing;');
+out.push(EXERCISES.map((row) => {
+  const [n, slug, name, loadType, primary, secondary, equipment, pattern, mechanics, unilateral, tier] = row;
+  return `  ('${ex(n)}', ${q(slug)}, ${q(name)}, '${modalityOf(row)}', '${loadType}', ${uuids(primary, mg)}, ${uuids(secondary, mg)}, ${uuids(equipment, eq)}, '${pattern}', '${mechanics}', ${unilateral === 1}, '${tier}')`;
+}).join(',\n') + '\non conflict (id) do nothing;');
 
 out.push('-- Rasgos de los ejercicios que ya existían (solo si difieren).');
 out.push(`update athlete3.exercises e set movement_pattern = v.pattern, mechanics = v.mechanics, is_unilateral = v.unilateral, access_tier = v.tier

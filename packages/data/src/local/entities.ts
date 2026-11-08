@@ -8,6 +8,8 @@ import {
   Profile,
   SessionExercise,
   StrengthSet,
+  SessionBlockResult,
+  TrainingBlock,
   TrainingDay,
   TrainingDayExercise,
   TrainingPlan,
@@ -88,16 +90,31 @@ export const ENTITIES: Readonly<Record<SyncEntity, EntityMeta>> = {
   training_plan: {
     entity: 'training_plan',
     table: 'training_plans',
-    columns: { name: 'text', description: 'text', status: 'text', starts_on: 'text', ends_on: 'text' },
+    columns: { name: 'text', description: 'text', status: 'text', starts_on: 'text', ends_on: 'text', kind: 'text', template_slug: 'text' },
     children: [{ entity: 'training_day', fk: 'plan_id' }],
-    toContract: parseWith(TrainingPlan),
+    // Filas anteriores a 0.7.0 (o de un servidor sin migrar) son rutinas.
+    toContract: (row) => parseWith(TrainingPlan)({ ...row, kind: row.kind ?? 'routine', template_slug: row.template_slug ?? null }),
   },
   training_day: {
     entity: 'training_day',
     table: 'training_days',
-    columns: { plan_id: 'text', position: 'int', name: 'text', kind: 'text', notes: 'text' },
-    children: [{ entity: 'training_day_exercise', fk: 'training_day_id' }],
-    toContract: parseWith(TrainingDay),
+    columns: {
+      plan_id: 'text', position: 'int', name: 'text', kind: 'text', notes: 'text',
+      weekday: 'int', modality: 'text', target_rpe: 'real', target_duration_minutes: 'int',
+    },
+    children: [{ entity: 'training_day_exercise', fk: 'training_day_id' }, { entity: 'training_block', fk: 'training_day_id' }],
+    toContract: (row) => parseWith(TrainingDay)({
+      ...row, weekday: row.weekday ?? null, modality: row.modality ?? null, target_rpe: row.target_rpe ?? null, target_duration_minutes: row.target_duration_minutes ?? null,
+    }),
+  },
+  training_block: {
+    entity: 'training_block',
+    table: 'training_blocks',
+    columns: {
+      training_day_id: 'text', position: 'int', name: 'text', kind: 'text', format: 'text', rounds: 'int',
+      time_cap_seconds: 'int', rest_seconds: 'int', target_rpe: 'real', notes: 'text',
+    },
+    toContract: parseWith(TrainingBlock),
   },
   training_day_exercise: {
     entity: 'training_day_exercise',
@@ -105,19 +122,30 @@ export const ENTITIES: Readonly<Record<SyncEntity, EntityMeta>> = {
     columns: {
       training_day_id: 'text', exercise_id: 'text', position: 'int', target_sets: 'int', target_reps_min: 'int',
       target_reps_max: 'int', target_weight_kg: 'real', target_rir: 'real', target_rest_seconds: 'int',
-      target_duration_seconds: 'int', target_distance_m: 'real', notes: 'text',
+      target_duration_seconds: 'int', target_distance_m: 'real', notes: 'text', block_id: 'text', per_side: 'bool', target_rpe: 'real',
     },
-    toContract: parseWith(TrainingDayExercise, { target_distance_m: 'targetDistanceMeters' }),
+    toContract: (row) => parseWith(TrainingDayExercise, { target_distance_m: 'targetDistanceMeters' })({
+      ...row, block_id: row.block_id ?? null, per_side: row.per_side ?? false, target_rpe: row.target_rpe ?? null,
+    }),
   },
   workout_session: {
     entity: 'workout_session',
     table: 'workout_sessions',
     columns: {
       status: 'text', training_day_id: 'text', title: 'text', started_at: 'text', ended_at: 'text',
-      time_zone: 'text', local_date: 'text', source: 'text', notes: 'text',
+      time_zone: 'text', local_date: 'text', source: 'text', notes: 'text', session_rpe: 'real',
     },
-    children: [{ entity: 'session_exercise', fk: 'session_id' }],
-    toContract: parseWith(WorkoutSession),
+    children: [{ entity: 'session_exercise', fk: 'session_id' }, { entity: 'session_block_result', fk: 'session_id' }],
+    toContract: (row) => parseWith(WorkoutSession)({ ...row, session_rpe: row.session_rpe ?? null }),
+  },
+  session_block_result: {
+    entity: 'session_block_result',
+    table: 'session_block_results',
+    columns: {
+      session_id: 'text', training_block_id: 'text', position: 'int', name: 'text', format: 'text',
+      rounds_completed: 'int', extra_reps: 'int', duration_seconds: 'int', notes: 'text',
+    },
+    toContract: parseWith(SessionBlockResult),
   },
   session_exercise: {
     entity: 'session_exercise',

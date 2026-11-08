@@ -5,6 +5,7 @@ import {
   LogSetInput,
   PageRequest,
   ReorderSessionExercisesInput,
+  SaveBlockResultInput,
   SessionHistoryQuery,
   StartFromTrainingDayInput,
   StartSessionInput,
@@ -14,6 +15,7 @@ import {
   type LocalDate,
   type Page,
   type Result,
+  type SessionBlockResult,
   type SessionExercise,
   type StrengthSet,
   type WorkoutSession,
@@ -195,6 +197,7 @@ export class LocalWorkoutSessionRepository extends Repository implements Workout
       const changes: Record<string, unknown> = { started_at: startedAt, ended_at: endedAt, local_date: localDateOf(startedAt, s.time_zone as string) };
       if (i.title !== undefined) changes.title = i.title;
       if (i.notes !== undefined) changes.notes = i.notes;
+      if (i.sessionRpe !== undefined) changes.session_rpe = i.sessionRpe;
       return this.store.toContract<WorkoutSession>('workout_session', await this.store.upsert('workout_session', s.id, changes, tx));
     }));
   }
@@ -207,6 +210,7 @@ export class LocalWorkoutSessionRepository extends Repository implements Workout
       unwrap(validateSessionTimes(s.started_at as string, i.endedAt));
       const changes: Record<string, unknown> = { status: 'completed', ended_at: i.endedAt };
       if (i.notes !== undefined) changes.notes = i.notes;
+      if (i.sessionRpe !== undefined) changes.session_rpe = i.sessionRpe;
       return this.store.toContract<WorkoutSession>('workout_session', await this.store.upsert('workout_session', s.id, changes, tx));
     }));
   }
@@ -218,6 +222,27 @@ export class LocalWorkoutSessionRepository extends Repository implements Workout
       unwrap(assertTransition(s.status as WorkoutSession['status'], 'discarded'));
       return this.store.toContract<WorkoutSession>('workout_session', await this.store.upsert('workout_session', s.id, { status: 'discarded' }, tx));
     }));
+  }
+
+  // ---- Resultado de bloques (0.7.0) ----
+  saveBlockResult(raw: SaveBlockResultInput): Promise<Result<SessionBlockResult>> {
+    return guard(() => this.store.db.transaction(async (tx) => {
+      const i = input(SaveBlockResultInput, raw);
+      const session = await this.loadSession(i.sessionId, tx);
+      if (session.status === 'discarded') fail('INVALID_STATE', 'La sesión está descartada.');
+      const existing = await this.store.get('session_block_result', i.id, tx);
+      if (existing && existing.session_id !== i.sessionId) fail('VALIDATION_FAILED', 'El resultado pertenece a otra sesión.');
+      const row = await this.store.upsert('session_block_result', i.id, {
+        session_id: i.sessionId, training_block_id: i.trainingBlockId, position: checkPosition(i.position), name: i.name, format: i.format,
+        rounds_completed: i.roundsCompleted, extra_reps: i.extraReps, duration_seconds: i.durationSeconds, notes: i.notes,
+      }, tx);
+      return this.store.toContract<SessionBlockResult>('session_block_result', row);
+    }));
+  }
+
+  listBlockResults(sessionId: string): Promise<Result<SessionBlockResult[]>> {
+    return guard(async () => (await this.store.select('session_block_result', 'WHERE session_id = ? AND deleted_at IS NULL ORDER BY position, id', [sessionId]))
+      .map((r) => this.store.toContract<SessionBlockResult>('session_block_result', r)));
   }
 
   delete(sessionId: string): Promise<Result<void>> {

@@ -1,5 +1,6 @@
 import {
   CreateCustomExerciseInput,
+  CreateTrainingBlockInput,
   CreateTrainingDayExerciseInput,
   CreateTrainingDayInput,
   CreateTrainingPlanInput,
@@ -14,6 +15,7 @@ import {
   type Profile,
   type ProfileRepository,
   type Result,
+  type TrainingBlock,
   type TrainingDay,
   type TrainingDayExercise,
   type TrainingPlan,
@@ -161,10 +163,10 @@ export class LocalProfileRepository extends Repository implements ProfileReposit
 
 // ---------------- Programas ----------------
 
-type PlanDetail = { plan: TrainingPlan; days: Array<TrainingDay & { exercises: TrainingDayExercise[] }> };
+type PlanDetail = { plan: TrainingPlan; days: Array<TrainingDay & { exercises: TrainingDayExercise[]; blocks: TrainingBlock[] }> };
 
 export class LocalTrainingPlanRepository extends Repository implements TrainingPlanRepository {
-  private async live(entity: 'training_plan' | 'training_day' | 'training_day_exercise', id: string, tx?: SqlExecutor) {
+  private async live(entity: 'training_plan' | 'training_day' | 'training_day_exercise' | 'training_block', id: string, tx?: SqlExecutor) {
     const r = await this.store.get(entity, id, tx);
     if (!r || r.deleted_at) fail('NOT_FOUND', 'El registro no existe.');
     return r!;
@@ -182,7 +184,12 @@ export class LocalTrainingPlanRepository extends Repository implements TrainingP
       const out: PlanDetail['days'] = [];
       for (const d of days) {
         const ex = await this.store.select('training_day_exercise', 'WHERE training_day_id = ? AND deleted_at IS NULL ORDER BY position, id', [d.id]);
-        out.push({ ...this.store.toContract<TrainingDay>('training_day', d), exercises: ex.map((e) => this.store.toContract<TrainingDayExercise>('training_day_exercise', e)) });
+        const blocks = await this.store.select('training_block', 'WHERE training_day_id = ? AND deleted_at IS NULL ORDER BY position, id', [d.id]);
+        out.push({
+          ...this.store.toContract<TrainingDay>('training_day', d),
+          exercises: ex.map((e) => this.store.toContract<TrainingDayExercise>('training_day_exercise', e)),
+          blocks: blocks.map((b) => this.store.toContract<TrainingBlock>('training_block', b)),
+        });
       }
       return { plan, days: out };
     });
@@ -192,7 +199,7 @@ export class LocalTrainingPlanRepository extends Repository implements TrainingP
     return guard(() => this.store.db.transaction(async (tx) => {
       const i = input(CreateTrainingPlanInput, raw);
       if (await this.store.get('training_plan', i.id, tx)) fail('DUPLICATE', 'El plan ya existe.');
-      const row = await this.store.upsert('training_plan', i.id, { name: i.name, description: i.description, status: i.status, starts_on: i.startsOn, ends_on: i.endsOn }, tx);
+      const row = await this.store.upsert('training_plan', i.id, { name: i.name, description: i.description, status: i.status, starts_on: i.startsOn, ends_on: i.endsOn, kind: i.kind, template_slug: i.templateSlug }, tx);
       return this.store.toContract<TrainingPlan>('training_plan', row);
     }));
   }
@@ -201,7 +208,7 @@ export class LocalTrainingPlanRepository extends Repository implements TrainingP
     return guard(() => this.store.db.transaction(async (tx) => {
       const current = this.store.toContract<TrainingPlan>('training_plan', await this.live('training_plan', id, tx));
       const i = input(CreateTrainingPlanInput, { ...current, ...raw, id });
-      const row = await this.store.upsert('training_plan', id, { name: i.name, description: i.description, status: i.status, starts_on: i.startsOn, ends_on: i.endsOn }, tx);
+      const row = await this.store.upsert('training_plan', id, { name: i.name, description: i.description, status: i.status, starts_on: i.startsOn, ends_on: i.endsOn, kind: i.kind, template_slug: i.templateSlug }, tx);
       return this.store.toContract<TrainingPlan>('training_plan', row);
     }));
   }
@@ -215,7 +222,7 @@ export class LocalTrainingPlanRepository extends Repository implements TrainingP
       const i = input(CreateTrainingDayInput, raw);
       await this.live('training_plan', i.planId, tx);
       if (await this.store.get('training_day', i.id, tx)) fail('DUPLICATE', 'El día ya existe.');
-      const row = await this.store.upsert('training_day', i.id, { plan_id: i.planId, position: checkPosition(i.position), name: i.name, kind: i.kind, notes: i.notes }, tx);
+      const row = await this.store.upsert('training_day', i.id, { plan_id: i.planId, ...this.dayColumns(i) }, tx);
       return this.store.toContract<TrainingDay>('training_day', row);
     }));
   }
@@ -224,13 +231,63 @@ export class LocalTrainingPlanRepository extends Repository implements TrainingP
     return guard(() => this.store.db.transaction(async (tx) => {
       const current = this.store.toContract<TrainingDay>('training_day', await this.live('training_day', id, tx));
       const i = input(CreateTrainingDayInput, { ...current, ...raw, id, planId: current.planId });
-      const row = await this.store.upsert('training_day', id, { position: checkPosition(i.position), name: i.name, kind: i.kind, notes: i.notes }, tx);
+      const row = await this.store.upsert('training_day', id, this.dayColumns(i), tx);
       return this.store.toContract<TrainingDay>('training_day', row);
     }));
   }
 
   deleteDay(id: string): Promise<Result<void>> {
     return guard(() => this.store.remove('training_day', id));
+  }
+
+  private dayColumns(i: ReturnType<typeof CreateTrainingDayInput.parse>) {
+    return {
+      position: checkPosition(i.position), name: i.name, kind: i.kind, notes: i.notes,
+      weekday: i.weekday, modality: i.modality, target_rpe: i.targetRpe, target_duration_minutes: i.targetDurationMinutes,
+    };
+  }
+
+  // ---- Bloques (0.7.0) ----
+  private blockColumns(i: ReturnType<typeof CreateTrainingBlockInput.parse>) {
+    return {
+      training_day_id: i.trainingDayId, position: checkPosition(i.position), name: i.name, kind: i.kind, format: i.format,
+      rounds: i.rounds, time_cap_seconds: i.timeCapSeconds, rest_seconds: i.restSeconds, target_rpe: i.targetRpe, notes: i.notes,
+    };
+  }
+
+  addBlock(raw: CreateTrainingBlockInput): Promise<Result<TrainingBlock>> {
+    return guard(() => this.store.db.transaction(async (tx) => {
+      const i = input(CreateTrainingBlockInput, raw);
+      await this.live('training_day', i.trainingDayId, tx);
+      if (await this.store.get('training_block', i.id, tx)) fail('DUPLICATE', 'El bloque ya existe.');
+      return this.store.toContract<TrainingBlock>('training_block', await this.store.upsert('training_block', i.id, this.blockColumns(i), tx));
+    }));
+  }
+
+  updateBlock(id: string, raw: Partial<Omit<CreateTrainingBlockInput, 'id' | 'trainingDayId'>>): Promise<Result<TrainingBlock>> {
+    return guard(() => this.store.db.transaction(async (tx) => {
+      const current = this.store.toContract<TrainingBlock>('training_block', await this.live('training_block', id, tx));
+      const i = input(CreateTrainingBlockInput, { ...current, ...raw, id, trainingDayId: current.trainingDayId });
+      return this.store.toContract<TrainingBlock>('training_block', await this.store.upsert('training_block', id, this.blockColumns(i), tx));
+    }));
+  }
+
+  /** Al borrar un bloque, sus ejercicios quedan sin bloque (no se borran). */
+  deleteBlock(id: string): Promise<Result<void>> {
+    return guard(() => this.store.db.transaction(async (tx) => {
+      await this.live('training_block', id, tx);
+      for (const e of await this.store.select('training_day_exercise', 'WHERE block_id = ? AND deleted_at IS NULL', [id], tx)) {
+        await this.store.upsert('training_day_exercise', e.id, { block_id: null }, tx);
+      }
+      await this.store.remove('training_block', id, tx);
+    }));
+  }
+
+  /** El bloque debe existir y ser del mismo día que el ejercicio. */
+  private async assertBlockOfDay(blockId: string | null, dayId: string, tx: SqlExecutor): Promise<void> {
+    if (blockId === null) return;
+    const b = await this.store.get('training_block', blockId, tx);
+    if (!b || b.deleted_at || b.training_day_id !== dayId) fail('VALIDATION_FAILED', 'El bloque no pertenece a este día.');
   }
 
   /** Columnas del ejercicio planificado, con las mismas reglas que el servidor aplica (`athlete3.training_day_exercises`). */
@@ -240,6 +297,7 @@ export class LocalTrainingPlanRepository extends Repository implements TrainingP
       target_reps_min: i.targetRepsMin, target_reps_max: i.targetRepsMax, target_weight_kg: toServerScale(i.targetWeightKg, 2), target_rir: i.targetRir,
       target_rest_seconds: i.targetRestSeconds, target_duration_seconds: i.targetDurationSeconds,
       target_distance_m: toServerScale(i.targetDistanceMeters, 2), notes: i.notes,
+      block_id: i.blockId, per_side: i.perSide, target_rpe: i.targetRpe,
     };
   }
 
@@ -253,6 +311,7 @@ export class LocalTrainingPlanRepository extends Repository implements TrainingP
       const i = input(CreateTrainingDayExerciseInput, raw);
       await this.live('training_day', i.trainingDayId, tx);
       await this.assertUsableExercise(i.exerciseId, tx);
+      await this.assertBlockOfDay(i.blockId, i.trainingDayId, tx);
       if (await this.store.get('training_day_exercise', i.id, tx)) fail('DUPLICATE', 'El ejercicio ya está en el día.');
       const row = await this.store.upsert('training_day_exercise', i.id, this.dayExerciseColumns(i), tx);
       return this.store.toContract<TrainingDayExercise>('training_day_exercise', row);
@@ -264,6 +323,7 @@ export class LocalTrainingPlanRepository extends Repository implements TrainingP
       const current = this.store.toContract<TrainingDayExercise>('training_day_exercise', await this.live('training_day_exercise', id, tx));
       const i = input(CreateTrainingDayExerciseInput, { ...current, ...raw, id, trainingDayId: current.trainingDayId });
       if (i.exerciseId !== current.exerciseId) await this.assertUsableExercise(i.exerciseId, tx);
+      if (i.blockId !== current.blockId) await this.assertBlockOfDay(i.blockId, current.trainingDayId, tx);
       const row = await this.store.upsert('training_day_exercise', id, this.dayExerciseColumns(i), tx);
       return this.store.toContract<TrainingDayExercise>('training_day_exercise', row);
     }));

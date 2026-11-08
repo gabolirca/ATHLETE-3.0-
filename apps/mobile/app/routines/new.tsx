@@ -13,6 +13,7 @@ import { useLocalDataReady, useTrainingRepository } from '@/data/MobileTrainingC
 import { RoutineInputSchema } from '@/data/trainingSchemas';
 import type { Exercise } from '@/data/trainingTypes';
 import { colors } from '@/theme/colors';
+import { RoutineDiagnosisCard } from '@/routines/diagnosis';
 
 type PlannedExercise = Exercise & { sets: string; reps: string; restSeconds: string; version: number };
 
@@ -35,6 +36,7 @@ export default function NewRoutineScreen() {
   const [showPicker, setShowPicker] = useState(true);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
+  const [timesPerWeek, setTimesPerWeek] = useState(1);
 
   function toggleExercise(exercise: Exercise) {
     setSelected((current) => current.some((item) => item.id === exercise.id)
@@ -95,6 +97,7 @@ export default function NewRoutineScreen() {
       </Card>)}
     </View> : null}
 
+    {selected.length > 0 ? <RoutineDiagnosisCard items={selected.map((item) => ({ exercise: item, sets: Number(item.sets) || 0 }))} timesPerWeek={timesPerWeek} onTimesChange={setTimesPerWeek}/> : null}
     {error ? <Text accessibilityRole="alert" style={s.error}>{error}</Text> : null}
     {selected.length > 0 ? <ActionButton onPress={save} loading={saving} disabled={!ready}>Guardar rutina</ActionButton> : null}
 

@@ -21,6 +21,8 @@ export const MovementPattern = z.enum([
   'chest_fly', 'shoulder_raise', 'elbow_flexion', 'elbow_extension', 'knee_extension', 'knee_flexion',
   'hip_extension', 'hip_abduction', 'hip_adduction', 'calf_raise', 'shrug', 'wrist',
   'core_anti_extension', 'core_flexion', 'core_rotation', 'carry', 'power',
+  // 0.7.0: cardio cíclico (remo, bici, carrera, natación) y movilidad.
+  'locomotion', 'mobility',
 ]);
 export type MovementPattern = z.infer<typeof MovementPattern>;
 

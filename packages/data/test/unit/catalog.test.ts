@@ -71,7 +71,7 @@ describe('catálogo 0.6.0', () => {
     await d.close();
   });
 
-  it('un teléfono con la versión 4 (13 ejercicios) recibe los 105 sin perder sus ejercicios propios', async () => {
+  it('un teléfono con la versión 4 (13 ejercicios) recibe el catálogo completo sin perder sus ejercicios propios', async () => {
     const d1 = await offline();
     const own = newId();
     expectOk(await d1.exercises.createCustom({ id: own, name: 'Ejercicio propio', modality: 'strength', loadType: 'external' }));
@@ -86,13 +86,23 @@ describe('catálogo 0.6.0', () => {
     await raw.close();
     const d2 = await openDevice(path, USER, new CatalogTransport());
     // La migración v5 olvidó el catálogo aplicado: la siguiente sync lo vuelve a descargar.
-    expect(expectOk(await d2.exercises.list({})).filter((e) => e.ownerUserId === null).length).toBeLessThan(105);
+    expect(expectOk(await d2.exercises.list({})).filter((e) => e.ownerUserId === null).length).toBeLessThan(118);
     expectOk(await d2.sync.syncNow());
     const all = expectOk(await d2.exercises.list({}));
-    expect(all.filter((e) => e.ownerUserId === null)).toHaveLength(105);
+    expect(all.filter((e) => e.ownerUserId === null)).toHaveLength(118);
     expect(all.find((e) => e.id === own)).toMatchObject({ name: 'Ejercicio propio', accessTier: 'free', isUnilateral: false });
     expect(all.find((e) => e.name === 'Sentadilla trasera')).toMatchObject({ movementPattern: 'squat', accessTier: 'free' });
-    expect(LOCAL_SCHEMA_VERSION).toBe(5);
+    expect(LOCAL_SCHEMA_VERSION).toBe(6);
     await d2.close();
+  });
+});
+
+describe('plantillas de programa (0.7.0)', () => {
+  it('todos los ejercicios de las plantillas existen en el catálogo incluido', async () => {
+    const { PROGRAM_TEMPLATES } = await import('@athlete/domain');
+    const { CATALOG_EXERCISE_ID } = await import('../../src/catalog/bundled');
+    const missing = PROGRAM_TEMPLATES.flatMap((t) => t.sessions.flatMap((s) => s.blocks.flatMap((b) => b.exercises.map((e) => e.slug))))
+      .filter((slug) => !CATALOG_EXERCISE_ID[slug]);
+    expect(missing).toEqual([]);
   });
 });
