@@ -10,3 +10,5 @@ export * from './nutrition';
 export * from './volume';
 export * from './score';
 export * from './loadSuggestion';
+export * from './templates/types';
+export * from './templates/hybridAthlete';

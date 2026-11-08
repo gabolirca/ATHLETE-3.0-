@@ -7,7 +7,7 @@
  * Reglas: los números (→ UUID) y los slugs NUNCA cambian ni se reutilizan; solo se agregan al final.
  * Para retirar un ejercicio se archiva en una migración, no se borra de aquí.
  */
-export const CATALOG_VERSION = '2026-11-08.1';
+export const CATALOG_VERSION = '2026-11-09.1';
 
 // [n, slug, nombre]
 export const MUSCLE_GROUPS: ReadonlyArray<readonly [number, string, string]> = [
@@ -25,6 +25,9 @@ export const EQUIPMENT: ReadonlyArray<readonly [number, string, string]> = [
   [9, 'smith-machine', 'Máquina Smith'], [10, 'ez-bar', 'Barra Z'], [11, 'resistance-band', 'Banda elástica'],
   [12, 'trap-bar', 'Barra hexagonal'], [13, 'landmine', 'Landmine'], [14, 'medicine-ball', 'Balón medicinal'],
   [15, 'box', 'Cajón'], [16, 'ab-wheel', 'Rueda abdominal'],
+  // 0.7.0 (motor híbrido)
+  [17, 'rower', 'Remo (máquina)'], [18, 'stationary-bike', 'Bicicleta fija'], [19, 'treadmill', 'Caminadora'],
+  [20, 'pool', 'Alberca'], [21, 'jump-rope', 'Cuerda para saltar'], [22, 'ski-erg', 'SkiErg'],
 ];
 
 export type CatalogLoadType = 'external' | 'bodyweight' | 'assisted' | 'time' | 'none';
@@ -32,7 +35,10 @@ export type CatalogExerciseRow = readonly [
   n: number, slug: string, name: string, loadType: CatalogLoadType,
   primary: readonly number[], secondary: readonly number[], equipment: readonly number[],
   pattern: string, mechanics: 'compound' | 'isolation', unilateral: 0 | 1, tier: 'free' | 'pro',
+  /** 0.7.0: 'cardio' para máquinas, carrera y natación (no salen en el selector de fuerza). Por defecto 'strength'. */
+  modality?: 'strength' | 'cardio',
 ];
+export const modalityOf = (row: CatalogExerciseRow): 'strength' | 'cardio' => row[11] ?? 'strength';
 
 const C = 'compound' as const;
 const I = 'isolation' as const;
@@ -170,4 +176,22 @@ export const EXERCISES: ReadonlyArray<CatalogExerciseRow> = [
   [103, 'pallof-press', 'Press Pallof', 'external', [7], [], [4, 11], 'core_rotation', I, 1, P],
   [104, 'farmers-carry', 'Caminata del granjero', 'external', [6, 13], [7, 10], [2, 6], 'carry', C, 0, P],
   [105, 'hollow-hold', 'Hollow hold', 'time', [7], [], [5], 'core_anti_extension', I, 0, P],
+
+  // --- 0.7.0 · Motor híbrido: cardio, funcional y movilidad ---
+  // Cardio (modality 'cardio'): se registran con tiempo y/o distancia; no cuentan como series de fuerza.
+  [106, 'row-erg', 'Remo ergómetro', 'time', [12], [2, 8], [17], 'locomotion', C, 0, F, 'cardio'],
+  [107, 'bike-erg', 'Bicicleta fija / air bike', 'time', [8], [10, 11], [18], 'locomotion', C, 0, F, 'cardio'],
+  [108, 'run', 'Correr (pista o caminadora)', 'time', [8], [9, 10, 11], [19], 'locomotion', C, 0, F, 'cardio'],
+  [109, 'swim-freestyle', 'Natación (libre)', 'time', [12], [2, 3], [20], 'locomotion', C, 0, F, 'cardio'],
+  [110, 'swim-drills', 'Natación técnica (drills)', 'time', [12], [3], [20], 'locomotion', C, 0, F, 'cardio'],
+  [111, 'walk', 'Caminata', 'time', [12], [], [], 'locomotion', C, 0, F, 'cardio'],
+  [112, 'jump-rope', 'Saltar la cuerda', 'time', [11], [12], [21], 'locomotion', C, 0, F, 'cardio'],
+  [113, 'ski-erg', 'SkiErg', 'time', [2], [5, 7], [22], 'locomotion', C, 0, P, 'cardio'],
+  // Funcional (fuerza): sí cuentan como series.
+  [114, 'wall-ball', 'Wall ball', 'external', [8, 3], [10], [14], 'power', C, 0, F],
+  [115, 'burpee', 'Burpees', 'bodyweight', [12], [1, 8], [5], 'power', C, 0, F],
+  [116, 'box-jump', 'Salto al cajón', 'bodyweight', [8], [10, 11], [15], 'power', C, 0, P],
+  [117, 'thruster', 'Thruster', 'external', [8, 3], [10, 5], [1, 2], 'power', C, 0, P],
+  // Movilidad: por tiempo, sin volumen.
+  [118, 'mobility', 'Movilidad', 'time', [12], [], [], 'mobility', I, 0, F],
 ];
