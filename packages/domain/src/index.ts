@@ -13,3 +13,4 @@ export * from './loadSuggestion';
 export * from './templates/types';
 export * from './templates/hybridAthlete';
 export * from './load';
+export * from './templates/moreTemplates';

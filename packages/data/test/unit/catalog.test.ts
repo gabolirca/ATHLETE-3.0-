@@ -86,10 +86,10 @@ describe('catálogo 0.6.0', () => {
     await raw.close();
     const d2 = await openDevice(path, USER, new CatalogTransport());
     // La migración v5 olvidó el catálogo aplicado: la siguiente sync lo vuelve a descargar.
-    expect(expectOk(await d2.exercises.list({})).filter((e) => e.ownerUserId === null).length).toBeLessThan(118);
+    expect(expectOk(await d2.exercises.list({})).filter((e) => e.ownerUserId === null).length).toBeLessThan(122);
     expectOk(await d2.sync.syncNow());
     const all = expectOk(await d2.exercises.list({}));
-    expect(all.filter((e) => e.ownerUserId === null)).toHaveLength(118);
+    expect(all.filter((e) => e.ownerUserId === null)).toHaveLength(122);
     expect(all.find((e) => e.id === own)).toMatchObject({ name: 'Ejercicio propio', accessTier: 'free', isUnilateral: false });
     expect(all.find((e) => e.name === 'Sentadilla trasera')).toMatchObject({ movementPattern: 'squat', accessTier: 'free' });
     expect(LOCAL_SCHEMA_VERSION).toBe(6);

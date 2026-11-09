@@ -7,7 +7,7 @@
  * Reglas: los números (→ UUID) y los slugs NUNCA cambian ni se reutilizan; solo se agregan al final.
  * Para retirar un ejercicio se archiva en una migración, no se borra de aquí.
  */
-export const CATALOG_VERSION = '2026-11-09.1';
+export const CATALOG_VERSION = '2026-11-09.2';
 
 // [n, slug, nombre]
 export const MUSCLE_GROUPS: ReadonlyArray<readonly [number, string, string]> = [
@@ -28,6 +28,7 @@ export const EQUIPMENT: ReadonlyArray<readonly [number, string, string]> = [
   // 0.7.0 (motor híbrido)
   [17, 'rower', 'Remo (máquina)'], [18, 'stationary-bike', 'Bicicleta fija'], [19, 'treadmill', 'Caminadora'],
   [20, 'pool', 'Alberca'], [21, 'jump-rope', 'Cuerda para saltar'], [22, 'ski-erg', 'SkiErg'],
+  [23, 'sled', 'Trineo'], [24, 'sandbag', 'Sandbag'],
 ];
 
 export type CatalogLoadType = 'external' | 'bodyweight' | 'assisted' | 'time' | 'none';
@@ -194,4 +195,10 @@ export const EXERCISES: ReadonlyArray<CatalogExerciseRow> = [
   [117, 'thruster', 'Thruster', 'external', [8, 3], [10, 5], [1, 2], 'power', C, 0, P],
   // Movilidad: por tiempo, sin volumen.
   [118, 'mobility', 'Movilidad', 'time', [12], [], [], 'mobility', I, 0, F],
+
+  // --- 0.7.0 · Estaciones de Hyrox ---
+  [119, 'sled-push', 'Empuje de trineo', 'external', [8, 10], [11, 3], [23], 'power', C, 0, P],
+  [120, 'sled-pull', 'Arrastre de trineo', 'external', [2, 9], [6, 10], [23], 'horizontal_pull', C, 0, P],
+  [121, 'burpee-broad-jump', 'Burpee con salto largo', 'bodyweight', [12], [8, 10, 1], [5], 'power', C, 0, P],
+  [122, 'sandbag-lunge', 'Zancadas con sandbag', 'external', [8, 10], [7, 9], [24], 'lunge', C, 0, P],
 ];
