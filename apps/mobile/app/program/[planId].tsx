@@ -10,6 +10,9 @@ import { Screen } from '@/components/Screen';
 import { useTrainingRepository } from '@/data/MobileTrainingContext';
 import type { Program, ProgramWeekStatus } from '@/data/trainingTypes';
 import { ProgramNotes } from '@/program/DayPlan';
+import { SessionSheet } from '@/program/edit/SessionSheet';
+import { ActionButton } from '@/components/ActionButton';
+import type { ProgramDay } from '@/data/trainingTypes';
 import { HYBRID_COLOR } from '@/program/HybridCard';
 import { daySummary, modalityInfo, todayWeekday, weekdayLabel } from '@/program/format';
 import { colors } from '@/theme/colors';
@@ -21,13 +24,15 @@ export default function ProgramWeekScreen() {
   const repository = useTrainingRepository();
   const [program, setProgram] = useState<Program | null | undefined>(undefined);
   const [status, setStatus] = useState<ProgramWeekStatus>({});
-  useFocusEffect(useCallback(() => {
-    let active = true;
-    if (repository) Promise.all([repository.listPrograms(), repository.programWeekStatus(planId).catch(() => ({}))]).then(([list, st]) => {
-      if (active) { setProgram(list.find((p) => p.id === planId) ?? null); setStatus(st); }
-    }).catch(() => { if (active) setProgram(null); });
-    return () => { active = false; };
-  }, [repository, planId]));
+  const [sheet, setSheet] = useState<{ day: ProgramDay | null } | null>(null);
+  const load = useCallback(async () => {
+    if (!repository) return;
+    try {
+      const [list, st] = await Promise.all([repository.listPrograms(), repository.programWeekStatus(planId).catch(() => ({}))]);
+      setProgram(list.find((p) => p.id === planId) ?? null); setStatus(st);
+    } catch { setProgram(null); }
+  }, [repository, planId]);
+  useFocusEffect(useCallback(() => { void load(); }, [load]));
 
   if (program === undefined) return <Screen><Title>Programa</Title></Screen>;
   if (!program) return <Screen><Title>Programa</Title><EmptyState title="Programa no disponible" detail="Puede que lo hayas quitado en otro dispositivo." action="Ir a Entrenar" onAction={() => router.replace('/train')}/></Screen>;
@@ -62,14 +67,20 @@ export default function ProgramWeekScreen() {
               <View style={s.row}>
                 <View style={[s.icon, { backgroundColor: `${info.color}22` }]}><Ionicons name={info.icon as never} size={18} color={info.color}/></View>
                 <View style={s.flex}><Text style={s.name}>{d.name}</Text><Text style={s.muted}>{info.label}{daySummary(d) ? ` · ${daySummary(d)}` : ''}</Text></View>
-                {st && !st.active ? <Ionicons name="checkmark-circle" size={22} color={colors.green}/> : st?.active ? <Text style={s.live}>EN CURSO</Text> : <Ionicons name="chevron-forward" size={18} color={colors.muted}/>}
+                {st && !st.active ? <Ionicons name="checkmark-circle" size={22} color={colors.green}/> : st?.active ? <Text style={s.live}>EN CURSO</Text> : null}
+                <Pressable accessibilityRole="button" accessibilityLabel={`Opciones de ${d.name}`} hitSlop={10} onPress={() => setSheet({ day: d })}><Ionicons name="ellipsis-horizontal" size={20} color={colors.secondary}/></Pressable>
               </View>
             </Card>
           </Pressable>;
         })}
       </View>;
     })}
+    <ActionButton secondary onPress={() => setSheet({ day: null })}>＋ Agregar sesión</ActionButton>
     <ProgramNotes notes={notes}/>
+    <SessionSheet visible={sheet !== null} day={sheet?.day ?? null} onClose={() => setSheet(null)}
+      onSave={async (v) => { if (sheet?.day) await repository!.updateProgramDay(sheet.day.id, v); else { const id = await repository!.addProgramDay(program.id, v); router.push(`/program/day/${id}`); } await load(); }}
+      onDuplicate={sheet?.day ? async (weekday) => { await repository!.duplicateProgramDay(sheet.day!.id, weekday); await load(); } : undefined}
+      onDelete={sheet?.day ? async () => { await repository!.deleteProgramDay(sheet.day!.id); await load(); } : undefined}/>
     <Pressable accessibilityRole="button" onPress={confirmDelete}><Text style={s.delete}>Quitar este programa</Text></Pressable>
   </Screen>;
 }

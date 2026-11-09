@@ -17,12 +17,13 @@ const program: Program = { id: 'p', name: 'Hybrid Athlete 1.0', templateSlug: 'h
 
 beforeEach(() => jest.clearAllMocks());
 
-test('sin programa invita a ver Hybrid Athlete 1.0', async () => {
+test('sin programa muestra las 4 plantillas y abre la elegida', async () => {
   const screen = await render(<HybridCard program={null} status={{}} loaded/>);
   expect(screen.getByText('MODO HÍBRIDO')).toBeTruthy();
-  expect(screen.getByText('4 fuerza')).toBeTruthy();
-  await fireEvent.press(screen.getByText('Ver el programa'));
-  expect(mockRouter.push).toHaveBeenCalledWith('/program/template/hybrid-athlete-1-0');
+  for (const name of ['Hybrid Athlete 1.0', 'Híbrido 3 días', 'Corredor híbrido', 'Hyrox Prep']) expect(screen.getByLabelText(`Ver ${name}`)).toBeTruthy();
+  expect(screen.getAllByText('3 carrera')).toHaveLength(1);
+  await fireEvent.press(screen.getByLabelText('Ver Hyrox Prep'));
+  expect(mockRouter.push).toHaveBeenCalledWith('/program/template/hyrox-prep');
 });
 
 test('con programa: lo de hoy, empezar fuerza abre la sesión y nadar abre el registro de cardio con el plan', async () => {
