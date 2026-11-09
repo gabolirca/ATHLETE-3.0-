@@ -1,9 +1,10 @@
 import type { CardioDraft } from '@/cardio/cardioForm';
-import type { BodyMeasurement, CardioEntry, Exercise, LocalAthletePreferences, Program, ProgramWeekStatus, ProgressSummary, Routine, WeeklyLoad, WeeklyMuscleVolume, RoutineDraft, TrainingOverview, Workout, WorkoutDetail } from './trainingTypes';
+import type { BodyMeasurement, CardioEntry, Exercise, LocalAthletePreferences, Program, ProgramWeekStatus, ProgressSummary, Routine, WeeklyLoad, WeeklyMuscleVolume, SessionModality, ProgramBlockInput, ProgramExercisePatch, RoutineDraft, TrainingOverview, Workout, WorkoutDetail } from './trainingTypes';
 import type { BodyMeasurementInput, LocalAthletePreferencesInput, LoggedSetInput } from './trainingSchemas';
 
 export interface TrainingRepository {
-  searchExercises(query?: string): Promise<Exercise[]>;
+  /** Por defecto solo fuerza; `modality: 'all'` incluye cardio (para armar programas). */
+  searchExercises(query?: string, options?: { modality?: 'strength' | 'cardio' | 'all' }): Promise<Exercise[]>;
   listRoutines(): Promise<Routine[]>;
   createRoutine(input: RoutineDraft): Promise<string>;
   tombstoneRoutine(routineId: string): Promise<void>;
@@ -25,6 +26,18 @@ export interface TrainingRepository {
   saveBlockResult(sessionId: string, blockId: string, result: { roundsCompleted: number | null; extraReps: number | null; durationSeconds: number | null }): Promise<void>;
   /** Carga de sesión (RPE × minutos) por semana: fuerza, acondicionamiento y cardio. */
   getWeeklyLoad(weeks?: number): Promise<WeeklyLoad>;
+  // ---- Editar programa (0.7.0) ----
+  addProgramDay(planId: string, input: { name: string; weekday: number; modality: SessionModality }): Promise<string>;
+  updateProgramDay(dayId: string, patch: Partial<{ name: string; weekday: number; modality: SessionModality; targetRpe: number | null; targetDurationMinutes: number | null }>): Promise<void>;
+  duplicateProgramDay(dayId: string, weekday: number): Promise<string>;
+  deleteProgramDay(dayId: string): Promise<void>;
+  addProgramBlock(dayId: string, input: ProgramBlockInput): Promise<string>;
+  updateProgramBlock(blockId: string, patch: Partial<ProgramBlockInput>): Promise<void>;
+  /** Quita el bloque y sus ejercicios. */
+  deleteProgramBlock(blockId: string): Promise<void>;
+  addProgramExercise(dayId: string, blockId: string, exerciseId: string): Promise<string>;
+  updateProgramExercise(id: string, patch: ProgramExercisePatch): Promise<void>;
+  removeProgramExercise(id: string): Promise<void>;
   tombstoneWorkout(sessionId: string): Promise<void>;
   getWorkout(sessionId: string): Promise<WorkoutDetail | null>;
   listHistory(): Promise<Workout[]>;

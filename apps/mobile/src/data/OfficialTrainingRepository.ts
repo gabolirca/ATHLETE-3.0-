@@ -4,7 +4,7 @@ import type { CardioDraft } from '@/cardio/cardioForm';
 import type { TrainingRepository } from './TrainingRepository';
 import { PROGRAM_TEMPLATES, computePersonalRecords, diagnoseWeeklyVolume, isEffectiveSet, loadTrend, weekStartOf, weeklyLoads, type LoadItem, newRecordsInSession, setVolumeKg, summarizeWeek, weeklySetsByMuscle, type ExerciseMuscles } from '@athlete/domain';
 import type { BodyMeasurementInput, LocalAthletePreferencesInput, LoggedSetInput, RoutineInput } from './trainingSchemas';
-import type { BodyMeasurement, CardioEntry, Exercise, ExerciseRecord, LocalAthletePreferences, PreviousPerformance, ProgressSummary, Routine, SessionRecord, WeeklyMuscleVolume, Program, ProgramBlock, ProgramDay, ProgramExercise, ProgramWeekStatus, WeeklyLoad, WorkoutBlock, TrainingOverview, Workout, WorkoutDetail, TrainingSet } from './trainingTypes';
+import type { BodyMeasurement, CardioEntry, Exercise, ExerciseRecord, LocalAthletePreferences, PreviousPerformance, ProgressSummary, Routine, SessionRecord, WeeklyMuscleVolume, Program, ProgramBlock, ProgramDay, ProgramExercise, ProgramWeekStatus, WeeklyLoad, WorkoutBlock, ProgramBlockInput, ProgramExercisePatch, SessionModality, TrainingOverview, Workout, WorkoutDetail, TrainingSet } from './trainingTypes';
 
 type IdFactory = () => string;
 type SessionDetail = Awaited<ReturnType<OpenedAthleteData['sessions']['getDetail']>>;
@@ -56,9 +56,10 @@ export class OfficialTrainingRepository implements TrainingRepository {
 
   constructor(private readonly data: OpenedAthleteData, private readonly newId: IdFactory) {}
 
-  async searchExercises(query = ''): Promise<Exercise[]> {
+  async searchExercises(query = '', options: { modality?: 'strength' | 'cardio' | 'all' } = {}): Promise<Exercise[]> {
+    const modality = options.modality ?? 'strength';
     const [items, groups, equipment] = await Promise.all([
-      this.data.exercises.list({ search: query, modality: 'strength' }),
+      this.data.exercises.list({ search: query, ...(modality === 'all' ? {} : { modality }) }),
       this.data.exercises.listMuscleGroups(),
       this.data.exercises.listEquipment(),
     ]);
@@ -76,7 +77,8 @@ export class OfficialTrainingRepository implements TrainingRepository {
         equipment: equipmentList.join(', ') || null,
         origin: exercise.ownerUserId ? 'server' : 'sample',
         muscles, equipmentList, tier: exercise.accessTier,
-        muscleRoles: { primary: refs(exercise.primaryMuscleGroupIds), secondary: refs(exercise.secondaryMuscleGroupIds) }, isCustom: exercise.ownerUserId !== null, mechanics: exercise.mechanics,
+        muscleRoles: { primary: refs(exercise.primaryMuscleGroupIds), secondary: refs(exercise.secondaryMuscleGroupIds) },
+        movementPattern: exercise.movementPattern ?? null, modality: exercise.modality, loadType: exercise.loadType, isCustom: exercise.ownerUserId !== null, mechanics: exercise.mechanics,
       };
     });
   }
@@ -483,6 +485,132 @@ export class OfficialTrainingRepository implements TrainingRepository {
     const list = weeklyLoads(items, today, weeks);
     return { weeks: list, trend: loadTrend(list) };
   }
+
+  // ---------------- Editar programa (0.7.0) ----------------
+
+  /** Plan y día vivos que contienen un día, bloque o ejercicio. */
+  private async locate(predicate: (day: Awaited<ReturnType<OfficialTrainingRepository['findDay']>> & object) => boolean) {
+    for (const plan of unwrap(await this.data.plans.listPlans())) {
+      const detail = unwrap(await this.data.plans.getPlan(plan.id));
+      const day = detail.days.find((d) => predicate(d));
+      if (day) return { plan: detail.plan, days: detail.days, day };
+    }
+    throw new Error('NOT_FOUND');
+  }
+
+  private static defaultBlockFor(modality: SessionModality): ProgramBlockInput & { kind: string } {
+    switch (modality) {
+      case 'strength': return { name: 'Fuerza', kind: 'strength', format: 'sets', rounds: null, timeCapSeconds: null, restSeconds: null, targetRpe: null, notes: null };
+      case 'conditioning': return { name: 'Circuito', kind: 'conditioning', format: 'rounds', rounds: 3, timeCapSeconds: null, restSeconds: 90, targetRpe: null, notes: null };
+      case 'mobility': case 'rest': return { name: 'Movilidad', kind: 'mobility', format: 'continuous', rounds: null, timeCapSeconds: null, restSeconds: null, targetRpe: null, notes: null };
+      default: return { name: 'Principal', kind: modality === 'swim' ? 'swim' : 'cardio', format: 'continuous', rounds: null, timeCapSeconds: null, restSeconds: null, targetRpe: null, notes: null };
+    }
+  }
+
+  /** Tipo de bloque según su formato (los AMRAP/EMOM/por tiempo son WOD). */
+  private static kindFor(format: ProgramBlockInput['format'], fallback: string): 'warmup' | 'strength' | 'conditioning' | 'wod' | 'cardio' | 'swim' | 'cooldown' | 'mobility' {
+    if (format === 'amrap' || format === 'emom' || format === 'for_time') return 'wod';
+    if (format === 'rounds') return 'conditioning';
+    return fallback as never;
+  }
+
+  async addProgramDay(planId: string, input: { name: string; weekday: number; modality: SessionModality }): Promise<string> {
+    const plan = unwrap(await this.data.plans.getPlan(planId));
+    const dayId = this.newId();
+    unwrap(await this.data.plans.addDay({
+      id: dayId, planId, position: Math.min(1000, Math.max(-1, ...plan.days.map((d) => d.position)) + 1), name: input.name.trim(),
+      kind: input.modality === 'rest' ? 'rest' : 'training', notes: null, weekday: input.weekday, modality: input.modality,
+    }));
+    const b = OfficialTrainingRepository.defaultBlockFor(input.modality);
+    unwrap(await this.data.plans.addBlock({ id: this.newId(), trainingDayId: dayId, position: 0, name: b.name, kind: b.kind as never, format: b.format, rounds: b.rounds, timeCapSeconds: b.timeCapSeconds, restSeconds: b.restSeconds, targetRpe: null, notes: null }));
+    return dayId;
+  }
+
+  async updateProgramDay(dayId: string, patch: Partial<{ name: string; weekday: number; modality: SessionModality; targetRpe: number | null; targetDurationMinutes: number | null }>): Promise<void> {
+    unwrap(await this.data.plans.updateDay(dayId, {
+      ...patch, ...(patch.name !== undefined ? { name: patch.name.trim() } : {}),
+      ...(patch.modality !== undefined ? { kind: patch.modality === 'rest' ? 'rest' as const : 'training' as const } : {}),
+    }));
+  }
+
+  async duplicateProgramDay(dayId: string, weekday: number): Promise<string> {
+    const { plan, days, day } = await this.locate((d) => d.id === dayId);
+    const newDayId = this.newId();
+    unwrap(await this.data.plans.addDay({
+      id: newDayId, planId: plan.id, position: Math.min(1000, Math.max(...days.map((d) => d.position)) + 1), name: day.name, kind: day.kind, notes: day.notes,
+      weekday, modality: day.modality, targetRpe: day.targetRpe, targetDurationMinutes: day.targetDurationMinutes,
+    }));
+    const blockMap = new Map<string, string>();
+    for (const b of day.blocks) {
+      const id = this.newId(); blockMap.set(b.id, id);
+      unwrap(await this.data.plans.addBlock({ id, trainingDayId: newDayId, position: b.position, name: b.name, kind: b.kind, format: b.format, rounds: b.rounds, timeCapSeconds: b.timeCapSeconds, restSeconds: b.restSeconds, targetRpe: b.targetRpe, notes: b.notes }));
+    }
+    for (const e of day.exercises) {
+      unwrap(await this.data.plans.addDayExercise({
+        id: this.newId(), trainingDayId: newDayId, exerciseId: e.exerciseId, position: e.position, targetSets: e.targetSets, targetRepsMin: e.targetRepsMin,
+        targetRepsMax: e.targetRepsMax, targetWeightKg: e.targetWeightKg, targetRir: e.targetRir, targetRestSeconds: e.targetRestSeconds,
+        targetDurationSeconds: e.targetDurationSeconds, targetDistanceMeters: e.targetDistanceMeters, notes: e.notes,
+        blockId: e.blockId ? blockMap.get(e.blockId) ?? null : null, perSide: e.perSide, targetRpe: e.targetRpe,
+      }));
+    }
+    return newDayId;
+  }
+
+  async deleteProgramDay(dayId: string): Promise<void> { unwrap(await this.data.plans.deleteDay(dayId)); }
+
+  async addProgramBlock(dayId: string, input: ProgramBlockInput): Promise<string> {
+    const { day } = await this.locate((d) => d.id === dayId);
+    const id = this.newId();
+    const fallback = day.modality === 'swim' ? 'swim' : day.modality === 'strength' ? 'strength' : day.modality === 'mobility' ? 'mobility' : 'cardio';
+    unwrap(await this.data.plans.addBlock({
+      id, trainingDayId: dayId, position: Math.min(1000, Math.max(-1, ...day.blocks.map((b) => b.position)) + 1), name: input.name.trim(),
+      kind: OfficialTrainingRepository.kindFor(input.format, input.format === 'sets' ? 'strength' : fallback), format: input.format, rounds: input.rounds,
+      timeCapSeconds: input.timeCapSeconds, restSeconds: input.restSeconds, targetRpe: input.targetRpe, notes: input.notes,
+    }));
+    return id;
+  }
+
+  async updateProgramBlock(blockId: string, patch: Partial<ProgramBlockInput>): Promise<void> {
+    const { day } = await this.locate((d) => d.blocks.some((b) => b.id === blockId));
+    const current = day.blocks.find((b) => b.id === blockId)!;
+    const format = patch.format ?? current.format;
+    unwrap(await this.data.plans.updateBlock(blockId, { ...patch, ...(patch.name !== undefined ? { name: patch.name.trim() } : {}), kind: OfficialTrainingRepository.kindFor(format, format === 'sets' && current.kind === 'wod' ? 'strength' : current.kind === 'wod' || current.kind === 'conditioning' ? 'cardio' : current.kind) }));
+  }
+
+  async deleteProgramBlock(blockId: string): Promise<void> {
+    const { day } = await this.locate((d) => d.blocks.some((b) => b.id === blockId));
+    for (const e of day.exercises.filter((x) => x.blockId === blockId)) unwrap(await this.data.plans.deleteDayExercise(e.id));
+    unwrap(await this.data.plans.deleteBlock(blockId));
+  }
+
+  async addProgramExercise(dayId: string, blockId: string, exerciseId: string): Promise<string> {
+    const { day } = await this.locate((d) => d.id === dayId);
+    const block = day.blocks.find((b) => b.id === blockId);
+    if (!block) throw new Error('BLOCK_NOT_FOUND');
+    const ex = unwrap(await this.data.exercises.getById(exerciseId));
+    const timed = ex.modality === 'cardio' || ex.loadType === 'time';
+    const whole = block.format === 'amrap' || block.format === 'emom' || block.format === 'for_time' || block.format === 'rounds';
+    const id = this.newId();
+    // Valores de partida razonables; se ajustan en el editor.
+    unwrap(await this.data.plans.addDayExercise({
+      id, trainingDayId: dayId, exerciseId, blockId, position: Math.min(1000, Math.max(-1, ...day.exercises.map((e) => e.position)) + 1),
+      targetSets: whole ? null : timed ? (block.format === 'intervals' ? 4 : null) : 3,
+      targetRepsMin: timed ? null : 10, targetRepsMax: timed ? null : 10, targetWeightKg: null, targetRir: null,
+      targetRestSeconds: whole ? null : timed ? (block.format === 'intervals' ? 30 : null) : 90,
+      targetDurationSeconds: timed && ex.modality !== 'cardio' ? 30 : timed && block.format === 'continuous' ? 600 : null,
+      targetDistanceMeters: ex.modality === 'cardio' && block.format !== 'continuous' ? ((ex.slug ?? '').startsWith('swim') ? 50 : 400) : null,
+      notes: null, perSide: false, targetRpe: null,
+    }));
+    return id;
+  }
+
+  async updateProgramExercise(id: string, patch: ProgramExercisePatch): Promise<void> {
+    const map: Record<string, string> = { sets: 'targetSets', repsMin: 'targetRepsMin', repsMax: 'targetRepsMax', durationSeconds: 'targetDurationSeconds', distanceMeters: 'targetDistanceMeters', restSeconds: 'targetRestSeconds' };
+    const input = Object.fromEntries(Object.entries(patch).filter(([, v]) => v !== undefined).map(([k, v]) => [map[k] ?? k, v]));
+    unwrap(await this.data.plans.updateDayExercise(id, input));
+  }
+
+  async removeProgramExercise(id: string): Promise<void> { unwrap(await this.data.plans.deleteDayExercise(id)); }
 
   async getWeeklyMuscleVolume(): Promise<WeeklyMuscleVolume> {
     const from = localDate(new Date(Date.now() - 6 * 86_400_000));
