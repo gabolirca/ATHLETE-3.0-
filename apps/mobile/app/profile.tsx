@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { Pressable, StyleSheet, Switch, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 import { useStrictRest } from '@/settings/devicePrefs';
 import { ActionButton } from '@/components/ActionButton';
 import { AppInput } from '@/components/AppInput';
@@ -50,6 +50,16 @@ export default function ProfileScreen() {
   }
   function update<K extends keyof LocalAthletePreferences>(key: K, value: LocalAthletePreferences[K]) { setPrefs((current) => ({ ...current, [key]: value })); setSaved(false); }
 
+  function confirmErase() {
+    Alert.alert('¿Borrar todo de este teléfono?', 'Se borran tus entrenamientos, comidas, programa y sesión en este teléfono. No se puede deshacer.', [
+      { text: 'Cancelar', style: 'cancel' },
+      { text: 'Continuar', style: 'destructive', onPress: () => Alert.alert('Última confirmación', 'Después tendrás que cerrar y volver a abrir la app.', [
+        { text: 'Cancelar', style: 'cancel' },
+        { text: 'Borrar todo', style: 'destructive', onPress: () => router.replace('/erase') },
+      ]) },
+    ]);
+  }
+
   return <Screen>
     <Pressable accessibilityRole="button" accessibilityLabel="Regresar" hitSlop={12} onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}><Text style={{ color: '#9DBDFF', fontSize: 15, fontWeight: '700' }}>‹ Regresar</Text></Pressable>
     <View><Eyebrow>DATOS LOCALES</Eyebrow><Title>Perfil</Title></View>
@@ -82,6 +92,11 @@ export default function ProfileScreen() {
     {saved ? <Text style={s.saved}>Preferencias guardadas localmente.</Text> : null}
     <ActionButton onPress={save} loading={loading}>Guardar preferencias</ActionButton>
     <AccountCard />
+    <Card accent={colors.red}>
+      <Eyebrow>ZONA DE PRUEBAS</Eyebrow>
+      <Text style={{ color: colors.secondary, fontSize: 12, lineHeight: 18 }}>Borra todo lo guardado en este teléfono (entrenamientos, comidas, programa, sesión y asistente) para empezar desde cero. Lo que esté en la nube no se borra aquí.</Text>
+      <ActionButton secondary onPress={confirmErase}>Borrar todo de este teléfono</ActionButton>
+    </Card>
   </Screen>;
 }
 
