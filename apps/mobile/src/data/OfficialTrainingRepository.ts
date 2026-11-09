@@ -2,9 +2,9 @@ import type { CardioSession } from '@athlete/contracts';
 import { CATALOG_EXERCISE_ID, type OpenedAthleteData } from '@athlete/data';
 import type { CardioDraft } from '@/cardio/cardioForm';
 import type { TrainingRepository } from './TrainingRepository';
-import { PROGRAM_TEMPLATES, computePersonalRecords, diagnoseWeeklyVolume, isEffectiveSet, loadTrend, weekStartOf, weeklyLoads, type LoadItem, newRecordsInSession, setVolumeKg, summarizeWeek, weeklySetsByMuscle, type ExerciseMuscles } from '@athlete/domain';
+import { PROGRAM_TEMPLATES, benchmarks, computeStreak, localDateOf, weeksStreak, computePersonalRecords, diagnoseWeeklyVolume, isEffectiveSet, loadTrend, weekStartOf, weeklyLoads, type LoadItem, newRecordsInSession, setVolumeKg, summarizeWeek, weeklySetsByMuscle, type ExerciseMuscles } from '@athlete/domain';
 import type { BodyMeasurementInput, LocalAthletePreferencesInput, LoggedSetInput, RoutineInput } from './trainingSchemas';
-import type { BodyMeasurement, CardioEntry, Exercise, ExerciseRecord, LocalAthletePreferences, PreviousPerformance, ProgressSummary, Routine, SessionRecord, WeeklyMuscleVolume, Program, ProgramBlock, ProgramDay, ProgramExercise, ProgramWeekStatus, WeeklyLoad, WorkoutBlock, ProgramBlockInput, ProgramExercisePatch, SessionModality, TrainingOverview, Workout, WorkoutDetail, TrainingSet } from './trainingTypes';
+import type { BodyMeasurement, CardioEntry, Exercise, ExerciseRecord, LocalAthletePreferences, PreviousPerformance, ProgressSummary, Routine, SessionRecord, WeeklyMuscleVolume, Program, ProgramBlock, ProgramDay, ProgramExercise, ProgramWeekStatus, WeeklyLoad, WorkoutBlock, ProgramBlockInput, ProgramExercisePatch, SessionModality, StreakSummary, ProgramWeekCount, BenchmarkItem, TrainingOverview, Workout, WorkoutDetail, TrainingSet } from './trainingTypes';
 
 type IdFactory = () => string;
 type SessionDetail = Awaited<ReturnType<OpenedAthleteData['sessions']['getDetail']>>;
@@ -46,7 +46,7 @@ function toCardioEntry(c: CardioSession): CardioEntry {
   return {
     id: c.id, activity: c.activity, startedAt: c.startedAt, localDate: c.localDate, durationSeconds: c.durationSeconds,
     distanceMeters: c.distanceMeters, rounds: c.rounds, rpe: c.rpe, avgHeartRateBpm: c.avgHeartRateBpm,
-    maxHeartRateBpm: c.maxHeartRateBpm, swim: c.swim, notes: c.notes,
+    maxHeartRateBpm: c.maxHeartRateBpm, swim: c.swim, notes: c.notes, trainingDayId: c.trainingDayId,
     syncStatus: c.revision === null ? 'pending' : 'synced',
   };
 }
@@ -377,7 +377,7 @@ export class OfficialTrainingRepository implements TrainingRepository {
         days.push({ id: d.id, name: d.name, weekday: d.weekday, modality: d.modality, targetRpe: d.targetRpe, targetDurationMinutes: d.targetDurationMinutes, notes: d.notes, blocks });
       }
       days.sort((a, b) => (a.weekday ?? 8) - (b.weekday ?? 8));
-      out.push({ id: plan.id, name: plan.name, templateSlug: plan.templateSlug, days });
+      out.push({ id: plan.id, name: plan.name, templateSlug: plan.templateSlug, days, startedOn: localDateOf(plan.createdAt, Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC') });
     }
     return out;
   }
@@ -616,6 +616,63 @@ export class OfficialTrainingRepository implements TrainingRepository {
   }
 
   async removeProgramExercise(id: string): Promise<void> { unwrap(await this.data.plans.deleteDayExercise(id)); }
+
+  /** Sesiones de fuerza completadas (todas las páginas) desde una fecha, con su detalle. */
+  private async completedSessions(from?: string) {
+    const out: Array<Extract<Awaited<ReturnType<OpenedAthleteData['sessions']['getDetail']>>, { ok: true }>['value']> = [];
+    let cursor: string | null = null;
+    do {
+      const page: { items: Array<{ sessionId: string }>; nextCursor: string | null } = unwrap(await this.data.sessions.listHistory({ status: ['completed'], ...(from ? { from } : {}) }, { cursor, limit: 100 }));
+      for (const item of page.items) { const d = await this.data.sessions.getDetail(item.sessionId); if (d.ok) out.push(d.value); }
+      cursor = page.nextCursor;
+    } while (cursor && out.length < 1000);
+    return out;
+  }
+
+  async getStreak(): Promise<StreakSummary> {
+    const today = localDate();
+    const since = new Date(Date.now() - 400 * 86_400_000).toISOString().slice(0, 10);
+    const [sessions, cardio, programs] = await Promise.all([this.completedSessions(since), this.listCardio(), this.listPrograms()]);
+    const activeDates = new Set([...sessions.map((s) => s.localDate), ...cardio.filter((c) => c.localDate >= since).map((c) => c.localDate)]);
+    const program = programs[0] ?? null;
+    const planned = program ? new Set(program.days.filter((d) => d.modality !== 'rest' && d.weekday).map((d) => d.weekday!)) : null;
+    const days = computeStreak({ activeDates, today, plannedWeekdays: planned && planned.size ? planned : null });
+    const weeks = program ? weeksStreak((await this.programWeeks(program.id, 26)).filter((w) => !program.startedOn || w.weekStart >= weekStartOf(program.startedOn))) : null;
+    return { days, weeks, programName: program?.name ?? null };
+  }
+
+  async programWeeks(planId: string, weeks = 8): Promise<ProgramWeekCount[]> {
+    const plan = unwrap(await this.data.plans.getPlan(planId));
+    const dayIds = new Set(plan.days.filter((d) => d.kind !== 'rest').map((d) => d.id));
+    const current = weekStartOf(localDate());
+    const starts = Array.from({ length: weeks }, (_, i) => { const d = new Date(`${current}T12:00:00Z`); d.setUTCDate(d.getUTCDate() - 7 * (weeks - 1 - i)); return d.toISOString().slice(0, 10); });
+    const done = new Map(starts.map((w) => [w, new Set<string>()]));
+    for (const s of await this.completedSessions(starts[0])) if (s.trainingDayId && dayIds.has(s.trainingDayId)) done.get(weekStartOf(s.localDate))?.add(s.trainingDayId);
+    for (const c of await this.listCardio()) {
+      if (c.trainingDayId && dayIds.has(c.trainingDayId) && c.localDate >= starts[0]!) done.get(weekStartOf(c.localDate))?.add(c.trainingDayId);
+    }
+    return starts.map((w) => ({ weekStart: w, done: done.get(w)!.size, planned: dayIds.size }));
+  }
+
+  async getBenchmarks(): Promise<BenchmarkItem[]> {
+    const dayNames = new Map<string, string>();
+    for (const p of await this.listPrograms()) for (const d of p.days) dayNames.set(d.id, d.name);
+    const points = [];
+    const dayOfBlock = new Map<string, string | null>();
+    for (const s of await this.completedSessions()) {
+      const results = await this.data.sessions.listBlockResults(s.id);
+      if (!results.ok) continue;
+      for (const r of results.value) {
+        const key = r.trainingBlockId ?? `${s.trainingDayId ?? ''}:${r.name}`;
+        dayOfBlock.set(key, s.trainingDayId);
+        points.push({ blockKey: key, name: r.name, format: r.format, localDate: s.localDate, roundsCompleted: r.roundsCompleted, extraReps: r.extraReps, durationSeconds: r.durationSeconds });
+      }
+    }
+    return benchmarks(points).map((b) => ({
+      key: b.key, name: b.name, format: b.format, trend: b.trend, dayName: dayNames.get(dayOfBlock.get(b.key) ?? '') ?? null,
+      points: b.points.map((x) => ({ localDate: x.localDate, roundsCompleted: x.roundsCompleted, extraReps: x.extraReps, durationSeconds: x.durationSeconds })),
+    }));
+  }
 
   async previousBlockResult(sessionId: string, blockId: string) {
     const current = unwrap(await this.data.sessions.getDetail(sessionId));

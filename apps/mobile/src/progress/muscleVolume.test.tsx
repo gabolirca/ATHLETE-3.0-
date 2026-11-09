@@ -22,6 +22,8 @@ const mockRepository = {
   getPreferences: jest.fn().mockResolvedValue({ displayName: 'Gabo' }),
   getOverview: jest.fn().mockResolvedValue({ sessionsThisWeek: 3, strengthSessionsThisWeek: 2, cardioSessionsThisWeek: 1, activityMinutesThisWeek: 140, pendingSyncCount: 0, latestWorkout: null }),
   getWeeklyMuscleVolume: jest.fn().mockResolvedValue(volume),
+  getStreak: jest.fn().mockResolvedValue({ days: { current: 5, best: 9, todayDone: true, atRisk: false, daysSinceLast: 0 }, weeks: null, programName: null }),
+  listPrograms: jest.fn().mockResolvedValue([]),
 };
 jest.mock('expo-router', () => {
   const ReactModule = require('react');
@@ -52,6 +54,7 @@ test('Inicio muestra la dona de la semana con leyenda, totales y aviso; tocarla 
   const screen = await render(<HomeScreen/>);
   await waitFor(() => expect(screen.getByLabelText('16 series')).toBeTruthy());
   expect(screen.getByText('Pecho')).toBeTruthy();
+  expect(screen.getByLabelText('Racha de 5 días')).toBeTruthy();
   expect(screen.getByText('5.5')).toBeTruthy();
   expect(screen.getByText('140')).toBeTruthy();
   expect(screen.getByText('Por debajo de la referencia: Hombros, Espalda, Bíceps y 2 más')).toBeTruthy();

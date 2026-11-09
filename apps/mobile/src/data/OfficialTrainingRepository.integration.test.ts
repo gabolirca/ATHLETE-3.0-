@@ -347,3 +347,33 @@ test('adoptar con el catálogo incompleto no deja un programa a medias y avisa C
   expect(await repository.listPrograms()).toEqual([]);
   await data.close?.();
 });
+
+test('progreso híbrido: racha, semanas del programa y benchmarks del AMRAP', async () => {
+  const { data, repository, sessionId } = await setup({ catalog: true });
+  const w = (await repository.getWorkout(sessionId))!;
+  await repository.saveSet(sessionId, w.exercises[0]!.sets.at(-1)!.id, { weightKg: 60, reps: 8, rir: 2, isWarmup: false });
+  await repository.finishWorkout(sessionId);
+  // Sin programa: entrenaste hoy → racha de 1, sin riesgo.
+  expect((await repository.getStreak()).days).toMatchObject({ current: 1, todayDone: true, daysSinceLast: 0 });
+
+  const planId = await repository.adoptProgramTemplate('hybrid-athlete-1-0');
+  const program = (await repository.listPrograms())[0]!;
+  expect(program.startedOn).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  const saturday = program.days.find((d) => d.weekday === 6)!;
+  const swim = program.days.find((d) => d.modality === 'swim')!;
+  const amrap = saturday.blocks.find((b) => b.format === 'amrap')!;
+  const s1 = await repository.startProgramDay(saturday.id);
+  await repository.saveBlockResult(s1, amrap.id, { roundsCompleted: 6, extraReps: 4, durationSeconds: 900 });
+  await repository.finishWorkout(s1, { sessionRpe: 8 });
+  await repository.logCardio({ activity: 'swim', startedAt: new Date(Date.now() - 3_600_000).toISOString(), timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC', durationSeconds: 2400, distanceMeters: 1400, trainingDayId: swim.id });
+
+  const weeks = await repository.programWeeks(planId, 4);
+  expect(weeks).toHaveLength(4);
+  expect(weeks[3]).toMatchObject({ done: 2, planned: 10 });
+  const streak = await repository.getStreak();
+  expect(streak.programName).toBe('Hybrid Athlete 1.0');
+  expect(streak.weeks).toEqual({ current: 0, best: 0 }); // 2 de 10 aún no cumple el 80 %
+  const [bench] = await repository.getBenchmarks();
+  expect(bench).toMatchObject({ name: 'C · AMRAP 15 min', dayName: 'Hybrid Conditioning', format: 'amrap', trend: null, points: [{ roundsCompleted: 6, extraReps: 4 }] });
+  await data.close?.();
+});

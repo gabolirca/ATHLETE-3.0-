@@ -21,5 +21,6 @@ test('Progreso de cardio: distancia de la semana por actividad y mejores marcas'
   expect(screen.getAllByText('1500 m').length).toBeGreaterThan(0);
   expect(screen.getByText('10.00 km')).toBeTruthy(); // más larga (fuera de la semana)
   expect(screen.getByText('5:00 /km')).toBeTruthy(); // mejor ritmo: 5 km en 25 min
-  expect(screen.getByText('2:40 /100 m')).toBeTruthy();
+  expect(screen.getAllByText('2:40 /100 m').length).toBeGreaterThan(0);
+  expect(screen.getByText('NATACIÓN · METROS POR SEMANA')).toBeTruthy();
 });
