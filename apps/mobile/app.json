@@ -21,7 +21,11 @@
     },
     "android": {
       "package": "com.atheletsoftliirca.mobile",
-      "allowBackup": false
+      "allowBackup": false,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/brand/adaptive-icon.png",
+        "backgroundColor": "#0B0E14"
+      }
     },
     "plugins": [
       "expo-router",
@@ -34,11 +38,21 @@
       "expo-secure-store",
       "expo-font",
       "expo-status-bar",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/brand/splash-icon.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#0B0E14"
+        }
+      ],
       "./plugins/withScriptSandboxingDisabled",
       "./plugins/withPodsExplicitModulesDisabled"
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "icon": "./assets/brand/icon.png"
   }
 }

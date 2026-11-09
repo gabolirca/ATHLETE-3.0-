@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { BRAND, LOCKUP_RATIO } from '@/brand/assets';
 import { Card } from '@/components/Card';
 import { ActionButton } from '@/components/ActionButton';
 import { EmptyState } from '@/components/EmptyState';
@@ -62,6 +63,7 @@ export default function HomeScreen() {
   if (error || loadError) return <Screen><Title>Inicio</Title><EmptyState icon="cloud-offline-outline" title="No pudimos leer tus datos locales" detail="Tus sesiones siguen guardadas. Vuelve a intentar en un momento." action="Reintentar" onAction={() => repository?.getOverview().then(setOverview).catch(() => setLoadError(true))} /></Screen>;
 
   return <Screen>
+    <Image source={BRAND.lockup} accessibilityLabel="ATHLETE" resizeMode="contain" style={s.logo}/>
     <Row><View style={s.flex}><Eyebrow>{date}</Eyebrow><Title>{greeting(new Date())}{name ? `, ${name.split(' ')[0]}` : ''}</Title></View>
       <Pressable accessibilityRole="button" accessibilityLabel="Abrir perfil" onPress={() => router.push('/profile')} style={s.avatar}>
         {initials(name) ? <Text style={s.initials}>{initials(name)}</Text> : <Ionicons name="person" size={18} color={colors.secondary}/>}
@@ -106,7 +108,7 @@ export default function HomeScreen() {
   </Screen>;
 }
 
-const s = StyleSheet.create({ flex: { flex: 1 },
+const s = StyleSheet.create({ flex: { flex: 1 }, logo: { height: 18, width: 18 * LOCKUP_RATIO, marginBottom: 4 },
   week: { flexDirection: 'row', alignItems: 'center', gap: 16 }, legend: { flex: 1, gap: 6 },
   legendRow: { flexDirection: 'row', alignItems: 'center', gap: 7 }, dot: { width: 9, height: 9, borderRadius: 5 },
   legendName: { flex: 1, color: colors.text, fontSize: 12, fontWeight: '600' }, legendValue: { color: colors.secondary, fontSize: 12, fontWeight: '800' },
