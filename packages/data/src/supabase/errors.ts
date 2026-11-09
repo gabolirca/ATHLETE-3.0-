@@ -22,6 +22,11 @@ export function fromSupabaseError(error: SupabaseErrorLike | null | undefined): 
     return appError('NETWORK_UNAVAILABLE', 'Sin conexión. Los cambios se guardan en el dispositivo.');
   }
   if (error?.status === 429) return appError('RATE_LIMITED', msg('RATE_LIMITED'));
+  // El servidor anota cada llamada a nombre del usuario del token. Si esa cuenta ya se borró (p. ej. al limpiar la de pruebas),
+  // el token sigue vigente hasta una hora pero cada sync falla: no es un error del servidor ni se arregla reintentando.
+  if (error?.code === '23503' && /rate_limit_buckets_user_id_fkey/.test(message)) {
+    return appError('SESSION_EXPIRED', 'Tu cuenta ya no existe en el servidor. Cierra sesión y vuelve a registrarte.');
+  }
   switch (error?.code) {
     case 'PGRST301':
     case 'PGRST303':

@@ -285,6 +285,8 @@ describe('transporte de sync', () => {
     const cases = [
       [{ message: 'ATHLETE:RATE_LIMITED', code: 'P0001' }, 'RATE_LIMITED'],
       [{ message: 'JWT expired', code: 'PGRST301' }, 'SESSION_EXPIRED'],
+      [{ message: 'insert or update on table "rate_limit_buckets" violates foreign key constraint "rate_limit_buckets_user_id_fkey"', code: '23503' }, 'SESSION_EXPIRED'],
+      [{ message: 'insert or update on table "strength_sets" violates foreign key constraint "x"', code: '23503' }, 'INTERNAL'],
       [{ message: 'permission denied for schema athlete3', code: '42501' }, 'FORBIDDEN'],
       [{ message: 'ATHLETE:UNAUTHENTICATED', code: '28000' }, 'UNAUTHENTICATED'],
       [{ message: 'TypeError: Network request failed' }, 'NETWORK_UNAVAILABLE'],
@@ -293,7 +295,7 @@ describe('transporte de sync', () => {
     for (const [error, code] of cases) {
       const r = await new SupabaseSyncTransport(rpc(async () => ({ data: null, error }))).pull({ cursor: null });
       expect(r.ok === false && r.error.code).toBe(code);
-      expect(r.ok === false && r.error.message).not.toMatch(/athlete3|syntax|JWT/);
+      expect(r.ok === false && r.error.message).not.toMatch(/athlete3|syntax|JWT|rate_limit|strength_sets/);
     }
   });
 
