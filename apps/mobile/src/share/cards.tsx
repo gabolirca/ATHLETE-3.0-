@@ -1,5 +1,6 @@
 import { forwardRef, type ComponentRef, type PropsWithChildren } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, Text, View } from 'react-native';
+import { BRAND, LOCKUP_RATIO } from '@/brand/assets';
 import Svg, { Circle } from 'react-native-svg';
 import type { CardioCardData, SessionCardData, WeekCardData, WodCardData } from './shareData';
 
@@ -12,7 +13,7 @@ const C = { bg: '#0B0E14', text: '#F4F6FA', sub: '#9AA3B2', line: '#252B36', amb
 
 const Frame = forwardRef<CardRef, PropsWithChildren<{ tag?: string; tagColor?: string; date?: string }>>(({ children, tag, tagColor, date }, ref) =>
   <View ref={ref} collapsable={false} style={s.card}>
-    <View style={s.top}><Text style={s.brand}>ATHLETE</Text><Text style={[s.tag, tagColor ? { color: tagColor } : null]}>{tag ?? date ?? ''}</Text></View>
+    <View style={s.top}><Image source={BRAND.lockup} accessibilityLabel="ATHLETE" resizeMode="contain" style={s.brand}/><Text style={[s.tag, tagColor ? { color: tagColor } : null]}>{tag ?? date ?? ''}</Text></View>
     {children}
   </View>);
 Frame.displayName = 'Frame';
@@ -102,7 +103,7 @@ WeekCard.displayName = 'WeekCard';
 
 const s = StyleSheet.create({
   card: { width: CARD_W, height: CARD_H, backgroundColor: C.bg, borderRadius: 18, padding: 18, gap: 12 },
-  top: { flexDirection: 'row', justifyContent: 'space-between' }, brand: { color: C.sub, fontSize: 11, letterSpacing: 2.5, fontWeight: '800' },
+  top: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }, brand: { height: 12, width: 12 * LOCKUP_RATIO },
   tag: { color: C.sub, fontSize: 11, fontWeight: '700' },
   title: { color: C.text, fontSize: 21, fontWeight: '800', lineHeight: 25 }, sub: { color: C.sub, fontSize: 13 },
   scoreRow: { flexDirection: 'row', alignItems: 'center', gap: 12 }, ring: { width: 76, height: 76, alignItems: 'center', justifyContent: 'center' },

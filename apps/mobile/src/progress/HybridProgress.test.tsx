@@ -23,6 +23,13 @@ test('tarjeta de racha con mejor marca y semanas cumplidas', async () => {
   expect(screen.getByText('3')).toBeTruthy();
 });
 
+test('la "A" del logo se enciende con racha y queda gris sin racha', async () => {
+  const on = await render(<StreakCard streak={streak({ current: 2, todayDone: true })}/>);
+  expect(on.getByTestId('streak-a-lit', { includeHiddenElements: true })).toBeTruthy();
+  const off = await render(<StreakCard streak={streak({ current: 0 })}/>);
+  expect(off.getByTestId('streak-a-off', { includeHiddenElements: true })).toBeTruthy();
+});
+
 test('ciclo: semana 6 es descarga; cumplimiento y benchmarks', async () => {
   const program = { id: 'p', name: 'Hybrid Athlete 1.0', templateSlug: null, days: [], startedOn: '2026-10-05' };
   const cycle = await render(<CycleCard program={program} load={null} today="2026-11-10"/>);

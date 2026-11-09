@@ -1,10 +1,11 @@
-import { Ionicons } from '@expo/vector-icons';
 import { StyleSheet, Text, View } from 'react-native';
+import { AnimatedA } from '@/brand/AnimatedA';
+import { BRAND_CYAN } from '@/brand/assets';
 import { Card } from '@/components/Card';
 import type { StreakSummary } from '@/data/trainingTypes';
 import { colors } from '@/theme/colors';
 
-export const STREAK_COLOR = '#FF7A3D';
+export const STREAK_COLOR = BRAND_CYAN;
 
 /** Mensaje de la racha: lo que toca hoy. */
 export function streakMessage(s: StreakSummary): string {
@@ -18,14 +19,14 @@ export function streakMessage(s: StreakSummary): string {
 
 /**
  * Racha tipo Duolingo pero pensada para entrenar: los días de descanso del programa no la rompen.
- * (El ícono es provisional: va el logo con la "A" animada.)
+ * El ícono es la "A" del logo: se enciende y se mueve cuando la racha está viva.
  */
 export function StreakCard({ streak }: { streak: StreakSummary }) {
   const d = streak.days;
   const lit = d.current > 0;
   return <Card accent={lit ? STREAK_COLOR : undefined}>
     <View style={s.row}>
-      <View style={[s.badge, lit && s.badgeOn]}><Ionicons name={lit ? 'flame' : 'flame-outline'} size={30} color={lit ? STREAK_COLOR : colors.muted}/></View>
+      <AnimatedA lit={lit}/>
       <View style={s.flex}>
         <Text style={s.big} accessibilityLabel={`Racha de ${d.current} días`}>{d.current} <Text style={s.unit}>{d.current === 1 ? 'día' : 'días'}</Text></Text>
         <Text style={s.label}>de racha{d.best > d.current ? ` · tu mejor: ${d.best}` : d.current > 0 && d.best === d.current ? ' · ¡tu mejor racha!' : ''}</Text>
@@ -38,8 +39,6 @@ export function StreakCard({ streak }: { streak: StreakSummary }) {
 
 const s = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: 14 }, flex: { flex: 1 },
-  badge: { width: 56, height: 56, borderRadius: 18, backgroundColor: colors.surfaceRaised, alignItems: 'center', justifyContent: 'center' },
-  badgeOn: { backgroundColor: '#2E1A10' },
   big: { color: colors.text, fontSize: 30, fontWeight: '800' }, unit: { fontSize: 15, color: colors.secondary, fontWeight: '700' },
   label: { color: colors.secondary, fontSize: 12 },
   weeks: { alignItems: 'center' }, weeksNum: { color: colors.green, fontSize: 22, fontWeight: '800' }, weeksLabel: { color: colors.secondary, fontSize: 10, textAlign: 'center' },
