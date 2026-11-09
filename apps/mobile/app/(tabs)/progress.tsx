@@ -10,10 +10,13 @@ import { Eyebrow, Label, Title } from '@/components/Typography';
 import { Screen, Row } from '@/components/Screen';
 import { SectionHeading } from '@/components/SectionHeading';
 import { useTrainingRepository } from '@/data/MobileTrainingContext';
-import type { BodyMeasurement, ProgressSummary, WeeklyLoad, WeeklyMuscleVolume } from '@/data/trainingTypes';
+import type { BenchmarkItem, BodyMeasurement, Program, ProgramWeekCount, ProgressSummary, StreakSummary, WeeklyLoad, WeeklyMuscleVolume } from '@/data/trainingTypes';
 import { MuscleVolumeRow, VolumeExplainer } from '@/progress/muscleVolume';
 import { CardioProgress } from '@/progress/CardioProgress';
 import { LoadCard } from '@/progress/LoadCard';
+import { AdherenceCard, BenchmarksCard, CycleCard } from '@/progress/HybridProgress';
+import { StreakCard } from '@/progress/StreakCard';
+import { localDateOfDevice } from '@/lib/localDate';
 import { BodyMeasurementSchema } from '@/data/trainingSchemas';
 import { colors } from '@/theme/colors';
 
@@ -30,6 +33,7 @@ export default function ProgressScreen() {
   const [summary, setSummary] = useState<ProgressSummary | null>(null);
   const [volume, setVolume] = useState<WeeklyMuscleVolume | null>(null);
   const [load, setLoad] = useState<WeeklyLoad | null>(null);
+  const [hybrid, setHybrid] = useState<{ program: Program | null; weeks: ProgramWeekCount[]; benchmarks: BenchmarkItem[]; streak: StreakSummary | null }>({ program: null, weeks: [], benchmarks: [], streak: null });
   const [loadingError, setLoadingError] = useState(false);
   const [kind, setKind] = useState<MeasurementKind>('weight_kg');
   const [value, setValue] = useState('');
@@ -41,6 +45,13 @@ export default function ProgressScreen() {
     try { setSummary(await repository.getProgress()); setLoadingError(false); } catch { setLoadingError(true); }
     repository.getWeeklyMuscleVolume().then(setVolume).catch(() => setVolume(null));
     repository.getWeeklyLoad(4).then(setLoad).catch(() => setLoad(null));
+    (async () => {
+      const [program] = await repository.listPrograms();
+      const [weeks, benchmarks, streak] = await Promise.all([
+        program ? repository.programWeeks(program.id, 8) : Promise.resolve([]), repository.getBenchmarks(), repository.getStreak().catch(() => null),
+      ]);
+      setHybrid({ program: program ?? null, weeks, benchmarks, streak });
+    })().catch(() => undefined);
   }, [repository]);
   useFocusEffect(useCallback(() => { void refresh(); }, [refresh]));
 
@@ -63,7 +74,12 @@ export default function ProgressScreen() {
   if (loadingError) return <Screen><Title>Progreso</Title><EmptyState icon="alert-circle-outline" title="No pudimos cargar tus datos" detail="Los registros locales siguen en el dispositivo." action="Reintentar" onAction={() => void refresh()}/></Screen>;
   return <Screen>
     <View><Eyebrow>REGISTROS DE ESTE DISPOSITIVO</Eyebrow><Title>Progreso</Title></View>
+    {hybrid.streak ? <StreakCard streak={hybrid.streak}/> : null}
     {load ? <LoadCard load={load}/> : null}
+    {hybrid.program || hybrid.benchmarks.length ? <SectionHeading title="Modo híbrido"/> : null}
+    {hybrid.program ? <CycleCard program={hybrid.program} load={load} today={localDateOfDevice(new Date())}/> : null}
+    {hybrid.program && hybrid.weeks.length ? <AdherenceCard weeks={hybrid.weeks}/> : null}
+    {hybrid.benchmarks.length ? <BenchmarksCard items={hybrid.benchmarks}/> : null}
     <Card><Row><View><Eyebrow>VOLUMEN DE FUERZA · 7 DÍAS</Eyebrow><Text style={s.number}>{Math.round(summary?.weeklyVolumeKg ?? 0).toLocaleString('es-MX')} <Text style={s.unit}>kg·reps</Text></Text></View><View><Eyebrow>SESIONES</Eyebrow><Text style={s.metric}>{summary?.sessionsThisMonth ?? 0}<Text style={s.unit}> este mes</Text></Text></View></Row>
       {chartMax > 0 ? <View style={s.chart}>{summary?.dailyVolumeKg.map((day, index) => <View key={`${day.label}-${index}`} style={s.barColumn}><View style={[s.bar, { height: Math.max(5, Math.round((day.volumeKg / chartMax) * 94)), backgroundColor: day.volumeKg ? colors.blue : colors.graphite }]} /><Text style={s.day}>{day.label}</Text></View>)}</View> : <Text style={s.note}>Registra sesiones con peso y repeticiones para ver tu volumen. Las series de calentamiento no se cuentan.</Text>}
     </Card>

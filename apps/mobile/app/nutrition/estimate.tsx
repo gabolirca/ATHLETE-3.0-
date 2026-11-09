@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { estimateNutritionPlan, validateNutritionPlanInput, type ActivityLevel, type BiologicalSex, type NutritionGoal, type NutritionPlanEstimate } from '@athlete/domain';
@@ -28,13 +28,15 @@ const GOALS: ReadonlyArray<{ key: NutritionGoal; label: string }> = [
 
 export default function EstimatePlanScreen() {
   const router = useRouter();
+  // Desde el asistente de bienvenida llegan estatura, peso y la meta para no volver a preguntarlos.
+  const params = useLocalSearchParams<{ height?: string; weight?: string; goal?: string }>();
   const nutrition = useNutrition();
   const [accepted, setAccepted] = useState<boolean | null>(null);
   const [checked, setChecked] = useState(false);
   const [sex, setSex] = useState<BiologicalSex | null>(null);
   const [activity, setActivity] = useState<ActivityLevel>('moderate');
-  const [goal, setGoal] = useState<NutritionGoal>('maintain');
-  const [values, setValues] = useState({ age: '', height: '', weight: '' });
+  const [goal, setGoal] = useState<NutritionGoal>(params.goal === 'lose' || params.goal === 'gain' ? params.goal : 'maintain');
+  const [values, setValues] = useState({ age: '', height: params.height ?? '', weight: params.weight ?? '' });
   const [errors, setErrors] = useState<Partial<Record<'sex' | 'age' | 'height' | 'weight' | 'form', string>>>({});
   const [plan, setPlan] = useState<NutritionPlanEstimate | null>(null);
   const [saving, setSaving] = useState(false);

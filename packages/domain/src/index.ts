@@ -14,3 +14,5 @@ export * from './templates/types';
 export * from './templates/hybridAthlete';
 export * from './load';
 export * from './templates/moreTemplates';
+export * from './streak';
+export * from './benchmarks';

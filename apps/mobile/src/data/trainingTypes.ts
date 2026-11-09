@@ -68,7 +68,7 @@ export type RoutineDraft = RoutineInput;
 /** Actividad cardiovascular tal como la muestra la app. Ritmo y velocidad se derivan; no se guardan. */
 export type CardioEntry = Pick<CardioSession,
   'id' | 'activity' | 'startedAt' | 'localDate' | 'durationSeconds' | 'distanceMeters' | 'rounds' | 'rpe'
-  | 'avgHeartRateBpm' | 'maxHeartRateBpm' | 'swim' | 'notes'> & { syncStatus: Workout['syncStatus'] };
+  | 'avgHeartRateBpm' | 'maxHeartRateBpm' | 'swim' | 'notes'> & { syncStatus: Workout['syncStatus']; /** Día del programa (0.7.0). */ trainingDayId?: string | null };
 
 /** Elemento del historial unificado de atleta híbrido. */
 export type HistoryItem = { kind: 'strength'; startedAt: string; workout: Workout } | { kind: 'cardio'; startedAt: string; cardio: CardioEntry };
@@ -88,9 +88,22 @@ export type ProgramDay = {
   id: string; name: string; weekday: number | null; modality: SessionModality | null; targetRpe: number | null;
   targetDurationMinutes: number | null; notes: string | null; blocks: ProgramBlock[];
 };
-export type Program = { id: string; name: string; templateSlug: string | null; days: ProgramDay[] };
+/** `startedOn`: fecha local en que se empezó (para "Semana X de 6"). */
+export type Program = { id: string; name: string; templateSlug: string | null; days: ProgramDay[]; startedOn?: string };
 /** Lo hecho esta semana (lunes a domingo) por cada día del programa. */
 export type ProgramWeekStatus = Record<string, { workoutId?: string; cardioId?: string; active?: boolean }>;
 export type WeeklyLoad = { weeks: Array<{ weekStart: string; total: number; byKind: { strength: number; conditioning: number; cardio: number }; sessions: number; missingRpe: number }>; trend: { ratio: number | null; status: 'low_data' | 'ok' | 'spike' } };
 export type ProgramBlockInput = { name: string; format: WorkoutBlock['format']; rounds: number | null; timeCapSeconds: number | null; restSeconds: number | null; targetRpe: number | null; notes: string | null };
 export type ProgramExercisePatch = Partial<{ exerciseId: string; sets: number | null; repsMin: number | null; repsMax: number | null; durationSeconds: number | null; distanceMeters: number | null; restSeconds: number | null; perSide: boolean; targetRpe: number | null; notes: string | null }>;
+export type StreakSummary = {
+  days: { current: number; best: number; todayDone: boolean; atRisk: boolean; daysSinceLast: number | null };
+  /** Semanas seguidas cumpliendo ≥ 80 % del programa (null sin programa). */
+  weeks: { current: number; best: number } | null;
+  programName: string | null;
+};
+export type ProgramWeekCount = { weekStart: string; done: number; planned: number };
+export type BenchmarkItem = {
+  key: string; name: string; dayName: string | null; format: string;
+  points: Array<{ localDate: string; roundsCompleted: number | null; extraReps: number | null; durationSeconds: number | null }>;
+  trend: 'up' | 'same' | 'down' | null;
+};

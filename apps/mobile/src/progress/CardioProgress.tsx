@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { StyleSheet, Text, View } from 'react-native';
-import { cardioBests, cardioTotalsByActivity, formatDuration } from '@athlete/domain';
+import { cardioBests, cardioTotalsByActivity, formatDuration, swimPaces, weeklyMeters } from '@athlete/domain';
 import { Card } from '@/components/Card';
 import { EmptyState } from '@/components/EmptyState';
 import { Eyebrow } from '@/components/Typography';
@@ -32,6 +32,9 @@ export function CardioProgress() {
   const from = localDateOfDevice(new Date(Date.now() - 6 * 86_400_000));
   const totals = cardioTotalsByActivity(entries, from);
   const bests = cardioBests(entries);
+  const swimWeeks = weeklyMeters(entries, 'swim', localDateOfDevice(new Date()), 8);
+  const paces = swimPaces(entries);
+  const maxSwim = Math.max(1, ...swimWeeks.map((w) => w.meters));
   const icon = (a: string) => (ACTIVITIES.find((x) => x.key === a)?.icon ?? 'pulse-outline') as never;
   return <>
     <Card>
@@ -42,6 +45,15 @@ export function CardioProgress() {
         {t.distanceMeters !== null ? <Text style={s.big}>{formatDistance(t.activity, t.distanceMeters, unitSystem)}</Text> : null}
       </View>) : <Text style={s.sub}>Sin cardio esta semana.</Text>}
     </Card>
+    {paces.length || swimWeeks.some((w) => w.meters) ? <Card>
+      <Eyebrow>NATACIÓN · METROS POR SEMANA</Eyebrow>
+      <View style={s.swimBars} accessibilityLabel="Metros nadados por semana">{swimWeeks.map((w, i) => <View key={w.weekStart} style={s.swimCol}>
+        <Text style={s.swimNum}>{w.meters ? (w.meters >= 1000 ? `${(w.meters / 1000).toFixed(1)}k` : w.meters) : ''}</Text>
+        <View style={[s.swimBar, { height: Math.max(3, Math.round((w.meters / maxSwim) * 70)) }]}/>
+        <Text style={[s.swimLabel, i === swimWeeks.length - 1 && s.swimNow]}>{i === swimWeeks.length - 1 ? 'Esta' : shortDate(w.weekStart)}</Text>
+      </View>)}</View>
+      {paces.length ? <Text style={s.sub}>Ritmo de tu última nadada: <Text style={s.value}>{formatDuration(paces[paces.length - 1]!.pace)} /100 m</Text>{paces.length > 1 ? ` · la primera: ${formatDuration(paces[0]!.pace)}${paces[paces.length - 1]!.pace < paces[0]!.pace ? ' — vas más rápido' : ''}` : ''}</Text> : null}
+    </Card> : null}
     {bests.length ? <Card>
       <Eyebrow>MEJORES MARCAS</Eyebrow>
       {bests.map((b) => <View key={b.activity} style={s.best}>
@@ -61,4 +73,7 @@ const s = StyleSheet.create({
   big: { color: colors.text, fontSize: 16, fontWeight: '800' }, value: { color: colors.text, fontWeight: '800' },
   best: { gap: 2, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 10 },
   note: { color: colors.muted, fontSize: 10, lineHeight: 15 },
+  swimBars: { flexDirection: 'row', gap: 6, alignItems: 'flex-end', height: 104 }, swimCol: { flex: 1, alignItems: 'center', gap: 4 },
+  swimNum: { color: colors.text, fontSize: 9, fontWeight: '800' }, swimBar: { width: '70%', borderRadius: 4, backgroundColor: '#3CC8E6' },
+  swimLabel: { color: colors.muted, fontSize: 9, fontWeight: '700' }, swimNow: { color: colors.text },
 });

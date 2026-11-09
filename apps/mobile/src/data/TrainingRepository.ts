@@ -1,5 +1,5 @@
 import type { CardioDraft } from '@/cardio/cardioForm';
-import type { BodyMeasurement, CardioEntry, Exercise, LocalAthletePreferences, Program, ProgramWeekStatus, ProgressSummary, Routine, WeeklyLoad, WeeklyMuscleVolume, SessionModality, ProgramBlockInput, ProgramExercisePatch, RoutineDraft, TrainingOverview, Workout, WorkoutDetail } from './trainingTypes';
+import type { BodyMeasurement, CardioEntry, Exercise, LocalAthletePreferences, Program, ProgramWeekStatus, ProgressSummary, Routine, WeeklyLoad, WeeklyMuscleVolume, SessionModality, StreakSummary, ProgramWeekCount, BenchmarkItem, ProgramBlockInput, ProgramExercisePatch, RoutineDraft, TrainingOverview, Workout, WorkoutDetail } from './trainingTypes';
 import type { BodyMeasurementInput, LocalAthletePreferencesInput, LoggedSetInput } from './trainingSchemas';
 
 export interface TrainingRepository {
@@ -39,6 +39,15 @@ export interface TrainingRepository {
   updateProgramExercise(id: string, patch: ProgramExercisePatch): Promise<void>;
   removeProgramExercise(id: string): Promise<void>;
   /** Resultado del mismo bloque la última vez que se hizo ese día del programa (para "+1 ronda vs la semana pasada"). */
+  /** Racha de días (respeta los descansos del programa), racha de semanas y días sin entrenar. */
+  getStreak(): Promise<StreakSummary>;
+  /** Respuestas del asistente de bienvenida → perfil (nombre, meta, nivel, disciplinas, estatura y peso). */
+  saveOnboarding(input: { displayName: string; goal: string | null; level: 'beginner' | 'intermediate' | 'advanced' | null; sports: string[]; heightCm: number | null; weightKg: number | null; trainingDays: number | null }): Promise<void>;
+  getAthleteProfile(): Promise<{ displayName: string; goals: string[]; experienceLevel: string | null; heightCm: number | null; weightKg: number | null; sports: string[] }>;
+  /** Sesiones hechas contra planeadas en cada una de las últimas semanas del programa. */
+  programWeeks(planId: string, weeks?: number): Promise<ProgramWeekCount[]>;
+  /** Resultados de AMRAP / por tiempo / rondas a lo largo del tiempo, por bloque. */
+  getBenchmarks(): Promise<BenchmarkItem[]>;
   previousBlockResult(sessionId: string, blockId: string): Promise<{ localDate: string; roundsCompleted: number | null; extraReps: number | null; durationSeconds: number | null } | null>;
   tombstoneWorkout(sessionId: string): Promise<void>;
   getWorkout(sessionId: string): Promise<WorkoutDetail | null>;

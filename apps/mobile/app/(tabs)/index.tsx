@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
@@ -10,11 +10,13 @@ import { Screen, Row } from '@/components/Screen';
 import { SectionHeading } from '@/components/SectionHeading';
 import { LocalSaveBadge } from '@/components/SyncBadge';
 import { useLocalDataReady, useTrainingRepository } from '@/data/MobileTrainingContext';
-import type { TrainingOverview, WeeklyMuscleVolume } from '@/data/trainingTypes';
+import type { StreakSummary, TrainingOverview, WeeklyMuscleVolume } from '@/data/trainingTypes';
 import { Donut } from '@/charts/Donut';
 import { formatSets, lowMuscles, muscleSegments } from '@/progress/muscleVolume';
 import { HybridCard } from '@/program/HybridCard';
 import { useProgram } from '@/program/useProgram';
+import { StreakCard } from '@/progress/StreakCard';
+import { getOnboardingDone } from '@/settings/devicePrefs';
 import { colors } from '@/theme/colors';
 
 /** "Buenos días" / "Buenas tardes" / "Buenas noches" según la hora del teléfono. */
@@ -37,10 +39,18 @@ export default function HomeScreen() {
   const [name, setName] = useState('');
   const [volume, setVolume] = useState<WeeklyMuscleVolume | null>(null);
   const hybrid = useProgram();
+  const [streak, setStreak] = useState<StreakSummary | null>(null);
+
+  // Primera vez en este teléfono: el asistente de bienvenida (una sola vez; después se repite desde el Perfil).
+  useEffect(() => {
+    if (!ready) return;
+    void getOnboardingDone().then((done) => { if (!done) router.push('/onboarding'); });
+  }, [ready, router]);
 
   useFocusEffect(useCallback(() => {
     let active = true;
     if (repository) repository.getPreferences().then((p) => { if (active) setName(p.displayName); }).catch(() => undefined);
+    if (repository) repository.getStreak().then((v) => { if (active) setStreak(v); }).catch(() => undefined);
     if (repository) repository.getWeeklyMuscleVolume().then((v) => { if (active) setVolume(v); }).catch(() => undefined);
     if (repository) repository.getOverview().then((value) => { if (active) { setOverview(value); setLoadError(false); } }).catch(() => { if (active) setLoadError(true); });
     return () => { active = false; };
@@ -56,6 +66,7 @@ export default function HomeScreen() {
       <Pressable accessibilityRole="button" accessibilityLabel="Abrir perfil" onPress={() => router.push('/profile')} style={s.avatar}>
         {initials(name) ? <Text style={s.initials}>{initials(name)}</Text> : <Ionicons name="person" size={18} color={colors.secondary}/>}
       </Pressable></Row>
+    {streak ? <StreakCard streak={streak}/> : null}
     {hybrid.program ? <HybridCard program={hybrid.program} status={hybrid.status} loaded={hybrid.loaded}/> : null}
     <Card accent={colors.blue}>
       <Row><Eyebrow>ENTRENAMIENTO DE HOY</Eyebrow><View style={s.pill}><Text style={s.pillText}>LOCAL</Text></View></Row>

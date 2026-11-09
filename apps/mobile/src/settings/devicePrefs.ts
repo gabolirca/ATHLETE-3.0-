@@ -21,3 +21,12 @@ export function useStrictRest(): [boolean, (value: boolean) => void] {
   const update = useCallback((next: boolean) => { setValue(next); void setStrictRest(next).catch(() => undefined); }, []);
   return [value, update];
 }
+
+/** El asistente de bienvenida ya se mostró en este teléfono (se completó o se saltó). */
+const ONBOARDING_KEY = 'athlete3.onboarding.v1';
+export async function getOnboardingDone(): Promise<boolean> {
+  try { return (await SecureStore.getItemAsync(ONBOARDING_KEY)) === '1'; } catch { return true; }
+}
+export async function setOnboardingDone(done = true): Promise<void> {
+  await SecureStore.setItemAsync(ONBOARDING_KEY, done ? '1' : '0');
+}
