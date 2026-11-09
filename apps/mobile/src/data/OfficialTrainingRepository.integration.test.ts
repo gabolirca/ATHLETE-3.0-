@@ -318,3 +318,20 @@ test('editar programa: agregar sesión, mover y duplicar días, cambiar ejercici
   expect(p3.days.find((d) => d.id === copyId)!.blocks[0]!.exercises.some((e) => e.id === squat.id)).toBe(false);
   await data.close?.();
 });
+
+test('compartir: el resultado del AMRAP se compara con la vez anterior del mismo día del programa', async () => {
+  const { data, repository, sessionId } = await setup({ catalog: true });
+  await repository.finishWorkout(sessionId);
+  await repository.adoptProgramTemplate('hybrid-athlete-1-0');
+  const saturday = (await repository.listPrograms())[0]!.days.find((d) => d.weekday === 6)!;
+  const amrap = saturday.blocks.find((b) => b.format === 'amrap')!;
+  const first = await repository.startProgramDay(saturday.id);
+  await repository.saveBlockResult(first, amrap.id, { roundsCompleted: 5, extraReps: 10, durationSeconds: 900 });
+  await repository.finishWorkout(first, { sessionRpe: 8 });
+  expect(await repository.previousBlockResult(first, amrap.id)).toBeNull(); // la primera vez no hay con qué comparar
+  await new Promise((r) => setTimeout(r, 5));
+  const second = await repository.startProgramDay(saturday.id);
+  await repository.saveBlockResult(second, amrap.id, { roundsCompleted: 6, extraReps: 4, durationSeconds: 900 });
+  expect(await repository.previousBlockResult(second, amrap.id)).toMatchObject({ roundsCompleted: 5, extraReps: 10 });
+  await data.close?.();
+});

@@ -612,6 +612,21 @@ export class OfficialTrainingRepository implements TrainingRepository {
 
   async removeProgramExercise(id: string): Promise<void> { unwrap(await this.data.plans.deleteDayExercise(id)); }
 
+  async previousBlockResult(sessionId: string, blockId: string) {
+    const current = unwrap(await this.data.sessions.getDetail(sessionId));
+    if (!current.trainingDayId) return null;
+    const history = unwrap(await this.data.sessions.listHistory({ status: ['completed'], to: current.localDate }, { limit: 100 }));
+    for (const item of history.items) { // más recientes primero
+      if (item.sessionId === sessionId || item.startedAt >= current.startedAt) continue;
+      const detail = await this.data.sessions.getDetail(item.sessionId);
+      if (!detail.ok || detail.value.trainingDayId !== current.trainingDayId) continue;
+      const results = await this.data.sessions.listBlockResults(item.sessionId);
+      const r = results.ok ? results.value.find((x) => x.trainingBlockId === blockId) : undefined;
+      if (r) return { localDate: detail.value.localDate, roundsCompleted: r.roundsCompleted, extraReps: r.extraReps, durationSeconds: r.durationSeconds };
+    }
+    return null;
+  }
+
   async getWeeklyMuscleVolume(): Promise<WeeklyMuscleVolume> {
     const from = localDate(new Date(Date.now() - 6 * 86_400_000));
     const [active, history, groups] = await Promise.all([

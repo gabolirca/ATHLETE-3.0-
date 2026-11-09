@@ -43,6 +43,7 @@ export default function HistoryDetailScreen() {
     <View><Eyebrow>{new Date(detail.workout.startedAt).toLocaleString('es-MX', { dateStyle: 'long', timeStyle: 'short' })}</Eyebrow><Title>Entrenamiento</Title></View>
     <LocalSaveBadge status={detail.workout.syncStatus}/>
     {score ? <ScoreCard score={score}/> : null}
+    {detail.workout.state === 'completed' ? <ActionButton onPress={() => router.push(`/share/session/${detail.workout.id}`)}>Compartir</ActionButton> : null}
     {detail.sessionRpe || detail.blocks?.some((b) => b.result) ? <Card>
       {detail.sessionRpe ? <Row><View><Eyebrow>RPE DE LA SESIÓN</Eyebrow><Text style={s.number}>{detail.sessionRpe}<Text style={s.unit}> / 10</Text></Text></View>
         {detail.workout.durationMinutes ? <View><Eyebrow>CARGA</Eyebrow><Text style={s.number}>{Math.round(detail.sessionRpe * detail.workout.durationMinutes)} <Text style={s.unit}>UA</Text></Text></View> : null}</Row> : null}

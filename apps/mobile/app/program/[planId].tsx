@@ -53,6 +53,7 @@ export default function ProgramWeekScreen() {
       <Text style={s.big}>{done} de {program.days.length}</Text>
       <Text style={s.muted}>sesiones hechas esta semana (lunes a domingo)</Text>
       <View style={s.track}><View style={[s.fill, { width: `${Math.round((done / Math.max(1, program.days.length)) * 100)}%` }]}/></View>
+      <ActionButton secondary onPress={() => router.push(`/share/week/${program.id}`)}>Compartir mi semana</ActionButton>
     </Card>
     {[1, 2, 3, 4, 5, 6, 7].map((w) => {
       const days = program.days.filter((d) => d.weekday === w);

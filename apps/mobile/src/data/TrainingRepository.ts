@@ -38,6 +38,8 @@ export interface TrainingRepository {
   addProgramExercise(dayId: string, blockId: string, exerciseId: string): Promise<string>;
   updateProgramExercise(id: string, patch: ProgramExercisePatch): Promise<void>;
   removeProgramExercise(id: string): Promise<void>;
+  /** Resultado del mismo bloque la última vez que se hizo ese día del programa (para "+1 ronda vs la semana pasada"). */
+  previousBlockResult(sessionId: string, blockId: string): Promise<{ localDate: string; roundsCompleted: number | null; extraReps: number | null; durationSeconds: number | null } | null>;
   tombstoneWorkout(sessionId: string): Promise<void>;
   getWorkout(sessionId: string): Promise<WorkoutDetail | null>;
   listHistory(): Promise<Workout[]>;
