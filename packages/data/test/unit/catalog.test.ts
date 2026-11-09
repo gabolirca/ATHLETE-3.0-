@@ -106,3 +106,27 @@ describe('plantillas de programa (0.7.0)', () => {
     expect(missing).toEqual([]);
   });
 });
+
+describe('catálogo incluido nuevo en un teléfono que ya descargó el del servidor (bug 8-nov)', () => {
+  it('agrega los ejercicios que faltan sin pisar lo descargado y fuerza una descarga fresca', async () => {
+    const { BUNDLED_CATALOG } = await import('../../src/catalog/bundled');
+    const { LocalStore } = await import('../../src/local/store');
+    const { createUuidV7Generator, systemClock } = await import('../../src/ids');
+    const { randomBytes } = await import('node:crypto');
+    const ids = createUuidV7Generator((n) => new Uint8Array(randomBytes(n)));
+    const db = openNodeSqlite(path);
+    const store = await LocalStore.open(db, { userId: USER, ids, clock: systemClock });
+    // Teléfono que descargó el catálogo del servidor ANTES de la actualización: sin los ejercicios de cardio y con un nombre del servidor.
+    const old = { ...BUNDLED_CATALOG, exercises: BUNDLED_CATALOG.exercises.filter((e) => e.modality !== 'cardio').map((e) => e.slug === 'back-squat' ? { ...e, name: 'Sentadilla (servidor)' } : e) };
+    await store.applyCatalog(old);
+    const count = async () => (await db.get<{ n: number }>("SELECT COUNT(*) AS n FROM exercises WHERE user_id IS NULL"))!.n;
+    expect(await count()).toBe(BUNDLED_CATALOG.exercises.length - 8);
+
+    expect(await store.applyBundledCatalog(BUNDLED_CATALOG, 'nueva')).toBe(true);
+    expect(await count()).toBe(BUNDLED_CATALOG.exercises.length); // llegaron los 8 de cardio (remo, movilidad…)
+    expect((await db.get<{ name: string }>("SELECT name FROM exercises WHERE slug = 'back-squat'"))!.name).toBe('Sentadilla (servidor)'); // no pisa
+    expect(await store.getState('catalog_at')).toBeNull(); // la siguiente sync vuelve a descargar
+    expect(await store.applyBundledCatalog(BUNDLED_CATALOG, 'nueva')).toBe(false); // una sola vez por versión
+    await db.close();
+  });
+});

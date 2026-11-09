@@ -27,8 +27,8 @@ import TrainScreen from '../app/(tabs)/train';
 test('barra: Inicio · Entrenar · ＋ · Progreso · Nutrición; Perfil sale de la barra (se abre desde el avatar)', async () => {
   const screen = await render(<TabLayout />);
   const titles = screen.getAllByText(/.+/).map((t) => t.props.children);
-  expect(titles).toEqual(['Inicio', 'Entrenar', 'Registrar', 'Progreso', 'Nutrición', 'Perfil']);
-  expect(mockScreens.find((o) => o.title === 'Perfil')).toMatchObject({ href: null });
+  expect(titles).toEqual(['Inicio', 'Entrenar', 'Registrar', 'Progreso', 'Nutrición']);
+  expect(mockScreens.find((o) => o.title === 'Perfil')).toBeUndefined(); // Perfil es una pantalla aparte (app/profile.tsx), no una pestaña oculta
   expect(typeof mockScreens.find((o) => o.title === 'Registrar')?.tabBarButton).toBe('function');
 });
 
