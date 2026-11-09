@@ -1,4 +1,5 @@
 import type { ProgramTemplate } from './types';
+import { HYBRID_3_DAYS, HYBRID_RUNNER, HYROX_PREP } from './moreTemplates';
 
 /**
  * "Hybrid Athlete 1.0": 6 días de gimnasio (4 de fuerza + 2 funcionales) y 3 sesiones de natación.
@@ -135,4 +136,5 @@ export const HYBRID_ATHLETE_1_0: ProgramTemplate = {
   ],
 };
 
-export const PROGRAM_TEMPLATES: readonly ProgramTemplate[] = [HYBRID_ATHLETE_1_0];
+/** Plantillas disponibles, en el orden en que se muestran. */
+export const PROGRAM_TEMPLATES: readonly ProgramTemplate[] = [HYBRID_ATHLETE_1_0, HYBRID_3_DAYS, HYBRID_RUNNER, HYROX_PREP];

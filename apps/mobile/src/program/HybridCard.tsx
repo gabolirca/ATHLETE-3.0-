@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { HYBRID_ATHLETE_1_0 } from '@athlete/domain';
+import { PROGRAM_TEMPLATES } from '@athlete/domain';
 import { ActionButton } from '@/components/ActionButton';
 import { Card } from '@/components/Card';
 import { Eyebrow } from '@/components/Typography';
@@ -22,17 +22,20 @@ export function HybridCard({ program, status, loaded }: { program: Program | nul
   const startDay = useStartDay();
   if (!loaded) return null;
   if (!program) {
-    const t = HYBRID_ATHLETE_1_0;
     return <Card accent={HYBRID_COLOR}>
       <Eyebrow>MODO HÍBRIDO</Eyebrow>
-      <Text style={s.title}>{t.name}</Text>
-      <Text style={s.muted}>{t.summary}</Text>
-      <View style={s.chips}>{(['strength', 'conditioning', 'swim'] as const).map((m) => {
-        const n = t.sessions.filter((x) => x.modality === m).length;
-        const info = modalityInfo(m);
-        return <View key={m} style={s.chip}><Ionicons name={info.icon as never} size={13} color={info.color}/><Text style={s.chipText}>{n} {info.label.toLowerCase()}</Text></View>;
-      })}</View>
-      <ActionButton onPress={() => router.push(`/program/template/${t.slug}`)}>Ver el programa</ActionButton>
+      <Text style={s.title}>Elige tu programa</Text>
+      <Text style={s.muted}>Fuerza, cardio y funcional en una semana. Empieza con una plantilla y ajústala a lo que buscas.</Text>
+      {PROGRAM_TEMPLATES.map((t) => {
+        const kinds = (['strength', 'conditioning', 'swim', 'run'] as const).map((m) => [m, t.sessions.filter((x) => x.modality === m).length] as const).filter(([, n]) => n > 0);
+        return <Pressable key={t.slug} accessibilityRole="button" accessibilityLabel={`Ver ${t.name}`} onPress={() => router.push(`/program/template/${t.slug}`)} style={s.template}>
+          <View style={s.flex}>
+            <Text style={s.name}>{t.name}</Text>
+            <View style={s.chips}>{kinds.map(([m, n]) => { const info = modalityInfo(m); return <View key={m} style={s.chip}><Ionicons name={info.icon as never} size={12} color={info.color}/><Text style={s.chipText}>{n} {info.label.toLowerCase()}</Text></View>; })}</View>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={colors.secondary}/>
+        </Pressable>;
+      })}
     </Card>;
   }
   const today = todayWeekday();
@@ -68,7 +71,8 @@ export function HybridCard({ program, status, loaded }: { program: Program | nul
 
 const s = StyleSheet.create({
   title: { color: colors.text, fontSize: 21, fontWeight: '800' }, muted: { color: colors.secondary, fontSize: 12, lineHeight: 18 },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 4 },
+  template: { flexDirection: 'row', alignItems: 'center', gap: 10, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 11 },
   chip: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 9, paddingVertical: 5, borderRadius: 9, backgroundColor: colors.surfaceRaised },
   chipText: { color: colors.text, fontSize: 11, fontWeight: '700' },
   row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }, week: { color: HYBRID_COLOR, fontSize: 11, fontWeight: '800' },

@@ -66,6 +66,7 @@ export default function CardioDetailScreen() {
       <Text style={s.note}>{entry.swim.poolType === 'open_water' ? 'Aguas abiertas' : `Alberca de ${entry.swim.poolLengthMeters ?? '—'} m · ${entry.swim.laps ?? '—'} largos`}{stroke ? ` · ${stroke}` : ''}</Text>
     </Card> : null}
     {entry.notes ? <Card><Eyebrow>NOTAS</Eyebrow><Text style={s.note}>{entry.notes}</Text></Card> : null}
+    <ActionButton onPress={() => router.push(`/share/cardio/${entry.id}`)}>Compartir</ActionButton>
     <ActionButton secondary onPress={() => router.push({ pathname: '/cardio/new', params: { edit: entry.id } })}>Editar actividad</ActionButton>
     <Pressable accessibilityRole="button" onPress={() => Alert.alert('Eliminar actividad', 'Se ocultará de este dispositivo y se guardará una tombstone para la próxima sincronización.', [{ text: 'Cancelar', style: 'cancel' }, { text: 'Eliminar', style: 'destructive', onPress: () => void remove() }])}><Text style={s.delete}>Eliminar actividad de este dispositivo</Text></Pressable>
   </Screen>;

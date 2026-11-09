@@ -8,6 +8,8 @@ import type { LoggedSetInput, RoutineInput } from './trainingSchemas';
 export type Exercise = {
   id: string; name: string; muscleGroup: string; equipment: string | null; origin: 'sample' | 'server';
   muscles?: string[]; equipmentList?: string[];
+  /** Patrón de movimiento, modalidad y tipo de carga (0.7.0): para sugerir reemplazos y saber cómo se registra. */
+  movementPattern?: string | null; modality?: 'strength' | 'cardio'; loadType?: string;
   /** Músculos por papel (slug + nombre), para diagnosticar rutinas. */
   muscleRoles?: { primary: Array<{ slug: string; name: string }>; secondary: Array<{ slug: string; name: string }> }; tier?: 'free' | 'pro'; isCustom?: boolean; mechanics?: 'compound' | 'isolation' | null;
 };
@@ -90,3 +92,5 @@ export type Program = { id: string; name: string; templateSlug: string | null; d
 /** Lo hecho esta semana (lunes a domingo) por cada día del programa. */
 export type ProgramWeekStatus = Record<string, { workoutId?: string; cardioId?: string; active?: boolean }>;
 export type WeeklyLoad = { weeks: Array<{ weekStart: string; total: number; byKind: { strength: number; conditioning: number; cardio: number }; sessions: number; missingRpe: number }>; trend: { ratio: number | null; status: 'low_data' | 'ok' | 'spike' } };
+export type ProgramBlockInput = { name: string; format: WorkoutBlock['format']; rounds: number | null; timeCapSeconds: number | null; restSeconds: number | null; targetRpe: number | null; notes: string | null };
+export type ProgramExercisePatch = Partial<{ exerciseId: string; sets: number | null; repsMin: number | null; repsMax: number | null; durationSeconds: number | null; distanceMeters: number | null; restSeconds: number | null; perSide: boolean; targetRpe: number | null; notes: string | null }>;

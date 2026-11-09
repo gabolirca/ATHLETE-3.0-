@@ -78,7 +78,7 @@ test('una serie nueva tras borrar otra no reutiliza una posición ocupada', asyn
 });
 
 function cardioDraft(patch: Partial<CardioFormValues>, now = new Date()) {
-  const result = parseCardioForm({ ...EMPTY_FORM, ...patch }, { now, unitSystem: 'metric', timeZone: 'America/Mexico_City' });
+  const result = parseCardioForm({ ...EMPTY_FORM, ...patch }, { now, unitSystem: 'metric', timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC' }); // misma zona que el teléfono (así lo hace la app)
   if (!result.ok) throw new Error(JSON.stringify(result.errors));
   return result.draft;
 }
@@ -259,5 +259,79 @@ test('modo híbrido: adoptar Hybrid Athlete 1.0 → entrenar el sábado por bloq
 
   await repository.deleteProgram(planId);
   expect(await repository.listPrograms()).toEqual([]);
+  await data.close?.();
+});
+
+test('editar programa: agregar sesión, mover y duplicar días, cambiar ejercicio, editar bloques y quitar', async () => {
+  const { data, repository, sessionId } = await setup({ catalog: true });
+  await repository.finishWorkout(sessionId);
+  const planId = await repository.adoptProgramTemplate('hibrido-3-dias');
+  const program = () => repository.listPrograms().then((p) => p[0]!);
+  const p0 = await program();
+  expect(p0.days.map((d) => [d.weekday, d.name])).toEqual([[1, 'Cuerpo completo A'], [3, 'Funcional + cardio'], [5, 'Cuerpo completo B']]);
+
+  // Nueva sesión de natación el martes, con su bloque inicial
+  const swimId = await repository.addProgramDay(planId, { name: 'Natación suave', weekday: 2, modality: 'swim' });
+  let swim = (await program()).days.find((d) => d.id === swimId)!;
+  expect(swim.blocks.map((b) => [b.name, b.format])).toEqual([['Principal', 'continuous']]);
+  const swimEx = await repository.addProgramExercise(swimId, swim.blocks[0]!.id, (await repository.searchExercises('Natación (libre)', { modality: 'all' }))[0]!.id);
+  await repository.updateProgramExercise(swimEx, { distanceMeters: 1200 });
+  swim = (await program()).days.find((d) => d.id === swimId)!;
+  expect(swim.blocks[0]!.exercises[0]).toMatchObject({ exerciseName: 'Natación (libre)', distanceMeters: 1200 });
+
+  // Mover el día A al domingo y duplicarlo el sábado
+  const dayA = p0.days[0]!;
+  await repository.updateProgramDay(dayA.id, { weekday: 7, name: 'Fuerza A' });
+  const copyId = await repository.duplicateProgramDay(dayA.id, 6);
+  const p1 = await program();
+  expect(p1.days.map((d) => [d.weekday, d.name])).toEqual([[2, 'Natación suave'], [3, 'Funcional + cardio'], [5, 'Cuerpo completo B'], [6, 'Fuerza A'], [7, 'Fuerza A']]);
+  const copy = p1.days.find((d) => d.id === copyId)!;
+  expect(copy.blocks[0]!.exercises.map((e) => e.exerciseName)).toEqual(p1.days.find((d) => d.id === dayA.id)!.blocks[0]!.exercises.map((e) => e.exerciseName));
+
+  // Cambiar sentadilla por sentadilla frontal y ajustar series/reps en la copia (el original no cambia)
+  const squat = copy.blocks[0]!.exercises.find((e) => e.exerciseName === 'Sentadilla trasera')!;
+  const front = (await repository.searchExercises('Sentadilla frontal'))[0]!;
+  expect(front.movementPattern).toBe('squat');
+  await repository.updateProgramExercise(squat.id, { exerciseId: front.id, sets: 5, repsMin: 5, repsMax: 5, restSeconds: 180 });
+  const p2 = await program();
+  expect(p2.days.find((d) => d.id === copyId)!.blocks[0]!.exercises.find((e) => e.id === squat.id)).toMatchObject({ exerciseName: 'Sentadilla frontal', sets: 5, repsMin: 5, restSeconds: 180 });
+  expect(p2.days.find((d) => d.id === dayA.id)!.blocks[0]!.exercises[0]!.exerciseName).toBe('Sentadilla trasera');
+
+  // Convertir el circuito del miércoles en AMRAP 12 min; agregar y quitar un bloque
+  const wed = p2.days.find((d) => d.weekday === 3)!;
+  const circuit = wed.blocks.find((b) => b.format === 'rounds')!;
+  await repository.updateProgramBlock(circuit.id, { format: 'amrap', timeCapSeconds: 720, rounds: null, name: 'AMRAP 12' });
+  const finisher = await repository.addProgramBlock(wed.id, { name: 'Finisher', format: 'for_time', rounds: null, timeCapSeconds: null, restSeconds: null, targetRpe: 9, notes: null });
+  await repository.addProgramExercise(wed.id, finisher, (await repository.searchExercises('Burpees'))[0]!.id);
+  let wed2 = (await program()).days.find((d) => d.id === wed.id)!;
+  expect(wed2.blocks.map((b) => [b.name, b.format])).toEqual([['A · Calentamiento', 'continuous'], ['AMRAP 12', 'amrap'], ['C · Zona 2', 'continuous'], ['Finisher', 'for_time']]);
+  await repository.deleteProgramBlock(finisher);
+  wed2 = (await program()).days.find((d) => d.id === wed.id)!;
+  expect(wed2.blocks.map((b) => b.name)).not.toContain('Finisher');
+  expect(wed2.blocks.flatMap((b) => b.exercises).map((e) => e.exerciseName)).not.toContain('Burpees');
+
+  // Quitar un ejercicio y un día
+  await repository.removeProgramExercise(squat.id);
+  await repository.deleteProgramDay(swimId);
+  const p3 = await program();
+  expect(p3.days.some((d) => d.id === swimId)).toBe(false);
+  expect(p3.days.find((d) => d.id === copyId)!.blocks[0]!.exercises.some((e) => e.id === squat.id)).toBe(false);
+  await data.close?.();
+});
+
+test('compartir: el resultado del AMRAP se compara con la vez anterior del mismo día del programa', async () => {
+  const { data, repository, sessionId } = await setup({ catalog: true });
+  await repository.finishWorkout(sessionId);
+  await repository.adoptProgramTemplate('hybrid-athlete-1-0');
+  const saturday = (await repository.listPrograms())[0]!.days.find((d) => d.weekday === 6)!;
+  const amrap = saturday.blocks.find((b) => b.format === 'amrap')!;
+  const first = await repository.startProgramDay(saturday.id);
+  await repository.saveBlockResult(first, amrap.id, { roundsCompleted: 5, extraReps: 10, durationSeconds: 900 });
+  await repository.finishWorkout(first, { sessionRpe: 8 });
+  expect(await repository.previousBlockResult(first, amrap.id)).toBeNull(); // la primera vez no hay con qué comparar
+  await new Promise((r) => setTimeout(r, 5));
+  const second = await repository.startProgramDay(saturday.id);
+  await repository.saveBlockResult(second, amrap.id, { roundsCompleted: 6, extraReps: 4, durationSeconds: 900 });
+  expect(await repository.previousBlockResult(second, amrap.id)).toMatchObject({ roundsCompleted: 5, extraReps: 10 });
   await data.close?.();
 });

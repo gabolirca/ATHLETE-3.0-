@@ -31,7 +31,7 @@ export function useStartDay() {
   return useCallback(async (day: ProgramDay, done?: { workoutId?: string; cardioId?: string }) => {
     if (done?.cardioId) { router.push(`/cardio/${done.cardioId}`); return; }
     if (done?.workoutId) { router.push(`/workout/${done.workoutId}`); return; }
-    if (cardioActivityFor(day.modality)) { router.push({ pathname: '/cardio/new', params: { dayId: day.id } }); return; }
+    if (cardioActivityFor(day.modality)) { router.push(`/program/pool/${day.id}`); return; }
     if (!repository) return;
     try {
       const id = await repository.startProgramDay(day.id);

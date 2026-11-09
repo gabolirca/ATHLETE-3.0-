@@ -34,7 +34,7 @@ describe('contratos 0.3.0 contra el servidor', () => {
     expect(byId(server.exercises.filter((e) => e.user_id == null).map(pick))).toEqual(byId(BUNDLED_CATALOG.exercises.map(pick)));
     expect(byId(server.muscleGroups)).toEqual(byId(BUNDLED_CATALOG.muscleGroups));
     expect(byId(server.equipment)).toEqual(byId(BUNDLED_CATALOG.equipment));
-    expect(BUNDLED_CATALOG.exercises).toHaveLength(118);
+    expect(BUNDLED_CATALOG.exercises).toHaveLength(122);
   });
 
   it('sin cuenta → ciclo offline → iniciar sesión → adoptar → sincronizar: 0 rechazos y datos del usuario correcto', async () => {

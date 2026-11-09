@@ -24,3 +24,27 @@ describe('Hybrid Athlete 1.0', () => {
     }
   });
 });
+
+describe('todas las plantillas', () => {
+  it('slugs únicos, días válidos y bloques válidos para el contrato', async () => {
+    const { PROGRAM_TEMPLATES } = await import('./hybridAthlete');
+    expect(PROGRAM_TEMPLATES.map((t) => t.slug)).toEqual(['hybrid-athlete-1-0', 'hibrido-3-dias', 'corredor-hibrido', 'hyrox-prep']);
+    for (const t of PROGRAM_TEMPLATES) for (const s of t.sessions) {
+      expect(s.weekday >= 1 && s.weekday <= 7, `${t.slug}/${s.name}`).toBe(true);
+      for (const [i, b] of s.blocks.entries()) {
+        const parsed = CreateTrainingBlockInput.safeParse({
+          id: '00000000-0000-7000-8000-000000000001', trainingDayId: '00000000-0000-7000-8000-000000000002', position: i, name: b.name, kind: b.kind,
+          format: b.format, rounds: b.rounds ?? null, timeCapSeconds: b.timeCapSeconds ?? null, restSeconds: b.restSeconds ?? null, targetRpe: b.targetRpe ?? null, notes: b.notes ?? null,
+        });
+        expect(parsed.success, `${t.slug}/${s.name}/${b.name}`).toBe(true);
+      }
+    }
+  });
+  it('corredor: 3 fuerza y 3 carrera; Hyrox: las 8 estaciones', async () => {
+    const { HYBRID_RUNNER, HYROX_PREP } = await import('./moreTemplates');
+    expect(HYBRID_RUNNER.sessions.filter((s) => s.modality === 'run')).toHaveLength(3);
+    expect(HYBRID_RUNNER.sessions.filter((s) => s.modality === 'strength')).toHaveLength(3);
+    const stations = new Set(HYROX_PREP.sessions.flatMap((s) => s.blocks.flatMap((b) => b.exercises.map((e) => e.slug))));
+    for (const slug of ['ski-erg', 'sled-push', 'sled-pull', 'burpee-broad-jump', 'row-erg', 'farmers-carry', 'sandbag-lunge', 'wall-ball']) expect(stations.has(slug), slug).toBe(true);
+  });
+});
