@@ -385,6 +385,11 @@ export class OfficialTrainingRepository implements TrainingRepository {
   async adoptProgramTemplate(slug: string): Promise<string> {
     const template = PROGRAM_TEMPLATES.find((t) => t.slug === slug);
     if (!template) throw new Error('TEMPLATE_NOT_FOUND');
+    // Antes de crear nada: todos los ejercicios deben existir en el catálogo de este teléfono (si no, nada a medias).
+    for (const slug of new Set(template.sessions.flatMap((x) => x.blocks.flatMap((b) => b.exercises.map((e) => e.slug))))) {
+      const id = CATALOG_EXERCISE_ID[slug];
+      if (!id || !(await this.data.exercises.getById(id)).ok) throw Object.assign(new Error('CATALOG_OUTDATED'), { code: 'CATALOG_OUTDATED', slug });
+    }
     const planId = this.newId();
     unwrap(await this.data.plans.createPlan({ id: planId, name: template.name, description: template.summary, status: 'active', startsOn: null, endsOn: null, kind: 'program', templateSlug: template.slug }));
     try {

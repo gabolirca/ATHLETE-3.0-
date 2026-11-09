@@ -6,7 +6,8 @@ import { QuickAddButton } from '@/navigation/QuickAdd';
 /**
  * Barra: Inicio · Entrenar · ＋ · Progreso · Nutrición.
  * El "+" central abre la hoja de registro (fuerza, cardio, comida, peso). Perfil no va en la barra: se abre desde
- * el avatar de Inicio (como Instagram); la ruta sigue existiendo, solo se oculta de la barra.
+ * el avatar de Inicio (como Instagram) como pantalla encima de las pestañas (`app/profile.tsx`). Una pestaña oculta
+ * con `href: null` regresaba a Inicio al abrirla (bug 8-nov).
  */
 const items = [
   { name: 'index', title: 'Inicio', icon: 'grid-outline', active: 'grid' },
@@ -33,7 +34,6 @@ export default function TabLayout() {
       <Tabs.Screen name="add" options={{ title: 'Registrar', tabBarLabel: () => null, tabBarButton: () => <QuickAddButton/> }} />
       {tab(items[2])}
       {tab(items[3])}
-      <Tabs.Screen name="profile" options={{ title: 'Perfil', href: null }} />
     </Tabs>
   );
 }

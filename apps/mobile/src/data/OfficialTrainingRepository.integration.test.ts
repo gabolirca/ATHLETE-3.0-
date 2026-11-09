@@ -335,3 +335,15 @@ test('compartir: el resultado del AMRAP se compara con la vez anterior del mismo
   expect(await repository.previousBlockResult(second, amrap.id)).toMatchObject({ roundsCompleted: 5, extraReps: 10 });
   await data.close?.();
 });
+
+test('adoptar con el catálogo incompleto no deja un programa a medias y avisa CATALOG_OUTDATED', async () => {
+  const { data, repository, sessionId } = await setup({ catalog: true });
+  await repository.finishWorkout(sessionId);
+  const rowErg = (await repository.searchExercises('Remo ergómetro', { modality: 'all' }))[0]!;
+  // Simula un teléfono sin los ejercicios nuevos (catálogo viejo descargado): el remo "no existe".
+  const original = data.exercises.getById.bind(data.exercises);
+  (data.exercises as { getById: typeof original }).getById = async (id: string) => (id === rowErg.id ? { ok: false as const, error: { code: 'NOT_FOUND', message: 'no', retryable: false } } : original(id)) as never;
+  await expect(repository.adoptProgramTemplate('hibrido-3-dias')).rejects.toMatchObject({ code: 'CATALOG_OUTDATED', slug: 'row-erg' });
+  expect(await repository.listPrograms()).toEqual([]);
+  await data.close?.();
+});

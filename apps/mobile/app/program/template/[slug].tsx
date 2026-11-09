@@ -45,7 +45,11 @@ export default function ProgramTemplateScreen() {
     if (!repository || !template) return;
     setSaving(true); setError('');
     try { const id = await repository.adoptProgramTemplate(template.slug); router.replace(`/program/${id}`); }
-    catch { setError('No pudimos crear el programa en este teléfono. Intenta de nuevo.'); }
+    catch (cause) {
+      setError(cause instanceof Error && cause.message === 'CATALOG_OUTDATED'
+        ? 'A tu teléfono le faltan ejercicios del catálogo. Conéctate a internet, espera unos segundos y vuelve a intentar.'
+        : `No pudimos crear el programa en este teléfono. Intenta de nuevo.${cause instanceof Error ? ` (${(cause as Error & { code?: string }).code ?? cause.message})` : ''}`);
+    }
     finally { setSaving(false); }
   }
 

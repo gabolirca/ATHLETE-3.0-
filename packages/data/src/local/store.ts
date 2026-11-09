@@ -471,19 +471,37 @@ export class LocalStore {
   }
 
   /**
-   * Catálogo incluido en la app (sin red ni cuenta). Nunca pisa uno descargado del servidor (`catalog_at`) y no
-   * marca `catalog_at`, de modo que la primera sync con cuenta descarga el catálogo real de inmediato.
-   * Devuelve true si lo aplicó.
+   * Catálogo incluido en la app (sin red ni cuenta). No marca `catalog_at`, de modo que la primera sync con cuenta
+   * descarga el catálogo real de inmediato. Devuelve true si escribió algo.
+   *
+   * Si ya hay un catálogo descargado del servidor, NO lo pisa, pero cuando la app trae una versión nueva del catálogo
+   * agrega los músculos, equipos y ejercicios que falten (por id) y olvida `catalog_at` para que la siguiente sync
+   * descargue el del servidor. Sin esto, un teléfono que descargó el catálogo antes de una actualización se quedaba
+   * hasta 24 h sin los ejercicios nuevos y las plantillas que los usan fallaban (8-nov-2026).
    */
   async applyBundledCatalog(catalog: CatalogSnapshot, version: string): Promise<boolean> {
     return this.db.transaction(async (tx) => {
       const state = async (key: string) => (await tx.get<{ value: string }>('SELECT value FROM sync_state WHERE key = ?', [key]))?.value ?? null;
-      if (await state('catalog_at')) return false;
       if ((await state('catalog_bundled')) === version) return false;
-      await this.writeCatalog(tx, catalog);
+      const downloaded = await state('catalog_at');
+      if (downloaded) await this.writeMissingCatalog(tx, catalog);
+      else await this.writeCatalog(tx, catalog);
       await tx.run("INSERT OR REPLACE INTO sync_state (key, value) VALUES ('catalog_bundled', ?)", [version]);
+      if (downloaded) await tx.run("DELETE FROM sync_state WHERE key = 'catalog_at'");
       return true;
     });
+  }
+
+  /** Solo inserta lo que no existe (no cambia nada de lo descargado del servidor). */
+  private async writeMissingCatalog(tx: SqlExecutor, catalog: CatalogSnapshot): Promise<void> {
+    const meta = requireMeta('exercise');
+    for (const g of catalog.muscleGroups) await tx.run('INSERT OR IGNORE INTO muscle_groups (id, slug, name) VALUES (?, ?, ?)', [g.id, g.slug, g.name]);
+    for (const e of catalog.equipment) await tx.run('INSERT OR IGNORE INTO equipment (id, slug, name) VALUES (?, ?, ?)', [e.id, e.slug, e.name]);
+    for (const x of catalog.exercises) {
+      if (x.user_id !== null && x.user_id !== undefined) continue;
+      if (await this.get('exercise', String(x.id), tx)) continue;
+      await this.writeRow(tx, meta, this.rowFromRecord(meta, x, Number(x.revision ?? 1)));
+    }
   }
 
   // ---------------- Importación y propiedad ----------------

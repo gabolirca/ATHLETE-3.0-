@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 import { useStrictRest } from '@/settings/devicePrefs';
 import { ActionButton } from '@/components/ActionButton';
@@ -24,6 +24,7 @@ const officialSports = [
 ] as const;
 
 export default function ProfileScreen() {
+  const router = useRouter();
   const repository = useTrainingRepository();
   const [strictRest, setStrictRest] = useStrictRest();
   const [loadedCount, setLoadedCount] = useState(0);
@@ -46,6 +47,7 @@ export default function ProfileScreen() {
   function update<K extends keyof LocalAthletePreferences>(key: K, value: LocalAthletePreferences[K]) { setPrefs((current) => ({ ...current, [key]: value })); setSaved(false); }
 
   return <Screen>
+    <Pressable accessibilityRole="button" accessibilityLabel="Regresar" hitSlop={12} onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}><Text style={{ color: '#9DBDFF', fontSize: 15, fontWeight: '700' }}>‹ Regresar</Text></Pressable>
     <View><Eyebrow>DATOS LOCALES</Eyebrow><Title>Perfil</Title></View>
     <Card><Eyebrow>INFORMACIÓN PERSONAL</Eyebrow><AppInput key={`nombre-${loadedCount}`} label="Nombre para mostrar (opcional)" defaultValue={prefs.displayName} onChangeText={(value) => update('displayName', value)} autoCorrect={false} placeholder="Tu nombre" maxLength={60}/><Text style={s.note}>Se guarda en este dispositivo y se respalda en tu cuenta si inicias sesión.</Text></Card>
     <Card><Eyebrow>PREFERENCIAS DEPORTIVAS</Eyebrow><Label>{prefs.sports ? 'Disciplinas que practicas' : 'Actividad preferida'}</Label><View style={s.options}>{(prefs.sports ? officialSports : sports).map((sport) => {
