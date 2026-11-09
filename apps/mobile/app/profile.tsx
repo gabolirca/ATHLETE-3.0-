@@ -25,6 +25,7 @@ const officialSports = [
 
 export default function ProfileScreen() {
   const router = useRouter();
+  const [athlete, setAthlete] = useState<Awaited<ReturnType<NonNullable<ReturnType<typeof useTrainingRepository>>['getAthleteProfile']>> | null>(null);
   const repository = useTrainingRepository();
   const [strictRest, setStrictRest] = useStrictRest();
   const [loadedCount, setLoadedCount] = useState(0);
@@ -32,7 +33,10 @@ export default function ProfileScreen() {
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const refresh = useCallback(() => { repository?.getPreferences().then((value) => { setPrefs(value); setLoadedCount((n) => n + 1); setError(''); }).catch(() => setError('No pudimos leer las preferencias locales.')); }, [repository]);
+  const refresh = useCallback(() => {
+    repository?.getPreferences().then((value) => { setPrefs(value); setLoadedCount((n) => n + 1); setError(''); }).catch(() => setError('No pudimos leer las preferencias locales.'));
+    repository?.getAthleteProfile().then(setAthlete).catch(() => setAthlete(null));
+  }, [repository]);
   useFocusEffect(useCallback(() => { refresh(); }, [refresh]));
 
   async function save() {
@@ -49,6 +53,12 @@ export default function ProfileScreen() {
   return <Screen>
     <Pressable accessibilityRole="button" accessibilityLabel="Regresar" hitSlop={12} onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}><Text style={{ color: '#9DBDFF', fontSize: 15, fontWeight: '700' }}>‹ Regresar</Text></Pressable>
     <View><Eyebrow>DATOS LOCALES</Eyebrow><Title>Perfil</Title></View>
+    {athlete ? <Card accent="#F5B841">
+      <Eyebrow>TU META</Eyebrow>
+      <Text style={{ color: colors.text, fontSize: 16, fontWeight: '800' }}>{athlete.goals[0] ?? 'Sin definir'}</Text>
+      <Text style={{ color: colors.secondary, fontSize: 12, lineHeight: 18 }}>{[athlete.goals[1], athlete.experienceLevel ? ({ beginner: 'Principiante', intermediate: 'Intermedio', advanced: 'Avanzado' } as Record<string, string>)[athlete.experienceLevel] : null, athlete.heightCm ? `${athlete.heightCm} cm` : null, athlete.weightKg ? `${athlete.weightKg} kg` : null].filter(Boolean).join(' · ') || 'Contesta el asistente para recomendarte un programa.'}</Text>
+      <ActionButton secondary onPress={() => router.push('/onboarding')}>{athlete.goals.length ? 'Repetir asistente' : 'Configurar con el asistente'}</ActionButton>
+    </Card> : null}
     <Card><Eyebrow>INFORMACIÓN PERSONAL</Eyebrow><AppInput key={`nombre-${loadedCount}`} label="Nombre para mostrar (opcional)" defaultValue={prefs.displayName} onChangeText={(value) => update('displayName', value)} autoCorrect={false} placeholder="Tu nombre" maxLength={60}/><Text style={s.note}>Se guarda en este dispositivo y se respalda en tu cuenta si inicias sesión.</Text></Card>
     <Card><Eyebrow>PREFERENCIAS DEPORTIVAS</Eyebrow><Label>{prefs.sports ? 'Disciplinas que practicas' : 'Actividad preferida'}</Label><View style={s.options}>{(prefs.sports ? officialSports : sports).map((sport) => {
       const selected = prefs.sports ? prefs.sports.includes(sport.id as typeof officialSports[number]['id']) : prefs.preferredSport === sport.id;

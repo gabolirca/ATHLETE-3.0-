@@ -377,3 +377,11 @@ test('progreso híbrido: racha, semanas del programa y benchmarks del AMRAP', as
   expect(bench).toMatchObject({ name: 'C · AMRAP 15 min', dayName: 'Hybrid Conditioning', format: 'amrap', trend: null, points: [{ roundsCompleted: 6, extraReps: 4 }] });
   await data.close?.();
 });
+
+test('asistente: las respuestas quedan en el perfil', async () => {
+  const { data, repository } = await setup();
+  await repository.saveOnboarding({ displayName: 'Gabo', goal: 'Prepararme para Hyrox', level: 'advanced', sports: ['strength', 'functional_fitness', 'running'], heightCm: 176, weightKg: 82.5, trainingDays: 5 });
+  expect(await repository.getAthleteProfile()).toEqual({ displayName: 'Gabo', goals: ['Prepararme para Hyrox', '5 días por semana'], experienceLevel: 'advanced', heightCm: 176, weightKg: 82.5, sports: ['strength', 'functional_fitness', 'running'] });
+  expect((await repository.getPreferences()).displayName).toBe('Gabo');
+  await data.close?.();
+});

@@ -41,6 +41,9 @@ export interface TrainingRepository {
   /** Resultado del mismo bloque la última vez que se hizo ese día del programa (para "+1 ronda vs la semana pasada"). */
   /** Racha de días (respeta los descansos del programa), racha de semanas y días sin entrenar. */
   getStreak(): Promise<StreakSummary>;
+  /** Respuestas del asistente de bienvenida → perfil (nombre, meta, nivel, disciplinas, estatura y peso). */
+  saveOnboarding(input: { displayName: string; goal: string | null; level: 'beginner' | 'intermediate' | 'advanced' | null; sports: string[]; heightCm: number | null; weightKg: number | null; trainingDays: number | null }): Promise<void>;
+  getAthleteProfile(): Promise<{ displayName: string; goals: string[]; experienceLevel: string | null; heightCm: number | null; weightKg: number | null; sports: string[] }>;
   /** Sesiones hechas contra planeadas en cada una de las últimas semanas del programa. */
   programWeeks(planId: string, weeks?: number): Promise<ProgramWeekCount[]>;
   /** Resultados de AMRAP / por tiempo / rondas a lo largo del tiempo, por bloque. */

@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
@@ -16,6 +16,7 @@ import { formatSets, lowMuscles, muscleSegments } from '@/progress/muscleVolume'
 import { HybridCard } from '@/program/HybridCard';
 import { useProgram } from '@/program/useProgram';
 import { StreakCard } from '@/progress/StreakCard';
+import { getOnboardingDone } from '@/settings/devicePrefs';
 import { colors } from '@/theme/colors';
 
 /** "Buenos días" / "Buenas tardes" / "Buenas noches" según la hora del teléfono. */
@@ -39,6 +40,12 @@ export default function HomeScreen() {
   const [volume, setVolume] = useState<WeeklyMuscleVolume | null>(null);
   const hybrid = useProgram();
   const [streak, setStreak] = useState<StreakSummary | null>(null);
+
+  // Primera vez en este teléfono: el asistente de bienvenida (una sola vez; después se repite desde el Perfil).
+  useEffect(() => {
+    if (!ready) return;
+    void getOnboardingDone().then((done) => { if (!done) router.push('/onboarding'); });
+  }, [ready, router]);
 
   useFocusEffect(useCallback(() => {
     let active = true;

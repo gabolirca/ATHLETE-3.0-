@@ -751,6 +751,22 @@ export class OfficialTrainingRepository implements TrainingRepository {
     return { displayName: profile.displayName ?? '', unitSystem: profile.unitSystem, preferredSport, sports: profile.sports, timezone: profile.timeZone };
   }
 
+  async saveOnboarding(input: { displayName: string; goal: string | null; level: 'beginner' | 'intermediate' | 'advanced' | null; sports: string[]; heightCm: number | null; weightKg: number | null; trainingDays: number | null }): Promise<void> {
+    await this.getPreferences();
+    const goals = [input.goal, input.trainingDays ? `${input.trainingDays} días por semana` : null].filter((x): x is string => Boolean(x));
+    unwrap(await this.data.profile.update({
+      ...(input.displayName.trim() ? { displayName: input.displayName.trim().slice(0, 80) } : {}),
+      goals, experienceLevel: input.level, sports: input.sports as never,
+      ...(input.heightCm !== null ? { heightCm: input.heightCm } : {}), ...(input.weightKg !== null ? { initialWeightKg: input.weightKg } : {}),
+    }));
+  }
+
+  async getAthleteProfile() {
+    await this.getPreferences();
+    const p = unwrap(await this.data.profile.get());
+    return { displayName: p.displayName ?? '', goals: p.goals, experienceLevel: p.experienceLevel, heightCm: p.heightCm, weightKg: p.initialWeightKg, sports: p.sports };
+  }
+
   async savePreferences(input: LocalAthletePreferencesInput): Promise<void> {
     await this.getPreferences();
     const sports = input.sports ?? (input.preferredSport === 'hybrid' ? [] : [input.preferredSport]);
