@@ -30,7 +30,7 @@ test('plantilla: semana tipo con bloques al tocar un día y "Empezar este progra
   expect(mockRepository.adoptProgramTemplate).toHaveBeenCalledWith('hybrid-athlete-1-0');
 });
 
-test('día de natación: muestra el plan y abre el registro de cardio ligado al día', async () => {
+test('día de natación: muestra el plan y abre el modo alberca', async () => {
   mockParams.dayId = 'swim-1';
   mockRepository.listPrograms.mockResolvedValue([{ id: 'p', name: 'Hybrid Athlete 1.0', templateSlug: 'hybrid-athlete-1-0', days: [{
     id: 'swim-1', name: 'Natación · Técnica', weekday: 3, modality: 'swim', targetRpe: 4.5, targetDurationMinutes: 45, notes: null,
@@ -41,6 +41,6 @@ test('día de natación: muestra el plan y abre el registro de cardio ligado al 
   await waitFor(() => expect(screen.getByText('Natación · Técnica')).toBeTruthy());
   expect(screen.getByText('200 m · 45 min · RPE 4.5')).toBeTruthy();
   expect(screen.getByText(/^4 × 50 m/)).toBeTruthy();
-  await fireEvent.press(screen.getByText('Registrar al terminar'));
-  await waitFor(() => expect(mockRouter.push).toHaveBeenCalledWith({ pathname: '/cardio/new', params: { dayId: 'swim-1' } }));
+  await fireEvent.press(screen.getByText('Empezar en modo alberca'));
+  await waitFor(() => expect(mockRouter.push).toHaveBeenCalledWith('/program/pool/swim-1'));
 });

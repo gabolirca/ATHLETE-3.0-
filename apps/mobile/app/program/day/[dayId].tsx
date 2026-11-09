@@ -47,7 +47,7 @@ export default function ProgramDayScreen() {
   const info = modalityInfo(day.modality);
   const st = status[day.id];
   const cardio = cardioActivityFor(day.modality);
-  const label = st && !st.active ? 'Ver lo que hiciste' : st?.active ? 'Continuar sesión' : cardio ? 'Registrar al terminar' : 'Empezar sesión';
+  const label = st && !st.active ? 'Ver lo que hiciste' : st?.active ? 'Continuar sesión' : cardio ? (day.modality === 'swim' ? 'Empezar en modo alberca' : 'Empezar') : 'Empezar sesión';
   return <Screen>
     <View style={s.titleRow}>
       <View style={s.flex}><Eyebrow>{`${weekdayLabel(day.weekday).toUpperCase()} · ${info.label.toUpperCase()} · ${program.name.toUpperCase()}`}</Eyebrow><Title>{day.name}</Title></View>
@@ -60,7 +60,7 @@ export default function ProgramDayScreen() {
       <ActionButton secondary onPress={() => setSheet({ kind: 'session' })}>Nombre, día y modalidad</ActionButton>
     </Card> : <Card accent={HYBRID_COLOR}>
       {daySummary(day) ? <Text style={s.summary}>{daySummary(day)}</Text> : null}
-      {cardio ? <Text style={s.muted}>Haz la sesión con el plan de abajo y, al terminar, registra tiempo y metros. Queda ligada a este día del programa.</Text>
+      {cardio ? <Text style={s.muted}>Palomea cada serie conforme la terminas: guardamos tus parciales y al final queda registrada con tus metros y tiempo, ligada a este día.</Text>
         : <Text style={s.muted}>La sesión se arma por bloques. En los AMRAP y "por tiempo" registras tu resultado; al final te preguntamos qué tan dura fue (RPE).</Text>}
       {st && !st.active ? <Text style={s.done}>✓ Hecha esta semana</Text> : null}
       <ActionButton loading={starting} onPress={async () => { setStarting(true); try { await startDay(day, st); } finally { setStarting(false); } }}>{label}</ActionButton>
