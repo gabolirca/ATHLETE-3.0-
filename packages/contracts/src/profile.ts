@@ -34,6 +34,11 @@ export const Profile = z.object({
   loadUnit: MassUnit,
   /** Inicio de semana para resúmenes: 0 = domingo … 6 = sábado. Por defecto lunes (ISO). */
   weekStartsOn: z.int().min(0).max(6),
+  /** Metas corporales (10-nov). Opcionales: un perfil de antes de la migración no las trae. */
+  goalWeightKg: z.number().min(20).max(400).nullable().optional(),
+  goalWaistCm: z.number().min(20).max(300).nullable().optional(),
+  goalChestCm: z.number().min(20).max(300).nullable().optional(),
+  goalHipCm: z.number().min(20).max(300).nullable().optional(),
   revision: z.int().nonnegative().nullable(),
   createdAt: IsoDateTime,
   updatedAt: IsoDateTime,

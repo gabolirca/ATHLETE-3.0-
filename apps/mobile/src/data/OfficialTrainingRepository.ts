@@ -770,6 +770,19 @@ export class OfficialTrainingRepository implements TrainingRepository {
     }));
   }
 
+  /** Metas corporales (perfil, se sincronizan). */
+  async getBodyGoals(): Promise<Record<BodyMeasurement['type'], number | null>> {
+    await this.getPreferences();
+    const p = unwrap(await this.data.profile.get());
+    return { weight_kg: p.goalWeightKg ?? null, waist_cm: p.goalWaistCm ?? null, chest_cm: p.goalChestCm ?? null, hip_cm: p.goalHipCm ?? null };
+  }
+
+  async saveBodyGoal(type: BodyMeasurement['type'], value: number | null): Promise<void> {
+    await this.getPreferences();
+    const key = ({ weight_kg: 'goalWeightKg', waist_cm: 'goalWaistCm', chest_cm: 'goalChestCm', hip_cm: 'goalHipCm' } as const)[type];
+    unwrap(await this.data.profile.update({ [key]: value }));
+  }
+
   async getAthleteProfile() {
     await this.getPreferences();
     const p = unwrap(await this.data.profile.get());

@@ -141,6 +141,7 @@ export class LocalProfileRepository extends Repository implements ProfileReposit
       const row = await this.store.upsert('profile', this.store.ctx.userId, {
         display_name: null, height_cm: null, initial_weight_kg: null, experience_level: null, goals: [], sports: [],
         time_zone: tz, unit_system: 'metric', load_unit: 'kg', week_starts_on: 1,
+        goal_weight_kg: null, goal_waist_cm: null, goal_chest_cm: null, goal_hip_cm: null,
       }, tx);
       return this.store.toContract<Profile>('profile', row);
     }));
@@ -153,6 +154,7 @@ export class LocalProfileRepository extends Repository implements ProfileReposit
       const map: Record<string, string> = {
         displayName: 'display_name', heightCm: 'height_cm', initialWeightKg: 'initial_weight_kg', experienceLevel: 'experience_level',
         goals: 'goals', sports: 'sports', timeZone: 'time_zone', unitSystem: 'unit_system', loadUnit: 'load_unit', weekStartsOn: 'week_starts_on',
+        goalWeightKg: 'goal_weight_kg', goalWaistCm: 'goal_waist_cm', goalChestCm: 'goal_chest_cm', goalHipCm: 'goal_hip_cm',
       };
       const changes: Record<string, unknown> = {};
       for (const [k, col] of Object.entries(map)) if ((i as Record<string, unknown>)[k] !== undefined) changes[col] = (i as Record<string, unknown>)[k];

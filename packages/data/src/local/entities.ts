@@ -70,6 +70,7 @@ export const ENTITIES: Readonly<Record<SyncEntity, EntityMeta>> = {
     columns: {
       display_name: 'text', height_cm: 'real', initial_weight_kg: 'real', experience_level: 'text', goals: 'json', sports: 'json',
       time_zone: 'text', unit_system: 'text', load_unit: 'text', week_starts_on: 'int',
+      goal_weight_kg: 'real', goal_waist_cm: 'real', goal_chest_cm: 'real', goal_hip_cm: 'real',
     },
     toContract: parseWith(Profile),
   },
