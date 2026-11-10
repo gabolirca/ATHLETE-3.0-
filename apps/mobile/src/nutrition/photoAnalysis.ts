@@ -22,7 +22,8 @@ export async function acceptPhotoConsent(): Promise<void> { await SecureStore.se
 const MESSAGES: Record<string, string> = {
   UNAUTHENTICATED: 'Inicia sesión en tu cuenta para analizar fotos (Perfil → Cuenta).',
   RATE_LIMITED: 'Llegaste al límite de fotos de hoy. Mañana se renueva; mientras, regístrala a mano.',
-  NOT_CONFIGURED: 'El análisis de fotos todavía no está activado en el servidor.',
+  NOT_CONFIGURED: 'El análisis de fotos todavía no está activado en el servidor (faltan las llaves del proveedor de IA).',
+  NOT_READY: 'El servidor aún no tiene la actualización de Nutrición Pro. Intenta más tarde o regístrala a mano.',
   PROVIDER_FAILED: 'El servicio de análisis no respondió. Intenta en un momento o regístrala a mano.',
   VALIDATION_FAILED: 'No pudimos leer la foto. Intenta con otra.',
 };
