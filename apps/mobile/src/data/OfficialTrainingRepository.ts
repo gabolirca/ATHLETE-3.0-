@@ -2,7 +2,7 @@ import type { CardioSession } from '@athlete/contracts';
 import { CATALOG_EXERCISE_ID, type OpenedAthleteData } from '@athlete/data';
 import type { CardioDraft } from '@/cardio/cardioForm';
 import type { TrainingRepository } from './TrainingRepository';
-import { PROGRAM_TEMPLATES, benchmarks, computeStreak, localDateOf, weeksStreak, computePersonalRecords, diagnoseWeeklyVolume, isEffectiveSet, loadTrend, weekStartOf, weeklyLoads, type LoadItem, newRecordsInSession, setVolumeKg, summarizeWeek, weeklySetsByMuscle, type ExerciseMuscles } from '@athlete/domain';
+import { PROGRAM_TEMPLATES, benchmarks, programStartDate, computeStreak, localDateOf, weeksStreak, computePersonalRecords, diagnoseWeeklyVolume, isEffectiveSet, loadTrend, weekStartOf, weeklyLoads, type LoadItem, newRecordsInSession, setVolumeKg, summarizeWeek, weeklySetsByMuscle, type ExerciseMuscles } from '@athlete/domain';
 import type { BodyMeasurementInput, LocalAthletePreferencesInput, LoggedSetInput, RoutineInput } from './trainingSchemas';
 import type { BodyMeasurement, CardioEntry, Exercise, ExerciseRecord, LocalAthletePreferences, PreviousPerformance, ProgressSummary, Routine, SessionRecord, WeeklyMuscleVolume, Program, ProgramBlock, ProgramDay, ProgramExercise, ProgramWeekStatus, WeeklyLoad, WorkoutBlock, ProgramBlockInput, ProgramExercisePatch, SessionModality, StreakSummary, ProgramWeekCount, BenchmarkItem, TrainingOverview, Workout, WorkoutDetail, TrainingSet } from './trainingTypes';
 
@@ -145,6 +145,15 @@ export class OfficialTrainingRepository implements TrainingRepository {
     unwrap(await this.data.sessions.addExercise({ id: this.newId(), sessionId, exerciseId, trainingDayExerciseId: null }));
   }
 
+  /** Quita un ejercicio de la sesión con sus series (los del plan solo se pueden quitar en entrenamiento libre; eso lo decide la pantalla). */
+  async removeWorkoutExercise(sessionId: string, sessionExerciseId: string): Promise<void> {
+    const detail = unwrap(await this.data.sessions.getDetail(sessionId));
+    const exercise = detail.exercises.find((e) => e.id === sessionExerciseId);
+    if (!exercise) return;
+    for (const set of exercise.sets) unwrap(await this.data.sessions.deleteSet(set.id));
+    unwrap(await this.data.sessions.removeExercise(sessionExerciseId));
+  }
+
   async addSet(_sessionId: string, sessionExerciseId: string): Promise<string> {
     const id = this.newId();
     const detail = unwrap(await this.data.sessions.getDetail(_sessionId));
@@ -233,7 +242,7 @@ export class OfficialTrainingRepository implements TrainingRepository {
         sortOrder: exercise.position, setsTarget: metadata?.targetSets ?? null,
         repsTarget: metadata?.targetRepsMin ?? null, repsMax: metadata?.targetRepsMax ?? null, restSeconds: metadata?.targetRestSeconds ?? null, targetRir: metadata?.targetRir ?? null,
         blockId: metadata?.blockId ?? null, targetDurationSeconds: metadata?.targetDurationSeconds ?? null, targetDistanceMeters: metadata?.targetDistanceMeters ?? null,
-        perSide: metadata?.perSide ?? false, modality: catalog.modality, loadType: catalog.loadType, notes: metadata?.notes ?? null,
+        perSide: metadata?.perSide ?? false, modality: catalog.modality, loadType: catalog.loadType, notes: metadata?.notes ?? null, fromPlan: exercise.trainingDayExerciseId !== null,
         sets: displayedSets,
         ...(await this.exerciseHistory(exercise.exerciseId, sessionId, persisted.length > 0)),
       };
@@ -377,7 +386,7 @@ export class OfficialTrainingRepository implements TrainingRepository {
         days.push({ id: d.id, name: d.name, weekday: d.weekday, modality: d.modality, targetRpe: d.targetRpe, targetDurationMinutes: d.targetDurationMinutes, notes: d.notes, blocks });
       }
       days.sort((a, b) => (a.weekday ?? 8) - (b.weekday ?? 8));
-      out.push({ id: plan.id, name: plan.name, templateSlug: plan.templateSlug, days, startedOn: localDateOf(plan.createdAt, Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC') });
+      out.push({ id: plan.id, name: plan.name, templateSlug: plan.templateSlug, days, startedOn: programStartDate(localDateOf(plan.createdAt, Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC')) });
     }
     return out;
   }

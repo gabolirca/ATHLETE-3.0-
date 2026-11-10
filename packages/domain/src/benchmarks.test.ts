@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { benchmarks, programCycle, swimPaces, weeklyMeters } from './benchmarks';
+import { benchmarks, programCycle, programStartDate, swimPaces, weeklyMeters } from './benchmarks';
 
 const p = (localDate: string, rounds: number | null, reps: number | null = null, seconds: number | null = null, format = 'amrap', key = 'amrap-sab') =>
   ({ blockKey: key, name: 'AMRAP 15 min', format, localDate, roundsCompleted: rounds, extraReps: reps, durationSeconds: seconds });
@@ -29,5 +29,15 @@ describe('natación y ciclo', () => {
     expect(programCycle('2026-11-08', '2026-11-08')).toEqual({ week: 1, cycleWeek: 1, cycleLength: 6, deloadWeek: false });
     expect(programCycle('2026-11-02', '2026-12-08')).toEqual({ week: 6, cycleWeek: 6, cycleLength: 6, deloadWeek: true });
     expect(programCycle('2026-11-02', '2026-12-14')).toMatchObject({ week: 7, cycleWeek: 1 });
+  });
+});
+
+describe('programStartDate', () => {
+  it('adoptado en fin de semana: la semana 1 empieza el lunes siguiente', () => {
+    expect(programStartDate('2026-11-08')).toBe('2026-11-09'); // domingo → lunes
+    expect(programStartDate('2026-11-07')).toBe('2026-11-09'); // sábado → lunes
+    expect(programStartDate('2026-11-04')).toBe('2026-11-04'); // miércoles: se queda
+    expect(programCycle(programStartDate('2026-11-08'), '2026-11-09').week).toBe(1);
+    expect(programCycle(programStartDate('2026-11-08'), '2026-11-08').week).toBe(1);
   });
 });

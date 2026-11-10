@@ -2,9 +2,11 @@ import type { SessionExercise, TrainingSet } from '@/data/trainingTypes';
 
 /**
  * Entrenamiento guiado: en qué ejercicio vas, cuántas series llevas y qué sigue.
- * Una serie "cuenta" si es de trabajo (no calentamiento) y ya tiene repeticiones.
+ * Una serie "cuenta" si es de trabajo (no calentamiento) y ya tiene repeticiones, o tiempo/distancia si es una
+ * serie por tiempo (plancha, remo 500 m): antes solo contaban las repeticiones y la plancha nunca terminaba.
  */
-export const isLoggedWorkingSet = (set: Pick<TrainingSet, 'isWarmup' | 'reps'>) => !set.isWarmup && set.reps !== null;
+export const isLoggedWorkingSet = (set: Pick<TrainingSet, 'isWarmup' | 'reps'> & Partial<Pick<TrainingSet, 'durationSeconds' | 'distanceMeters'>>) =>
+  !set.isWarmup && (set.reps !== null || Boolean(set.durationSeconds) || Boolean(set.distanceMeters));
 
 export type ExerciseProgress = { done: number; target: number | null; complete: boolean };
 
