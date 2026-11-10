@@ -26,6 +26,9 @@ export const TrainingPlan = SyncedRecord.extend({
   status: TrainingPlanStatus,
   startsOn: LocalDate.nullable(),
   endsOn: LocalDate.nullable(),
+  /** Coach que lo asignó (0.9.0). Solo el servidor lo marca; null si es propio. */
+  assignedBy: Uuid.nullable().default(null),
+  assignedByName: z.string().nullable().default(null),
 });
 export type TrainingPlan = z.infer<typeof TrainingPlan>;
 

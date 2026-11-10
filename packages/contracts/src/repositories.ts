@@ -49,6 +49,7 @@ import type {
 import type { LogSetInput, StrengthSet, UpdateSetInput } from './sets';
 import type { CardioSession, LogCardioSessionInput } from './cardio';
 import type { BodyMeasurement, BodySite, BodyWeight, LogBodyMeasurementInput, LogBodyWeightInput } from './body';
+import type { CoachComment, CoachCommentTarget } from './coach';
 import type { LogMealEntryInput, MealEntry, NutritionDaySummary, NutritionPlan, NutritionTarget, SaveNutritionPlanInput, SetNutritionTargetInput } from './nutrition';
 import type {
   ConflictResolution,
@@ -171,6 +172,11 @@ export interface NutritionRepository {
   savePlan(input: SaveNutritionPlanInput): Promise<Result<NutritionPlan>>;
   /** Plan vigente en `localDate`: el más reciente con `effectiveFrom <= localDate`, o null (0.8.0). */
   getPlanFor(localDate: LocalDate): Promise<Result<NutritionPlan | null>>;
+}
+
+/** Comentarios del coach (solo lectura en la app del atleta; 0.9.0). Más recientes primero. */
+export interface CoachRepository {
+  listComments(filter?: { targetType?: CoachCommentTarget; targetId?: Uuid }): Promise<Result<CoachComment[]>>;
 }
 
 // ---------- Puertos de sincronización ----------

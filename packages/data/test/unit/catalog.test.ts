@@ -92,7 +92,7 @@ describe('catálogo 0.6.0', () => {
     expect(all.filter((e) => e.ownerUserId === null)).toHaveLength(140);
     expect(all.find((e) => e.id === own)).toMatchObject({ name: 'Ejercicio propio', accessTier: 'free', isUnilateral: false });
     expect(all.find((e) => e.name === 'Sentadilla trasera')).toMatchObject({ movementPattern: 'squat', accessTier: 'free' });
-    expect(LOCAL_SCHEMA_VERSION).toBe(9);
+    expect(LOCAL_SCHEMA_VERSION).toBe(10);
     await d2.close();
   });
 });

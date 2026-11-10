@@ -29,6 +29,7 @@ export const SyncEntity = z.enum([
   'training_block',
   'session_block_result',
   'nutrition_plan',
+  'coach_comment',
 ]);
 export type SyncEntity = z.infer<typeof SyncEntity>;
 

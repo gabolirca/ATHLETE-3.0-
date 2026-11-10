@@ -9,6 +9,7 @@ import { Eyebrow, Label, Title } from '@/components/Typography';
 import { Screen, Row } from '@/components/Screen';
 import { AccountCard } from '@/account/AccountCard';
 import { NutritionSettingsCard } from '@/nutrition/NutritionSettingsCard';
+import { TrainingSettingsCard } from '@/coach/ProfessionalLinks';
 import { useTrainingRepository } from '@/data/MobileTrainingContext';
 import type { LocalAthletePreferences } from '@/data/trainingTypes';
 import { LocalAthletePreferencesSchema } from '@/data/trainingSchemas';
@@ -83,6 +84,7 @@ export default function SettingsScreen() {
         } else update('preferredSport', sport.id as typeof prefs.preferredSport);
       }}/>;
     })}</View>{prefs.sports ? <Text style={s.note}>Selecciona todas las disciplinas que practicas. No se infiere una disciplina híbrida.</Text> : null}</Card>
+    <TrainingSettingsCard />
     <NutritionSettingsCard />
     <Card><Eyebrow>EN EL GYM</Eyebrow>
       <View style={s.switchRow}>

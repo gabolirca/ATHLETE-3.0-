@@ -2,6 +2,7 @@ import {
   BodyMeasurement,
   BodyWeight,
   CardioSession,
+  CoachComment,
   Exercise,
   MealEntry,
   NutritionPlan,
@@ -92,7 +93,7 @@ export const ENTITIES: Readonly<Record<SyncEntity, EntityMeta>> = {
   training_plan: {
     entity: 'training_plan',
     table: 'training_plans',
-    columns: { name: 'text', description: 'text', status: 'text', starts_on: 'text', ends_on: 'text', kind: 'text', template_slug: 'text' },
+    columns: { name: 'text', description: 'text', status: 'text', starts_on: 'text', ends_on: 'text', kind: 'text', template_slug: 'text', assigned_by: 'text', assigned_by_name: 'text' },
     children: [{ entity: 'training_day', fk: 'plan_id' }],
     // Filas anteriores a 0.7.0 (o de un servidor sin migrar) son rutinas.
     toContract: (row) => parseWith(TrainingPlan)({ ...row, kind: row.kind ?? 'routine', template_slug: row.template_slug ?? null }),
@@ -219,6 +220,12 @@ export const ENTITIES: Readonly<Record<SyncEntity, EntityMeta>> = {
       effective_from: 'text', name: 'text', meals: 'json', notes: 'text', source: 'text', assigned_by: 'text', assigned_by_name: 'text',
     },
     toContract: parseWith(NutritionPlan),
+  },
+  coach_comment: {
+    entity: 'coach_comment',
+    table: 'coach_comments',
+    columns: { author_id: 'text', author_name: 'text', target_type: 'text', target_id: 'text', body: 'text' },
+    toContract: parseWith(CoachComment),
   },
 };
 

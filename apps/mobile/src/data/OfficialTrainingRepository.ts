@@ -99,7 +99,7 @@ export class OfficialTrainingRepository implements TrainingRepository {
         reps: item.targetRepsMin === item.targetRepsMax ? item.targetRepsMin : null,
         restSeconds: item.targetRestSeconds,
       })));
-      routines.push({ id: plan.id, name: plan.name, updatedAt: plan.updatedAt, exercises });
+      routines.push({ id: plan.id, name: plan.name, updatedAt: plan.updatedAt, exercises, coachName: plan.assignedByName ?? null });
     }
     return routines;
   }
@@ -386,7 +386,7 @@ export class OfficialTrainingRepository implements TrainingRepository {
         days.push({ id: d.id, name: d.name, weekday: d.weekday, modality: d.modality, targetRpe: d.targetRpe, targetDurationMinutes: d.targetDurationMinutes, notes: d.notes, blocks });
       }
       days.sort((a, b) => (a.weekday ?? 8) - (b.weekday ?? 8));
-      out.push({ id: plan.id, name: plan.name, templateSlug: plan.templateSlug, days, startedOn: programStartDate(localDateOf(plan.createdAt, Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC')) });
+      out.push({ id: plan.id, name: plan.name, templateSlug: plan.templateSlug, days, coachName: plan.assignedByName ?? null, startedOn: programStartDate(localDateOf(plan.createdAt, Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC')) });
     }
     return out;
   }

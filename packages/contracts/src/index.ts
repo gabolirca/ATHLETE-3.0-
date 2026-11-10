@@ -8,8 +8,9 @@ export * from './sessions';
 export * from './cardio';
 export * from './body';
 export * from './nutrition';
+export * from './coach';
 export * from './sync';
 export * from './auth';
 export type * from './repositories';
 
-export const CONTRACTS_VERSION = '0.8.0';
+export const CONTRACTS_VERSION = '0.9.0';

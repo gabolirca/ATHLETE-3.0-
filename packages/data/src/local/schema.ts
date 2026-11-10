@@ -130,6 +130,13 @@ const MIGRATIONS: ReadonlyArray<Migration> = [
     entityTable(ENTITIES.nutrition_plan),
     `CREATE INDEX IF NOT EXISTS nutrition_plans_from_idx ON nutrition_plans (effective_from DESC);`,
   ].join('\n'),
+  // v10 (contratos 0.9.0, modo coach): programas asignados y comentarios del coach.
+  async (tx) => {
+    await addColumnIfMissing(tx, 'training_plans', 'assigned_by', 'TEXT');
+    await addColumnIfMissing(tx, 'training_plans', 'assigned_by_name', 'TEXT');
+    await tx.exec(entityTable(ENTITIES.coach_comment));
+    await tx.exec('CREATE INDEX IF NOT EXISTS coach_comments_created_idx ON coach_comments (created_at DESC);');
+  },
 ];
 
 export const LOCAL_SCHEMA_VERSION = MIGRATIONS.length;

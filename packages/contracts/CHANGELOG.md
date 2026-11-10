@@ -4,6 +4,17 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 Mientras la versión sea `0.x`, los contratos son **borrador**: pueden cambiar sin incremento mayor,
 pero todo cambio debe registrarse aquí y revisarse con Codex (ADR-0001, regla 4).
 
+## [0.9.0] — 2026-11-10 — Modo coach (Claude, aprobado por el propietario)
+
+Cambio aditivo.
+
+### Añadido
+- `programs`: `TrainingPlan.assignedBy` y `assignedByName` (programa asignado por el coach; solo el servidor los marca).
+- `coach`: `CoachComment` y `CoachCommentTarget` (`general` | `session` | `plan`). Entidad de sync `coach_comment`.
+- `CoachRepository.listComments()`.
+- Servidor: migración `20261112000100` (vínculos por alcance `nutrition` | `training`, rol `coach`, copia de programas
+  al atleta, resumen de progreso y comentarios; RPC `coach_*`).
+
 ## [0.8.0] — 2026-11-10 — Plan nutricional SMAE y modo nutriólogo (Claude, aprobado por el propietario)
 
 Cambio aditivo.
