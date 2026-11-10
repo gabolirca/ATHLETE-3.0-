@@ -53,12 +53,19 @@ Responde SOLO con JSON, sin texto alrededor, con esta forma:
 
 type Proveedor = { nombre: string; url: string; llave: string; modelo: string };
 
+/** Modelos a probar por proveedor, en orden. Los catálogos cambian seguido: si uno ya no existe (404), sigue el próximo. */
+const modelos = (env: string, porDefecto: string[]) => { const v = Deno.env.get(env); return v ? v.split(',').map((x) => x.trim()).filter(Boolean) : porDefecto; };
+
 function proveedores(): Proveedor[] {
   const lista: Proveedor[] = [];
-  const cfCuenta = Deno.env.get('CF_ACCOUNT_ID'); const cfToken = Deno.env.get('CF_API_TOKEN');
-  if (cfCuenta && cfToken) lista.push({ nombre: 'cloudflare', url: `https://api.cloudflare.com/client/v4/accounts/${cfCuenta}/ai/v1/chat/completions`, llave: cfToken, modelo: Deno.env.get('CF_MODEL') ?? '@cf/google/gemma-3-12b-it' });
-  const groq = Deno.env.get('GROQ_API_KEY');
-  if (groq) lista.push({ nombre: 'groq', url: 'https://api.groq.com/openai/v1/chat/completions', llave: groq, modelo: Deno.env.get('GROQ_MODEL') ?? 'meta-llama/llama-4-maverick-17b-128e-instruct' });
+  const cfCuenta = Deno.env.get('CF_ACCOUNT_ID')?.trim(); const cfToken = Deno.env.get('CF_API_TOKEN')?.trim();
+  if (cfCuenta && cfToken) for (const modelo of modelos('CF_MODEL', ['@cf/google/gemma-3-12b-it', '@cf/meta/llama-4-scout-17b-16e-instruct'])) {
+    lista.push({ nombre: 'cloudflare', url: `https://api.cloudflare.com/client/v4/accounts/${cfCuenta}/ai/v1/chat/completions`, llave: cfToken, modelo });
+  }
+  const groq = Deno.env.get('GROQ_API_KEY')?.trim();
+  if (groq) for (const modelo of modelos('GROQ_MODEL', ['qwen/qwen3.6-27b', 'meta-llama/llama-4-scout-17b-16e-instruct'])) {
+    lista.push({ nombre: 'groq', url: 'https://api.groq.com/openai/v1/chat/completions', llave: groq, modelo });
+  }
   return lista;
 }
 
@@ -73,7 +80,11 @@ async function preguntar(p: Proveedor, imagen: string, mime: string): Promise<st
     }),
     signal: AbortSignal.timeout(45_000),
   });
-  if (!r.ok) throw new Error(`${p.nombre} ${r.status}`);
+  if (!r.ok) {
+    // El cuerpo de error del proveedor no trae la foto: se registra un pedazo para saber la causa (llave, modelo, permisos).
+    const detalle = (await r.text().catch(() => '')).replace(/\s+/g, ' ').slice(0, 220);
+    throw new Error(`${p.nombre} ${p.modelo} ${r.status} ${detalle}`);
+  }
   const j = await r.json();
   const texto = j?.choices?.[0]?.message?.content;
   if (typeof texto !== 'string' || !texto.trim()) throw new Error(`${p.nombre} sin respuesta`);
@@ -131,7 +142,7 @@ Deno.serve(async (req) => {
       return responder({ ...resultado, modelo: `${p.nombre}:${p.modelo}` });
     } catch (e) {
       // Sin la foto ni la respuesta en el log: solo qué proveedor falló.
-      console.warn('analizar-comida: falló', p.nombre, e instanceof Error ? e.message.slice(0, 80) : '');
+      console.warn('analizar-comida: falló', e instanceof Error ? e.message.slice(0, 300) : p.nombre);
     }
   }
   return responder({ error: 'PROVIDER_FAILED' }, 502);
