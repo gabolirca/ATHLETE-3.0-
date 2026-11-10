@@ -20,4 +20,4 @@ export function EmptyState({ icon = 'barbell-outline', title, detail, action, on
   );
 }
 
-const styles = StyleSheet.create({ wrap: { alignItems: 'center', gap: 12, paddingVertical: 26, paddingHorizontal: 18, backgroundColor: colors.surface, borderRadius: 18, borderWidth: 1, borderColor: colors.border }, icon: { width: 48, height: 48, borderRadius: 16, backgroundColor: '#172849', alignItems: 'center', justifyContent: 'center' }, title: { color: colors.text, fontWeight: '800', fontSize: 16, textAlign: 'center' }, detail: { color: colors.secondary, fontSize: 12, lineHeight: 18, textAlign: 'center' } });
+const styles = StyleSheet.create({ wrap: { alignItems: 'center', gap: 12, paddingVertical: 26, paddingHorizontal: 18, backgroundColor: colors.surface, borderRadius: 18, borderWidth: 1, borderColor: colors.border }, icon: { width: 48, height: 48, borderRadius: 16, backgroundColor: colors.accentSoft, alignItems: 'center', justifyContent: 'center' }, title: { color: colors.text, fontWeight: '800', fontSize: 16, textAlign: 'center' }, detail: { color: colors.secondary, fontSize: 12, lineHeight: 18, textAlign: 'center' } });

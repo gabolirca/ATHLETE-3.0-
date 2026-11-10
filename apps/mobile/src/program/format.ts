@@ -1,3 +1,4 @@
+import { colors } from '@/theme/colors';
 import { formatDuration } from '@athlete/domain';
 import type { CardioActivity } from '@athlete/contracts';
 import type { ProgramBlock, ProgramDay, ProgramExercise, SessionModality } from '@/data/trainingTypes';
@@ -9,14 +10,14 @@ export const weekdayShort = (n: number | null) => weekdayLabel(n).slice(0, 3);
 export const todayWeekday = (now = new Date()) => ((now.getDay() + 6) % 7) + 1;
 
 export const MODALITY: Record<SessionModality, { label: string; icon: string; color: string }> = {
-  strength: { label: 'Fuerza', icon: 'barbell-outline', color: '#1769FF' },
-  conditioning: { label: 'Funcional', icon: 'flash-outline', color: '#F5B841' },
-  swim: { label: 'Natación', icon: 'water-outline', color: '#3CC8E6' },
-  run: { label: 'Carrera', icon: 'walk-outline', color: '#55D6A2' },
-  bike: { label: 'Bici', icon: 'bicycle-outline', color: '#55D6A2' },
-  row: { label: 'Remo', icon: 'boat-outline', color: '#55D6A2' },
-  mobility: { label: 'Movilidad', icon: 'leaf-outline', color: '#9B7BFF' },
-  rest: { label: 'Descanso', icon: 'moon-outline', color: '#626C7C' },
+  strength: { label: 'Fuerza', icon: 'barbell-outline', color: colors.blue },
+  conditioning: { label: 'Funcional', icon: 'flash-outline', color: colors.amber },
+  swim: { label: 'Natación', icon: 'water-outline', color: colors.cyan },
+  run: { label: 'Carrera', icon: 'walk-outline', color: colors.green },
+  bike: { label: 'Bici', icon: 'bicycle-outline', color: colors.green },
+  row: { label: 'Remo', icon: 'boat-outline', color: colors.green },
+  mobility: { label: 'Movilidad', icon: 'leaf-outline', color: colors.purple },
+  rest: { label: 'Descanso', icon: 'moon-outline', color: colors.muted },
 };
 export const modalityInfo = (m: SessionModality | null) => MODALITY[m ?? 'strength'];
 

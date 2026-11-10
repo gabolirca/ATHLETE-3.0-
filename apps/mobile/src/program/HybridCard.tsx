@@ -11,7 +11,7 @@ import { colors } from '@/theme/colors';
 import { WEEKDAYS, daySummary, modalityInfo, todayWeekday, weekdayShort } from './format';
 import { useStartDay } from './useProgram';
 
-export const HYBRID_COLOR = '#F5B841';
+export const HYBRID_COLOR = colors.amber;
 
 /**
  * Modo Híbrido en Entrenar e Inicio:
@@ -82,7 +82,7 @@ const s = StyleSheet.create({
   icon: { width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   name: { color: colors.text, fontSize: 15, fontWeight: '800' },
   done: { color: colors.green, fontSize: 12, fontWeight: '800' },
-  go: { backgroundColor: HYBRID_COLOR, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8 }, goText: { color: '#1A1300', fontSize: 12, fontWeight: '800' },
+  go: { backgroundColor: HYBRID_COLOR, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8 }, goText: { color: colors.amberSoft, fontSize: 12, fontWeight: '800' },
   cycle: { color: colors.secondary, fontSize: 11, fontWeight: '700' }, deload: { color: HYBRID_COLOR, fontSize: 12, fontWeight: '800' },
   dots: { flexDirection: 'row', justifyContent: 'space-between', paddingTop: 2 }, dotCol: { alignItems: 'center', gap: 4 },
   dot: { width: 12, height: 12, borderRadius: 6, backgroundColor: colors.graphite },

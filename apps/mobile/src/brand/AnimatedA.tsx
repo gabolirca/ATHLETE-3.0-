@@ -61,7 +61,7 @@ export function AnimatedA({ lit, size = 56 }: Props) {
 
 const s = StyleSheet.create({
   box: { alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
-  on: { backgroundColor: '#0C1A2C' }, off: { backgroundColor: colors.surfaceRaised },
+  on: { backgroundColor: colors.accentDeep }, off: { backgroundColor: colors.surfaceRaised },
   glow: { position: 'absolute', backgroundColor: BRAND_CYAN, transform: [{ scale: 1.1 }], shadowColor: BRAND_CYAN, shadowOpacity: 0.9, shadowRadius: 18 },
   dim: { tintColor: colors.muted, opacity: 0.6 },
 });

@@ -11,7 +11,8 @@ import { AccountCard } from '@/account/AccountCard';
 import { useTrainingRepository } from '@/data/MobileTrainingContext';
 import type { LocalAthletePreferences } from '@/data/trainingTypes';
 import { LocalAthletePreferencesSchema } from '@/data/trainingSchemas';
-import { colors } from '@/theme/colors';
+import { THEME_KEY, colors, themeMode, type ThemeMode } from '@/theme/colors';
+import * as SecureStore from 'expo-secure-store';
 
 const sports = [
   { id: 'strength', title: 'Fuerza' }, { id: 'hybrid', title: 'Híbrido' },
@@ -33,6 +34,7 @@ export default function SettingsScreen() {
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [theme, setTheme] = useState<ThemeMode>(themeMode);
   const refresh = useCallback(() => {
     repository?.getPreferences().then((value) => { setPrefs(value); setLoadedCount((n) => n + 1); setError(''); }).catch(() => setError('No pudimos leer las preferencias locales.'));
     repository?.getAthleteProfile().then(setAthlete).catch(() => setAthlete(null));
@@ -61,7 +63,7 @@ export default function SettingsScreen() {
   }
 
   return <Screen>
-    <Pressable accessibilityRole="button" accessibilityLabel="Regresar" hitSlop={12} onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}><Text style={{ color: '#9DBDFF', fontSize: 15, fontWeight: '700' }}>‹ Regresar</Text></Pressable>
+    <Pressable accessibilityRole="button" accessibilityLabel="Regresar" hitSlop={12} onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}><Text style={{ color: colors.accentText, fontSize: 15, fontWeight: '700' }}>‹ Regresar</Text></Pressable>
     <View><Eyebrow>PERFIL</Eyebrow><Title>Ajustes</Title></View>
     {athlete ? <Card accent="#F5B841">
       <Eyebrow>TU META</Eyebrow>
@@ -87,6 +89,14 @@ export default function SettingsScreen() {
       </View>
       <Text style={s.note}>Se guarda solo en este teléfono.</Text>
     </Card>
+    <Card><Eyebrow>APARIENCIA</Eyebrow>
+      <View style={s.options}>{([['dark', 'Oscuro'], ['light', 'Claro']] as const).map(([mode, title]) => <SelectChip key={mode} title={title} selected={theme === mode} onPress={() => {
+        if (mode === theme) return;
+        setTheme(mode);
+        void SecureStore.setItemAsync(THEME_KEY, mode).then(() => Alert.alert(`Tema ${title.toLowerCase()}`, 'Cierra la app por completo (desliza hacia arriba) y vuelve a abrirla para verlo.')).catch(() => setError('No se pudo guardar el tema.'));
+      }}/>)}</View>
+      {theme !== themeMode ? <Text style={s.note}>Se aplica al volver a abrir la app.</Text> : null}
+    </Card>
     <Card><Eyebrow>CONFIGURACIÓN</Eyebrow><Label>Sistema de unidades</Label><View style={s.options}><SelectChip title="Métrico" selected={prefs.unitSystem === 'metric'} onPress={() => update('unitSystem', 'metric')}/><SelectChip title="Imperial" selected={prefs.unitSystem === 'imperial'} onPress={() => update('unitSystem', 'imperial')}/></View><View style={s.divider}/><Row><Label>Zona horaria del dispositivo</Label></Row><Text style={s.timezone}>{prefs.timezone}</Text></Card>
     {error ? <Text accessibilityRole="alert" style={s.error}>{error}</Text> : null}
     {saved ? <Text style={s.saved}>Preferencias guardadas localmente.</Text> : null}
@@ -104,4 +114,4 @@ function SelectChip({ title, selected, onPress }: { title: string; selected: boo
   return <Pressable accessibilityRole="button" accessibilityState={{ selected }} onPress={onPress} style={[s.chip, selected && s.chipSelected]}><Text style={[s.chipText, selected && s.chipTextSelected]}>{title}</Text></Pressable>;
 }
 
-const s=StyleSheet.create({switchRow:{flexDirection:'row',alignItems:'center',gap:12},flex:{flex:1,gap:4},note:{color:colors.secondary,fontSize:11,lineHeight:17},options:{flexDirection:'row',flexWrap:'wrap',gap:7},chip:{borderWidth:1,borderColor:colors.border,borderRadius:12,paddingHorizontal:12,paddingVertical:9,backgroundColor:colors.surfaceRaised},chipSelected:{borderColor:colors.blue,backgroundColor:'#172849'},chipText:{color:colors.secondary,fontSize:11,fontWeight:'700'},chipTextSelected:{color:'#A9C4FF'},divider:{height:1,backgroundColor:colors.border,marginVertical:4},timezone:{color:colors.text,fontSize:13},error:{color:colors.red,fontSize:12},saved:{color:colors.green,fontSize:12,fontWeight:'700'}});
+const s=StyleSheet.create({switchRow:{flexDirection:'row',alignItems:'center',gap:12},flex:{flex:1,gap:4},note:{color:colors.secondary,fontSize:11,lineHeight:17},options:{flexDirection:'row',flexWrap:'wrap',gap:7},chip:{borderWidth:1,borderColor:colors.border,borderRadius:12,paddingHorizontal:12,paddingVertical:9,backgroundColor:colors.surfaceRaised},chipSelected:{borderColor:colors.blue,backgroundColor:colors.accentSoft},chipText:{color:colors.secondary,fontSize:11,fontWeight:'700'},chipTextSelected:{color:colors.accentText},divider:{height:1,backgroundColor:colors.border,marginVertical:4},timezone:{color:colors.text,fontSize:13},error:{color:colors.red,fontSize:12},saved:{color:colors.green,fontSize:12,fontWeight:'700'}});

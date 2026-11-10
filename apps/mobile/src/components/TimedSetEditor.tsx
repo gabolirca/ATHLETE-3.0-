@@ -92,7 +92,7 @@ const s = StyleSheet.create({
   head: { flexDirection: 'row', justifyContent: 'space-between' }, label: { color: colors.secondary, fontSize: 10, fontWeight: '800', letterSpacing: 1 },
   done: { color: colors.green, fontSize: 14, fontWeight: '800' },
   fields: { flexDirection: 'row', gap: 8 }, flex: { flex: 1 },
-  plan: { alignSelf: 'flex-start', borderRadius: 10, borderWidth: 1, borderColor: colors.green, paddingHorizontal: 10, paddingVertical: 6, backgroundColor: '#12291F' },
+  plan: { alignSelf: 'flex-start', borderRadius: 10, borderWidth: 1, borderColor: colors.green, paddingHorizontal: 10, paddingVertical: 6, backgroundColor: colors.greenSoft },
   planText: { color: colors.green, fontSize: 12, fontWeight: '800' },
   error: { color: colors.red, fontSize: 11 },
   start: { borderRadius: 12, backgroundColor: colors.blue, paddingVertical: 12, alignItems: 'center' },

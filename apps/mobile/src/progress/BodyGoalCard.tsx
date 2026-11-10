@@ -66,7 +66,7 @@ const s = StyleSheet.create({
   muted: { color: colors.secondary, fontSize: 11, lineHeight: 16 },
   change: { alignItems: 'flex-end' }, changeNum: { fontSize: 16, fontWeight: '800' },
   goal: { color: colors.green, fontSize: 13, fontWeight: '800' },
-  link: { color: '#9DBDFF', fontSize: 12, fontWeight: '800', paddingVertical: 4 },
+  link: { color: colors.accentText, fontSize: 12, fontWeight: '800', paddingVertical: 4 },
   edit: { gap: 8 }, actions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   btnOn: { borderRadius: 10, backgroundColor: colors.blue, paddingHorizontal: 12, paddingVertical: 8 }, btnOnText: { color: 'white', fontSize: 12, fontWeight: '800' },
   btn: { borderRadius: 10, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 12, paddingVertical: 8 }, btnText: { color: colors.text, fontSize: 12, fontWeight: '700' },

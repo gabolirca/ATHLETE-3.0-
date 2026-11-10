@@ -151,7 +151,7 @@ const s = StyleSheet.create({
   step: { width: 36, height: 36, borderRadius: 10, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surfaceRaised },
   stepText: { color: colors.text, fontSize: 18, fontWeight: '800' },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
-  links: { flexDirection: 'row', justifyContent: 'space-between' }, link: { color: '#9DBDFF', fontSize: 12, fontWeight: '800' }, remove: { color: colors.red, fontSize: 12, fontWeight: '700' },
+  links: { flexDirection: 'row', justifyContent: 'space-between' }, link: { color: colors.accentText, fontSize: 12, fontWeight: '800' }, remove: { color: colors.red, fontSize: 12, fontWeight: '700' },
   total: { color: colors.text, fontSize: 28, fontWeight: '800' },
   error: { color: colors.red, fontSize: 12, lineHeight: 18 },
 });

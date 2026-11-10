@@ -101,8 +101,8 @@ export default function ProfileScreen() {
       const d = new Date(t.date);
       return <Pressable key={t.id} accessibilityRole="button" accessibilityLabel={`${t.kind === 'cardio' ? t.title : 'Entrenamiento'} del ${d.toLocaleDateString('es-MX')}`}
         onPress={() => router.push(t.kind === 'cardio' ? { pathname: '/cardio/[cardioId]', params: { cardioId: t.id } } as never : { pathname: '/history/[sessionId]', params: { sessionId: t.id } } as never)}
-        style={[s.tile, { borderColor: t.kind === 'cardio' ? '#3CC8E6' : colors.blue }]}>
-        <Ionicons name={t.kind === 'cardio' ? 'pulse' : 'barbell'} size={16} color={t.kind === 'cardio' ? '#3CC8E6' : colors.blue}/>
+        style={[s.tile, { borderColor: t.kind === 'cardio' ? colors.cyan : colors.blue }]}>
+        <Ionicons name={t.kind === 'cardio' ? 'pulse' : 'barbell'} size={16} color={t.kind === 'cardio' ? colors.cyan : colors.blue}/>
         <Text style={s.tileDay}>{d.getDate()}</Text>
         <Text style={s.tileMonth}>{d.toLocaleDateString('es-MX', { month: 'short' }).replace('.', '')}</Text>
         <Text style={s.tileSub} numberOfLines={1}>{t.title} · {t.sub}</Text>
@@ -110,7 +110,7 @@ export default function ProfileScreen() {
     })}</View> : <Card><Text style={s.bio}>Aquí aparecerán tus entrenamientos cuando termines el primero.</Text></Card> : null}
 
     {tab === 'logros' ? <View style={s.badges}>{done.map((a) => <View key={a.key} style={[s.badge, !a.done && s.badgeOff]} accessibilityLabel={`${a.title}: ${a.done ? 'logrado' : 'pendiente'}`}>
-      <Ionicons name={a.icon as never} size={24} color={a.done ? '#F5B841' : colors.muted}/>
+      <Ionicons name={a.icon as never} size={24} color={a.done ? colors.amber : colors.muted}/>
       <Text style={[s.badgeTitle, !a.done && s.muted]}>{a.title}</Text>
       <Text style={s.badgeDetail}>{a.detail}</Text>
     </View>)}</View> : null}
@@ -125,7 +125,7 @@ function Stat({ value, label }: { value: string; label: string }) {
 
 const s = StyleSheet.create({
   top: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  back: { color: '#9DBDFF', fontSize: 15, fontWeight: '700' },
+  back: { color: colors.accentText, fontSize: 15, fontWeight: '700' },
   lock: { flexDirection: 'row', alignItems: 'center', gap: 4 }, lockText: { color: colors.secondary, fontSize: 11, fontWeight: '700' },
   header: { flexDirection: 'row', alignItems: 'center', gap: 18 },
   avatar: { width: 84, height: 84, borderRadius: 42, backgroundColor: colors.surfaceRaised, borderWidth: 2, borderColor: colors.blue, alignItems: 'center', justifyContent: 'center' },
@@ -139,7 +139,7 @@ const s = StyleSheet.create({
   actionText: { color: colors.text, fontSize: 13, fontWeight: '700' },
   highlights: { flexDirection: 'row', flexWrap: 'wrap', gap: 14 },
   hl: { width: 66, alignItems: 'center', gap: 4 },
-  hlCircle: { width: 60, height: 60, borderRadius: 30, borderWidth: 2, borderColor: '#F5B841', alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface },
+  hlCircle: { width: 60, height: 60, borderRadius: 30, borderWidth: 2, borderColor: colors.amber, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface },
   hlTop: { color: colors.text, fontSize: 15, fontWeight: '800', paddingHorizontal: 4 }, hlLabel: { color: colors.secondary, fontSize: 10, maxWidth: 66 },
   tabs: { flexDirection: 'row', borderTopWidth: 1, borderColor: colors.border },
   tab: { flex: 1, alignItems: 'center', paddingVertical: 10, borderTopWidth: 2, borderColor: 'transparent' }, tabOn: { borderColor: colors.text },
@@ -148,7 +148,7 @@ const s = StyleSheet.create({
   tileDay: { color: colors.text, fontSize: 26, fontWeight: '800' }, tileMonth: { color: colors.secondary, fontSize: 11, textTransform: 'uppercase', marginTop: -6 },
   tileSub: { color: colors.secondary, fontSize: 10 },
   badges: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  badge: { width: '48.5%', borderRadius: 14, borderWidth: 1, borderColor: '#F5B841', backgroundColor: colors.surface, padding: 12, gap: 4 },
+  badge: { width: '48.5%', borderRadius: 14, borderWidth: 1, borderColor: colors.amber, backgroundColor: colors.surface, padding: 12, gap: 4 },
   badgeOff: { borderColor: colors.border, opacity: 0.6 },
   badgeTitle: { color: colors.text, fontSize: 13, fontWeight: '800' }, badgeDetail: { color: colors.secondary, fontSize: 11 }, muted: { color: colors.secondary },
 });

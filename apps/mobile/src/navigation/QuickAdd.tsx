@@ -45,7 +45,7 @@ const s = StyleSheet.create({
   sheet: { backgroundColor: colors.surface, borderTopLeftRadius: 22, borderTopRightRadius: 22, padding: 18, paddingBottom: 36, gap: 8, borderWidth: 1, borderColor: colors.border },
   title: { color: colors.text, fontSize: 17, fontWeight: '800', marginBottom: 6 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12, borderRadius: 14, backgroundColor: colors.surfaceRaised },
-  icon: { width: 42, height: 42, borderRadius: 13, backgroundColor: '#172849', alignItems: 'center', justifyContent: 'center' },
+  icon: { width: 42, height: 42, borderRadius: 13, backgroundColor: colors.accentSoft, alignItems: 'center', justifyContent: 'center' },
   flex: { flex: 1 },
   label: { color: colors.text, fontSize: 15, fontWeight: '800' },
   detail: { color: colors.secondary, fontSize: 12 },

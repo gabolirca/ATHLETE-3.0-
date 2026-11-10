@@ -4,7 +4,7 @@ import { Eyebrow } from '@/components/Typography';
 import type { WeeklyLoad } from '@/data/trainingTypes';
 import { colors } from '@/theme/colors';
 
-export const LOAD_COLORS = { strength: colors.blue, conditioning: '#F5B841', cardio: colors.green } as const;
+export const LOAD_COLORS = { strength: colors.blue, conditioning: colors.amber, cardio: colors.green } as const;
 const LABELS = { strength: 'Fuerza', conditioning: 'Funcional', cardio: 'Cardio' } as const;
 
 /** Mensaje de la tendencia de carga (semana actual contra el promedio de las anteriores). */
@@ -50,6 +50,6 @@ const s = StyleSheet.create({
   chart: { height: 130, flexDirection: 'row', alignItems: 'flex-end', gap: 12, paddingTop: 10 },
   col: { flex: 1, alignItems: 'center', gap: 6 }, stack: { width: '70%', borderRadius: 6, overflow: 'hidden', justifyContent: 'flex-end' },
   week: { color: colors.muted, fontSize: 9, fontWeight: '700' }, weekNow: { color: colors.text },
-  msg: { color: colors.text, fontSize: 12, lineHeight: 18 }, spike: { color: '#F5B841', fontWeight: '800' },
+  msg: { color: colors.text, fontSize: 12, lineHeight: 18 }, spike: { color: colors.amber, fontWeight: '800' },
   note: { color: colors.muted, fontSize: 10, lineHeight: 15 },
 });

@@ -136,7 +136,7 @@ const s = StyleSheet.create({
   note: { color: colors.secondary, fontSize: 11, lineHeight: 16 },
   clockRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   clock: { color: colors.text, fontSize: 40, fontWeight: '800', fontVariant: ['tabular-nums'] }, clockDone: { color: colors.green },
-  clockBtn: { backgroundColor: HYBRID_COLOR, borderRadius: 12, paddingHorizontal: 18, paddingVertical: 11 }, clockBtnText: { color: '#1A1300', fontSize: 14, fontWeight: '800' },
+  clockBtn: { backgroundColor: HYBRID_COLOR, borderRadius: 12, paddingHorizontal: 18, paddingVertical: 11 }, clockBtnText: { color: colors.amberSoft, fontSize: 14, fontWeight: '800' },
   finished: { color: colors.green, fontSize: 13, fontWeight: '800' },
   saved: { color: colors.green, fontSize: 14, fontWeight: '800' },
   fields: { flexDirection: 'row', gap: 9 }, flex: { flex: 1 },

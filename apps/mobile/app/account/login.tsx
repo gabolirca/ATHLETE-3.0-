@@ -63,6 +63,6 @@ const s = StyleSheet.create({
   text: { color: colors.secondary, fontSize: 13, lineHeight: 19 },
   strong: { color: colors.text, fontWeight: '700' },
   error: { color: colors.red, fontSize: 12 },
-  link: { color: '#9DBDFF', fontSize: 12, fontWeight: '700', textAlign: 'center', paddingVertical: 8 },
+  link: { color: colors.accentText, fontSize: 12, fontWeight: '700', textAlign: 'center', paddingVertical: 8 },
   note: { color: colors.muted, fontSize: 11, lineHeight: 16 },
 });

@@ -68,12 +68,12 @@ export function CardioProgress() {
 
 const s = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: 11 }, flex: { flex: 1 },
-  icon: { width: 34, height: 34, borderRadius: 11, backgroundColor: '#12291F', alignItems: 'center', justifyContent: 'center' },
+  icon: { width: 34, height: 34, borderRadius: 11, backgroundColor: colors.greenSoft, alignItems: 'center', justifyContent: 'center' },
   name: { color: colors.text, fontSize: 14, fontWeight: '800' }, sub: { color: colors.secondary, fontSize: 12, lineHeight: 18 },
   big: { color: colors.text, fontSize: 16, fontWeight: '800' }, value: { color: colors.text, fontWeight: '800' },
   best: { gap: 2, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 10 },
   note: { color: colors.muted, fontSize: 10, lineHeight: 15 },
   swimBars: { flexDirection: 'row', gap: 6, alignItems: 'flex-end', height: 104 }, swimCol: { flex: 1, alignItems: 'center', gap: 4 },
-  swimNum: { color: colors.text, fontSize: 9, fontWeight: '800' }, swimBar: { width: '70%', borderRadius: 4, backgroundColor: '#3CC8E6' },
+  swimNum: { color: colors.text, fontSize: 9, fontWeight: '800' }, swimBar: { width: '70%', borderRadius: 4, backgroundColor: colors.cyan },
   swimLabel: { color: colors.muted, fontSize: 9, fontWeight: '700' }, swimNow: { color: colors.text },
 });
