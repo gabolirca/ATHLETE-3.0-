@@ -1,6 +1,6 @@
 # Formato estándar para subir un plan nutricional (PROPUESTA)
 
-Estado: propuesta para decidir. Hoy la app solo captura las **metas diarias** del plan (kcal y macros, con origen `professional`).
+Estado: niveles 1 y 2 (captura en la app) implementados en contratos 0.8.0; ver `modo-nutriologo.md`. Pendiente: importar CSV y adjuntar el archivo original.
 
 ## Objetivo
 Que el plan de un nutriólogo, que suele llegar en PDF, foto o Excel, quede dentro de la app de forma **estructurada**, para:

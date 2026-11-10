@@ -5,6 +5,8 @@ import { localDateOfDevice } from './mealForm';
 const mockRouter = { push: jest.fn(), replace: jest.fn(), back: jest.fn() };
 const today = localDateOfDevice(new Date());
 const mockNutrition = {
+  getPlan: jest.fn().mockResolvedValue(null),
+  savePlan: jest.fn(),
   loadDay: jest.fn(),
   getMeal: jest.fn(),
   logMeal: jest.fn().mockResolvedValue({}),

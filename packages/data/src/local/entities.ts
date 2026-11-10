@@ -4,6 +4,7 @@ import {
   CardioSession,
   Exercise,
   MealEntry,
+  NutritionPlan,
   NutritionTarget,
   Profile,
   SessionExercise,
@@ -210,6 +211,14 @@ export const ENTITIES: Readonly<Record<SyncEntity, EntityMeta>> = {
     table: 'nutrition_targets',
     columns: { effective_from: 'text', energy_kcal: 'real', protein_g: 'real', carbs_g: 'real', fat_g: 'real', source: 'text' },
     toContract: parseWith(NutritionTarget),
+  },
+  nutrition_plan: {
+    entity: 'nutrition_plan',
+    table: 'nutrition_plans',
+    columns: {
+      effective_from: 'text', name: 'text', meals: 'json', notes: 'text', source: 'text', assigned_by: 'text', assigned_by_name: 'text',
+    },
+    toContract: parseWith(NutritionPlan),
   },
 };
 

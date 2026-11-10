@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { DataSource, IsoDateTime, LocalDate, Notes, SyncedRecord, TimeZone } from './common';
+import { DataSource, IsoDateTime, LocalDate, Notes, SyncedRecord, TimeZone, Uuid } from './common';
 
 /**
  * Nutrición — registro manual (especificación §6.7). La estimación por IA es posterior;
@@ -87,3 +87,54 @@ export const NutritionDaySummary = z.object({
   entriesMissingEnergy: z.int().nonnegative(),
 });
 export type NutritionDaySummary = z.infer<typeof NutritionDaySummary>;
+
+/**
+ * Plan nutricional por equivalentes del SMAE (contratos 0.8.0).
+ * Grupos: los mismos ids que `@athlete/domain` (SMAE_GROUPS) y que `athlete3_private.smae_groups()` en el servidor.
+ */
+export const SmaeGroupId = z.enum([
+  'verduras', 'frutas', 'cereales_sin_grasa', 'cereales_con_grasa', 'leguminosas',
+  'aoa_muy_bajo', 'aoa_bajo', 'aoa_moderado', 'aoa_alto',
+  'leche_descremada', 'leche_semidescremada', 'leche_entera', 'leche_con_azucar',
+  'grasas_sin_proteina', 'grasas_con_proteina', 'azucares_sin_grasa', 'azucares_con_grasa', 'libres',
+]);
+export type SmaeGroupId = z.infer<typeof SmaeGroupId>;
+
+/** Raciones por grupo: de 0.5 a 20, en pasos de ½ (igual que el servidor). */
+export const PlanEquivalents = z.partialRecord(SmaeGroupId, z.number().min(0.5).max(20).refine((n) => Number.isInteger(n * 2), 'Pasos de ½'));
+export type PlanEquivalents = z.infer<typeof PlanEquivalents>;
+
+/** Un tiempo de comida del plan: "Desayuno 08:00 → 2 cereales, 1 fruta…". */
+export const NutritionPlanMeal = z.strictObject({
+  label: z.string().trim().min(1).max(40),
+  time: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).nullable().default(null),
+  equivalents: PlanEquivalents,
+  note: z.string().max(300).nullable().default(null),
+});
+export type NutritionPlanMeal = z.infer<typeof NutritionPlanMeal>;
+
+/** `self`: lo capturó el usuario. `assigned`: se lo asignó su nutriólogo (solo el servidor lo marca). */
+export const NutritionPlanSource = z.enum(['self', 'assigned']);
+export type NutritionPlanSource = z.infer<typeof NutritionPlanSource>;
+
+/** Plan vigente desde una fecha local (uno por día). La meta diaria (kcal y macros) vive en `NutritionTarget`. */
+export const NutritionPlan = SyncedRecord.extend({
+  effectiveFrom: LocalDate,
+  name: z.string().trim().min(1).max(80),
+  meals: z.array(NutritionPlanMeal).min(1).max(10),
+  notes: Notes.nullable(),
+  source: NutritionPlanSource,
+  assignedBy: Uuid.nullable(),
+  assignedByName: z.string().nullable(),
+});
+export type NutritionPlan = z.infer<typeof NutritionPlan>;
+
+/** Guarda el plan propio del día `effectiveFrom`. Reemplaza el que haya ese día (si era asignado, queda uno propio nuevo). */
+export const SaveNutritionPlanInput = z.object({
+  id: NutritionPlan.shape.id,
+  effectiveFrom: LocalDate,
+  name: NutritionPlan.shape.name,
+  meals: NutritionPlan.shape.meals,
+  notes: Notes.nullable().default(null),
+});
+export type SaveNutritionPlanInput = z.input<typeof SaveNutritionPlanInput>;
