@@ -46,5 +46,5 @@ export function AccountCard() {
 
 const s = StyleSheet.create({
   note: { color: colors.secondary, fontSize: 11, lineHeight: 17 },
-  warning: { color: '#F4C46A', fontSize: 11, lineHeight: 16 },
+  warning: { color: colors.amber, fontSize: 11, lineHeight: 16 },
 });

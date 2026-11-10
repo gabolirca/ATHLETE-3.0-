@@ -88,8 +88,8 @@ export default function ProgramDayScreen() {
 
 const s = StyleSheet.create({
   titleRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 }, flex: { flex: 1 },
-  editBtn: { borderWidth: 1, borderColor: '#F5B841', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 7, marginTop: 4 }, editOn: { backgroundColor: '#F5B841' },
-  editText: { color: '#F5B841', fontSize: 13, fontWeight: '800' }, editTextOn: { color: '#1A1300' },
+  editBtn: { borderWidth: 1, borderColor: colors.amber, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 7, marginTop: 4 }, editOn: { backgroundColor: colors.amber },
+  editText: { color: colors.amber, fontSize: 13, fontWeight: '800' }, editTextOn: { color: colors.amberSoft },
   summary: { color: colors.text, fontSize: 16, fontWeight: '800' }, muted: { color: colors.secondary, fontSize: 12, lineHeight: 18 },
   done: { color: colors.green, fontSize: 13, fontWeight: '800' },
 });

@@ -5,8 +5,8 @@ import { colors } from '@/theme/colors';
 export type DonutSegment = { key: string; value: number; color: string };
 
 /** Paleta para categorías en fondo oscuro; el último color se reserva para "Otros". */
-export const CATEGORY_COLORS = ['#1769FF', '#55D6A2', '#F5B841', '#9B7BFF', '#3CC8E6'] as const;
-export const OTHERS_COLOR = '#4A5363';
+export const CATEGORY_COLORS = [colors.blue, colors.green, colors.amber, colors.purple, colors.cyan] as const;
+export const OTHERS_COLOR = colors.muted;
 
 /**
  * Arcos de la dona: longitud y desplazamiento de cada segmento sobre la circunferencia.

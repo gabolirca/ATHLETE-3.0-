@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react';
 import { Alert, StyleSheet, Text, View } from 'react-native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { colors } from '@/theme/colors';
+import { colors, themeMode } from '@/theme/colors';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Screen } from '@/components/Screen';
 import { Eyebrow, Title } from '@/components/Typography';
@@ -18,7 +18,7 @@ import { BrandIntro } from '@/brand/BrandIntro';
 export default function RootLayout() {
   return (
     <SafeAreaProvider>
-      <StatusBar style="light" />
+      <StatusBar style={themeMode === 'light' ? 'dark' : 'light'} />
       <AthleteDataProvider>
         <RootStorageGate />
       </AthleteDataProvider>
@@ -165,8 +165,8 @@ const styles = StyleSheet.create({
   recoveryTitle: { color: colors.text, fontSize: 18, fontWeight: '800', marginTop: 4 },
   recoveryDetail: { color: colors.secondary, fontSize: 13, lineHeight: 19, marginTop: 6 },
   recoveryCode: { color: colors.muted, fontSize: 11, marginTop: 8 },
-  recoveryNoticeBox: { backgroundColor: '#172849', borderRadius: 10, padding: 12, marginTop: 10 },
-  recoveryNotice: { color: '#9DBDFF', fontSize: 12, lineHeight: 17, fontWeight: '600' },
+  recoveryNoticeBox: { backgroundColor: colors.accentSoft, borderRadius: 10, padding: 12, marginTop: 10 },
+  recoveryNotice: { color: colors.accentText, fontSize: 12, lineHeight: 17, fontWeight: '600' },
   recoveryActionError: { color: colors.red, fontSize: 12, lineHeight: 17, fontWeight: '700', marginTop: 10 },
   recoveryActions: { gap: 10, marginTop: 16 },
   recoveryNote: { color: colors.secondary, fontSize: 11, lineHeight: 16, marginTop: 12, textAlign: 'center' },

@@ -5,7 +5,7 @@ import { Eyebrow } from '@/components/Typography';
 import { Donut } from '@/charts/Donut';
 import { colors } from '@/theme/colors';
 
-const gradeColor = (score: number) => (score >= 85 ? colors.green : score >= 70 ? colors.blue : score >= 50 ? '#F5B841' : colors.secondary);
+const gradeColor = (score: number) => (score >= 85 ? colors.green : score >= 70 ? colors.blue : score >= 50 ? colors.amber : colors.secondary);
 
 /** Calificación de la sesión con el desglose de cada parte (por qué salió así). */
 export function ScoreCard({ score, title = 'CALIFICACIÓN DE LA SESIÓN' }: { score: SessionScore; title?: string }) {

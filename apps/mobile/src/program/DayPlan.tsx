@@ -38,7 +38,7 @@ export function ProgramNotes({ notes }: { notes: readonly string[] }) {
 
 const s = StyleSheet.create({
   head: { gap: 3, flex: 1 }, headRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  add: { alignSelf: 'flex-start', paddingVertical: 6 }, addText: { color: '#F5B841', fontSize: 13, fontWeight: '800' }, name: { color: colors.text, fontSize: 15, fontWeight: '800' }, format: { color: '#F5B841', fontSize: 12, fontWeight: '700' },
+  add: { alignSelf: 'flex-start', paddingVertical: 6 }, addText: { color: colors.amber, fontSize: 13, fontWeight: '800' }, name: { color: colors.text, fontSize: 15, fontWeight: '800' }, format: { color: colors.amber, fontSize: 12, fontWeight: '700' },
   note: { color: colors.secondary, fontSize: 11, lineHeight: 16 },
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 8 },
   exercise: { flex: 1, color: colors.text, fontSize: 13 }, presc: { color: colors.text, fontSize: 13, fontWeight: '800', textAlign: 'right' },

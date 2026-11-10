@@ -71,7 +71,7 @@ const s = StyleSheet.create({
   row3: { flexDirection: 'row', gap: 10 },
   flex: { flex: 1 },
   hint: { color: colors.secondary, fontSize: 11, lineHeight: 16 },
-  suggest: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 10, paddingHorizontal: 12, borderRadius: 11, borderWidth: 1, borderColor: colors.blue, backgroundColor: '#10203F' },
+  suggest: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 10, paddingHorizontal: 12, borderRadius: 11, borderWidth: 1, borderColor: colors.blue, backgroundColor: colors.accentDeep },
   suggestText: { color: colors.text, fontSize: 12, fontWeight: '700' },
   error: { color: colors.red, fontSize: 11 },
 });

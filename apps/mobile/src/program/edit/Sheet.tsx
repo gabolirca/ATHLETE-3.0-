@@ -37,10 +37,10 @@ const s = StyleSheet.create({
   backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)' },
   sheet: { maxHeight: '86%', backgroundColor: colors.surface, borderTopLeftRadius: 22, borderTopRightRadius: 22, borderWidth: 1, borderColor: colors.border },
   head: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 18, paddingTop: 16, paddingBottom: 6 },
-  title: { color: colors.text, fontSize: 17, fontWeight: '800', flex: 1 }, close: { color: '#9DBDFF', fontSize: 13, fontWeight: '700' },
+  title: { color: colors.text, fontSize: 17, fontWeight: '800', flex: 1 }, close: { color: colors.accentText, fontSize: 13, fontWeight: '700' },
   body: { padding: 18, paddingTop: 8, paddingBottom: 40, gap: 12 },
   choices: { flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
   choice: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surfaceRaised },
-  choiceOn: { borderColor: '#F5B841', backgroundColor: '#2A2410' },
-  choiceText: { color: colors.secondary, fontSize: 12, fontWeight: '700' }, choiceTextOn: { color: '#F5B841' },
+  choiceOn: { borderColor: colors.amber, backgroundColor: colors.amberSoft },
+  choiceText: { color: colors.secondary, fontSize: 12, fontWeight: '700' }, choiceTextOn: { color: colors.amber },
 });

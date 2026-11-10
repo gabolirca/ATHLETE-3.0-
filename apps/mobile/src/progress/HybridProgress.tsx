@@ -21,7 +21,7 @@ export function CycleCard({ program, load, today }: { program: Program; load: We
   const c = programCycle(program.startedOn ?? today, today);
   const spike = load?.trend.status === 'spike';
   const deload = c.deloadWeek || spike;
-  return <Card accent={deload ? '#F5B841' : HYBRID_COLOR}>
+  return <Card accent={deload ? colors.amber : HYBRID_COLOR}>
     <Eyebrow>{program.name.toUpperCase()}</Eyebrow>
     <Text style={s.big}>Semana {c.cycleWeek} <Text style={s.unit}>de {c.cycleLength}</Text></Text>
     <View style={s.cycle}>{Array.from({ length: c.cycleLength }, (_, i) => <View key={i} style={[s.seg, i < c.cycleWeek && s.segOn, i === c.cycleLength - 1 && s.segDeload]}/>)}</View>
@@ -74,7 +74,7 @@ const s = StyleSheet.create({
   big: { color: colors.text, fontSize: 26, fontWeight: '800' }, unit: { color: colors.secondary, fontSize: 15, fontWeight: '700' },
   cycle: { flexDirection: 'row', gap: 5 }, seg: { flex: 1, height: 8, borderRadius: 4, backgroundColor: colors.graphite },
   segOn: { backgroundColor: HYBRID_COLOR }, segDeload: { borderWidth: 1, borderColor: colors.green },
-  msg: { color: colors.secondary, fontSize: 12, lineHeight: 18 }, warn: { color: '#F5B841', fontWeight: '700' }, note: { color: colors.muted, fontSize: 11 },
+  msg: { color: colors.secondary, fontSize: 12, lineHeight: 18 }, warn: { color: colors.amber, fontWeight: '700' }, note: { color: colors.muted, fontSize: 11 },
   bars: { flexDirection: 'row', gap: 8, height: 110, alignItems: 'flex-end' }, barCol: { flex: 1, alignItems: 'center', gap: 4, height: '100%' },
   barNum: { color: colors.text, fontSize: 11, fontWeight: '800' }, barTrack: { flex: 1, width: '70%', justifyContent: 'flex-end', backgroundColor: colors.surfaceRaised, borderRadius: 5, overflow: 'hidden' },
   barFill: { width: '100%', borderRadius: 5 }, barLabel: { color: colors.muted, fontSize: 9, fontWeight: '700' }, now: { color: colors.text },

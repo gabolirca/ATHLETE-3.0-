@@ -44,7 +44,7 @@ export function RoutineDiagnosisCard({ items, timesPerWeek, onTimesChange }: { i
     <Text style={s.q}>¿Cuántas veces a la semana harás esta rutina?</Text>
     <View style={s.chips}>{[1, 2, 3].map((n) => <Chip key={n} label={`${n}× por semana`} selected={timesPerWeek === n} onPress={() => onTimesChange(n)}/>)}</View>
     {d.trained.length ? <>
-      <Text style={[s.verdict, { color: low || high ? '#F5B841' : colors.green }]}>
+      <Text style={[s.verdict, { color: low || high ? colors.amber : colors.green }]}>
         {low || high ? [low ? `${low} ${low === 1 ? 'músculo queda bajo' : 'músculos quedan bajos'}` : '', high ? `${high} con demasiadas series` : ''].filter(Boolean).join(' y ') : 'Todo lo que trabajas queda en rango'}
       </Text>
       {d.trained.map((m) => <MuscleVolumeRow key={m.muscle} item={m} scaleMax={max}/>)}

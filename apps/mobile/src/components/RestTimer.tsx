@@ -77,7 +77,7 @@ export function RestTimerBar({ timer }: { timer: ReturnType<typeof useRestTimer>
   return <View style={s.bar} accessibilityLiveRegion="polite">
     <View style={[s.fill, { width: `${Math.round(progress * 100)}%` }]}/>
     <View style={s.row}>
-      <Ionicons name={timer.done ? 'flash' : 'timer-outline'} size={20} color={timer.done ? '#F5B841' : colors.text}/>
+      <Ionicons name={timer.done ? 'flash' : 'timer-outline'} size={20} color={timer.done ? colors.amber : colors.text}/>
       <View style={s.flex}>
         <Text style={s.title}>{timer.done ? '¡A darle! Siguiente serie' : `Descanso · ${formatClock(timer.remaining)}`}</Text>
         {timer.label ? <Text style={s.label} numberOfLines={1}>{timer.label}</Text> : null}
@@ -93,7 +93,7 @@ export function RestTimerBar({ timer }: { timer: ReturnType<typeof useRestTimer>
 
 const s = StyleSheet.create({
   bar: { position: 'absolute', left: 12, right: 12, bottom: 16, borderRadius: 16, backgroundColor: colors.surfaceRaised, borderWidth: 1, borderColor: colors.blue, overflow: 'hidden', shadowColor: '#000', shadowOpacity: 0.4, shadowRadius: 12, elevation: 8 },
-  fill: { position: 'absolute', left: 0, top: 0, bottom: 0, backgroundColor: '#10203F' },
+  fill: { position: 'absolute', left: 0, top: 0, bottom: 0, backgroundColor: colors.accentDeep },
   row: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 12 },
   flex: { flex: 1 },
   title: { color: colors.text, fontSize: 15, fontWeight: '800' },
@@ -161,15 +161,15 @@ const f = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.black, alignItems: 'center', justifyContent: 'center', padding: 28, gap: 22 },
   eyebrow: { color: colors.secondary, fontSize: 13, fontWeight: '800', letterSpacing: 2 },
   clock: { color: colors.text, fontSize: 96, fontWeight: '800', letterSpacing: -2, fontVariant: ['tabular-nums'] },
-  clockDone: { color: '#F5B841', fontSize: 64 },
+  clockDone: { color: colors.amber, fontSize: 64 },
   track: { width: '100%', height: 10, borderRadius: 5, backgroundColor: colors.surfaceRaised, overflow: 'hidden' },
   fill: { height: 10, borderRadius: 5, backgroundColor: colors.blue },
-  next: { color: '#9DBDFF', fontSize: 16, fontWeight: '700', textAlign: 'center' },
+  next: { color: colors.accentText, fontSize: 16, fontWeight: '700', textAlign: 'center' },
   primary: { minWidth: 220, alignItems: 'center', paddingVertical: 16, borderRadius: 16, backgroundColor: colors.blue },
   primaryText: { color: 'white', fontSize: 18, fontWeight: '800' },
   secondary: { minWidth: 160, alignItems: 'center', paddingVertical: 14, borderRadius: 14, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surfaceRaised },
   secondaryText: { color: colors.text, fontSize: 16, fontWeight: '800' },
   emergency: { position: 'absolute', bottom: 48, left: 28, right: 28, alignItems: 'center', paddingVertical: 16, borderRadius: 14, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' },
-  emergencyFill: { position: 'absolute', left: 0, top: 0, bottom: 0, backgroundColor: '#3A1D22' },
+  emergencyFill: { position: 'absolute', left: 0, top: 0, bottom: 0, backgroundColor: colors.redSoft },
   emergencyText: { color: colors.secondary, fontSize: 13, fontWeight: '700' },
 });

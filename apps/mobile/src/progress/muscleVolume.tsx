@@ -17,7 +17,7 @@ export function formatSets(n: number): string {
 }
 
 const STATUS = {
-  low: { label: 'Bajo', color: '#F5B841' },
+  low: { label: 'Bajo', color: colors.amber },
   ok: { label: 'En rango', color: colors.green },
   high: { label: 'Alto', color: colors.red },
   untracked: { label: '', color: colors.secondary },
@@ -57,7 +57,7 @@ const s = StyleSheet.create({
   range: { color: colors.muted, fontSize: 11, fontWeight: '600' },
   status: { width: 58, textAlign: 'right', fontSize: 11, fontWeight: '800' },
   track: { height: 8, borderRadius: 4, backgroundColor: colors.graphite, overflow: 'hidden' },
-  band: { position: 'absolute', top: 0, bottom: 0, backgroundColor: '#2F3A4C' },
+  band: { position: 'absolute', top: 0, bottom: 0, backgroundColor: colors.border },
   bar: { height: 8, borderRadius: 4, opacity: 0.95 },
   note: { color: colors.secondary, fontSize: 10, lineHeight: 15 },
 });

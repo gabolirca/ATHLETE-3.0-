@@ -49,4 +49,4 @@ function CardioRow({ item, unitSystem, onPress }: { item: Extract<HistoryItem, {
   </Pressable>;
 }
 
-const s=StyleSheet.create({heading:{flexDirection:'row',alignItems:'center',gap:11},icon:{width:40,height:40,borderRadius:13,backgroundColor:'#172849',alignItems:'center',justifyContent:'center'},cardioIcon:{backgroundColor:'#123326'},detail:{color:colors.secondary,fontSize:11,marginTop:4}});
+const s=StyleSheet.create({heading:{flexDirection:'row',alignItems:'center',gap:11},icon:{width:40,height:40,borderRadius:13,backgroundColor:colors.accentSoft,alignItems:'center',justifyContent:'center'},cardioIcon:{backgroundColor:colors.greenSoft},detail:{color:colors.secondary,fontSize:11,marginTop:4}});
