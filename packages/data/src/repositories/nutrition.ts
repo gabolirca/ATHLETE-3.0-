@@ -1,8 +1,10 @@
 import {
   LocalDate,
   LogMealEntryInput,
+  SaveNutritionPlanInput,
   SetNutritionTargetInput,
   type MealEntry,
+  type NutritionPlan,
   type NutritionTarget,
   type NutritionDaySummary,
   type NutritionRepository,
@@ -90,6 +92,34 @@ export class LocalNutritionRepository extends Repository implements NutritionRep
       const day = input(LocalDate, localDate);
       const row = (await this.store.select('nutrition_target', 'WHERE deleted_at IS NULL AND effective_from <= ? ORDER BY effective_from DESC LIMIT 1', [day]))[0];
       return row ? this.store.toContract<NutritionTarget>('nutrition_target', row) : null;
+    });
+  }
+
+  /**
+   * Un plan por día (igual que el índice único del servidor). Si el de ese día es propio se edita; si se lo
+   * asignó su nutriólogo, ese queda eliminado y se crea uno propio nuevo (el servidor no deja cambiar el origen).
+   */
+  savePlan(raw: SaveNutritionPlanInput): Promise<Result<NutritionPlan>> {
+    return guard(() => this.store.db.transaction(async (tx) => {
+      const i = input(SaveNutritionPlanInput, raw);
+      const existing = (await this.store.select('nutrition_plan', 'WHERE deleted_at IS NULL AND effective_from = ? LIMIT 1', [i.effectiveFrom], tx))[0];
+      let id = i.id;
+      if (existing && existing.source === 'assigned') await this.store.remove('nutrition_plan', existing.id, tx);
+      else if (existing) id = existing.id;
+      if (id === i.id && await this.store.get('nutrition_plan', id, tx)) fail('DUPLICATE', 'El plan ya existe.');
+      const row = await this.store.upsert('nutrition_plan', id, {
+        effective_from: i.effectiveFrom, name: i.name, meals: i.meals, notes: i.notes,
+        source: 'self', assigned_by: null, assigned_by_name: null,
+      }, tx);
+      return this.store.toContract<NutritionPlan>('nutrition_plan', row);
+    }));
+  }
+
+  getPlanFor(localDate: LocalDate): Promise<Result<NutritionPlan | null>> {
+    return guard(async () => {
+      const day = input(LocalDate, localDate);
+      const row = (await this.store.select('nutrition_plan', 'WHERE deleted_at IS NULL AND effective_from <= ? ORDER BY effective_from DESC LIMIT 1', [day]))[0];
+      return row ? this.store.toContract<NutritionPlan>('nutrition_plan', row) : null;
     });
   }
 }

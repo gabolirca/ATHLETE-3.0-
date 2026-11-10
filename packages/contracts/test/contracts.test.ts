@@ -200,3 +200,20 @@ describe('0.5.0 — metas nutricionales con origen', () => {
     expect(NutritionTargetSource.options).toEqual(['estimated', 'professional', 'manual']);
   });
 });
+
+describe('0.8.0 — plan nutricional SMAE', () => {
+  it('valida grupos, pasos de ½ y hora; los ids coinciden con el dominio', async () => {
+    const { SaveNutritionPlanInput, SmaeGroupId, NutritionPlanMeal } = await import('../src/nutrition');
+    const { SMAE_GROUP_IDS } = await import('../../domain/src/smae');
+    expect([...SmaeGroupId.options].sort()).toEqual([...SMAE_GROUP_IDS].sort());
+    const meal = NutritionPlanMeal.parse({ label: 'Desayuno', equivalents: { frutas: 1, cereales_sin_grasa: 2.5 } });
+    expect(meal).toEqual({ label: 'Desayuno', time: null, equivalents: { frutas: 1, cereales_sin_grasa: 2.5 }, note: null });
+    expect(NutritionPlanMeal.safeParse({ ...meal, equivalents: { pizza: 1 } }).success).toBe(false);
+    expect(NutritionPlanMeal.safeParse({ ...meal, equivalents: { frutas: 1.3 } }).success).toBe(false);
+    expect(NutritionPlanMeal.safeParse({ ...meal, time: '24:00' }).success).toBe(false);
+    expect(NutritionPlanMeal.safeParse({ ...meal, extra: 1 }).success).toBe(false);
+    const base = { id: '0190f0f0-0000-7000-8000-000000000001', effectiveFrom: '2026-11-10', name: 'Plan', meals: [meal] };
+    expect(SaveNutritionPlanInput.parse(base).notes).toBeNull();
+    expect(SaveNutritionPlanInput.safeParse({ ...base, meals: [] }).success).toBe(false);
+  });
+});

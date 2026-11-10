@@ -92,7 +92,7 @@ describe('nutrición (local)', () => {
     await d2.close();
     const check = await openNodeSqlite(path);
     expect((await check.get<{ user_version: number }>('PRAGMA user_version'))?.user_version).toBe(LOCAL_SCHEMA_VERSION);
-    expect(LOCAL_SCHEMA_VERSION).toBe(8);
+    expect(LOCAL_SCHEMA_VERSION).toBe(9);
     await check.close();
   });
 });
@@ -123,6 +123,44 @@ describe('metas nutricionales (0.5.0)', () => {
     await raw.close();
     const d2 = await openDevice(path, USER, new FakeTransport());
     expect(expectOk(await d2.nutrition.getTargetFor('2026-11-02'))).toMatchObject({ energyKcal: 2000, source: 'manual' });
+    await d2.close();
+  });
+});
+
+describe('plan nutricional SMAE (0.8.0)', () => {
+  const MEALS = [
+    { label: 'Desayuno', time: '08:00', equivalents: { cereales_sin_grasa: 2, frutas: 1 }, note: null },
+    { label: 'Comida', time: '15:00', equivalents: { verduras: 2, aoa_bajo: 3 }, note: 'Sin refresco' },
+  ];
+
+  it('guarda, edita el del mismo día y devuelve el vigente', async () => {
+    const d = await openDevice(path, USER, new FakeTransport());
+    expect(expectOk(await d.nutrition.getPlanFor('2026-11-03'))).toBeNull();
+    const first = expectOk(await d.nutrition.savePlan({ id: newId(), effectiveFrom: '2026-11-01', name: 'Base', meals: MEALS }));
+    expect(first).toMatchObject({ source: 'self', assignedBy: null, notes: null, meals: MEALS });
+    const edited = expectOk(await d.nutrition.savePlan({ id: newId(), effectiveFrom: '2026-11-01', name: 'Base v2', meals: MEALS.slice(0, 1) }));
+    expect(edited.id).toBe(first.id);
+    expect(expectOk(await d.nutrition.getPlanFor('2026-11-04'))).toMatchObject({ name: 'Base v2', meals: [MEALS[0]] });
+    const bad = await d.nutrition.savePlan({ id: newId(), effectiveFrom: '2026-11-02', name: 'Mal', meals: [{ label: 'X', equivalents: { pizza: 1 } }] as never });
+    expect(bad.ok === false && bad.error.code).toBe('VALIDATION_FAILED');
+    await d.close();
+  });
+
+  it('si el plan del día lo asignó el nutriólogo, guardar crea uno propio y elimina el asignado', async () => {
+    const d1 = await openDevice(path, USER, new FakeTransport());
+    await d1.close();
+    const raw = await openNodeSqlite(path);
+    const assigned = newId();
+    await raw.run(
+      `INSERT INTO nutrition_plans (id, user_id, created_at, updated_at, deleted_at, revision, effective_from, name, meals, notes, source, assigned_by, assigned_by_name)
+       VALUES (?, ?, '2026-11-01T00:00:00Z', '2026-11-01T00:00:00Z', NULL, 3, '2026-11-01', 'Del nutri', ?, NULL, 'assigned', ?, 'Dra. Ana')`,
+      [assigned, USER, JSON.stringify(MEALS), newId()]);
+    await raw.close();
+    const d2 = await openDevice(path, USER, new FakeTransport());
+    expect(expectOk(await d2.nutrition.getPlanFor('2026-11-02'))).toMatchObject({ id: assigned, source: 'assigned', assignedByName: 'Dra. Ana' });
+    const mine = expectOk(await d2.nutrition.savePlan({ id: newId(), effectiveFrom: '2026-11-01', name: 'Mío', meals: MEALS }));
+    expect(mine.id).not.toBe(assigned);
+    expect(expectOk(await d2.nutrition.getPlanFor('2026-11-02'))).toMatchObject({ id: mine.id, source: 'self' });
     await d2.close();
   });
 });

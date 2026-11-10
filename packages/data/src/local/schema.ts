@@ -125,6 +125,11 @@ const MIGRATIONS: ReadonlyArray<Migration> = [
   },
   // v8 (Nutrición Pro): estimación original de la IA en la comida.
   async (tx) => { await addColumnIfMissing(tx, 'meal_entries', 'ai_estimate', 'TEXT'); },
+  // v9 (contratos 0.8.0): plan nutricional por equivalentes SMAE (propio o asignado por el nutriólogo).
+  [
+    entityTable(ENTITIES.nutrition_plan),
+    `CREATE INDEX IF NOT EXISTS nutrition_plans_from_idx ON nutrition_plans (effective_from DESC);`,
+  ].join('\n'),
 ];
 
 export const LOCAL_SCHEMA_VERSION = MIGRATIONS.length;

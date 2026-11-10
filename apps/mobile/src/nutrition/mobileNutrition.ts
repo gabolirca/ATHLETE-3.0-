@@ -1,4 +1,5 @@
-import type { MealEntry, NutritionDaySummary, NutritionRepository, NutritionTarget, NutritionTargetSource, Result } from '@athlete/contracts';
+import type { MealEntry, NutritionDaySummary, NutritionPlan, NutritionPlanMeal, NutritionRepository, NutritionTarget, NutritionTargetSource, Result } from '@athlete/contracts';
+import type { Macros } from '@athlete/domain';
 import { useMemo } from 'react';
 import { useAthleteData } from '@/data/AthleteDataProvider';
 import { emitLocalChange } from '@/data/localChanges';
@@ -16,7 +17,12 @@ export type MobileNutrition = {
   deleteMeal(id: string): Promise<void>;
   getTarget(localDate: string): Promise<NutritionTarget | null>;
   setTarget(target: TargetDraft): Promise<NutritionTarget>;
+  getPlan(localDate: string): Promise<NutritionPlan | null>;
+  /** Guarda el plan propio y su meta del día (kcal y macros calculados con el SMAE, origen "De tu nutriólogo"). */
+  savePlan(plan: SavePlanDraft): Promise<NutritionPlan>;
 };
+
+export type SavePlanDraft = { effectiveFrom: string; name: string; meals: NutritionPlanMeal[]; notes: string | null; totals: Macros };
 
 export type TargetDraft = {
   effectiveFrom: string;
@@ -47,6 +53,16 @@ export function createMobileNutrition(repo: NutritionRepository, newId: () => st
     deleteMeal: (id) => write(() => repo.deleteMeal(id)),
     getTarget: async (localDate) => value(await repo.getTargetFor(localDate)),
     setTarget: (target) => write(() => repo.setTarget({ ...target, id: newId() })),
+    getPlan: async (localDate) => value(await repo.getPlanFor(localDate)),
+    async savePlan({ totals, ...plan }) {
+      const saved = value(await repo.savePlan({ ...plan, id: newId() }));
+      value(await repo.setTarget({
+        id: newId(), effectiveFrom: plan.effectiveFrom, energyKcal: totals.kcal,
+        proteinG: totals.proteinG, carbsG: totals.carbsG, fatG: totals.fatG, source: 'professional',
+      }));
+      notify();
+      return saved;
+    },
   };
 }
 

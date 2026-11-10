@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import type { MealEntry, NutritionDaySummary, NutritionTarget } from '@athlete/contracts';
+import type { MealEntry, NutritionDaySummary, NutritionPlan, NutritionTarget } from '@athlete/contracts';
 import { ActionButton } from '@/components/ActionButton';
 import { Card } from '@/components/Card';
 import { DatePickerSheet } from '@/components/DatePicker';
@@ -11,10 +11,13 @@ import { Screen } from '@/components/Screen';
 import { Eyebrow, Title } from '@/components/Typography';
 import { MEAL_TYPES, dayLabel, formatAmount, localDateOfDevice, shiftDay, timeOf } from '@/nutrition/mealForm';
 import { useNutrition } from '@/nutrition/mobileNutrition';
+import { NutritionOptions } from '@/nutrition/NutritionOptions';
+import { PlanView } from '@/nutrition/PlanView';
+import { fetchProStatus } from '@/pro/proApi';
 import { TARGET_SOURCE_LABEL } from '@/nutrition/targetLabels';
 import { colors } from '@/theme/colors';
 
-type DayState = { meals: MealEntry[]; summary: NutritionDaySummary; target: NutritionTarget | null } | null;
+type DayState = { meals: MealEntry[]; summary: NutritionDaySummary; target: NutritionTarget | null; plan: NutritionPlan | null } | null;
 
 export default function NutritionScreen() {
   const router = useRouter();
@@ -24,13 +27,18 @@ export default function NutritionScreen() {
   const [day, setDay] = useState<DayState>(null);
   const [error, setError] = useState<string | null>(null);
   const [calendar, setCalendar] = useState(false);
+  const [isNutritionist, setIsNutritionist] = useState(false);
 
   const load = useCallback(() => {
     if (!nutrition) return;
-    Promise.all([nutrition.loadDay(date), nutrition.getTarget(date)]).then(([d, target]) => { setDay({ ...d, target }); setError(null); })
+    Promise.all([nutrition.loadDay(date), nutrition.getTarget(date), nutrition.getPlan(date).catch(() => null)])
+      .then(([d, target, plan]) => { setDay({ ...d, target, plan }); setError(null); })
       .catch((cause: unknown) => setError(cause instanceof Error ? cause.message : 'No se pudieron cargar tus comidas.'));
   }, [nutrition, date]);
   useFocusEffect(load);
+  useFocusEffect(useCallback(() => {
+    fetchProStatus().then((s) => setIsNutritionist(Boolean(s?.isNutritionist))).catch(() => undefined);
+  }, []));
 
   const summary = day?.summary;
   const meals = day?.meals ?? [];
@@ -38,6 +46,12 @@ export default function NutritionScreen() {
 
   return <Screen>
     <View><Eyebrow>REGISTRO DE COMIDAS</Eyebrow><Title>Nutrición</Title></View>
+
+    {isNutritionist ? <Pressable accessibilityRole="button" accessibilityLabel="Modo nutriólogo" onPress={() => router.push('/pro' as never)} style={s.cta}>
+      <Ionicons name="people-outline" size={18} color={colors.blue}/>
+      <View style={s.flex}><Text style={s.mealText}>Modo nutriólogo</Text><Text style={s.hint}>Tus clientes y sus planes</Text></View>
+      <Ionicons name="chevron-forward" size={18} color={colors.secondary}/>
+    </Pressable> : null}
 
     <View style={s.dayRow}>
       <Pressable accessibilityRole="button" accessibilityLabel="Día anterior" onPress={() => setDate(shiftDay(date, -1))} style={s.arrow}>
@@ -67,11 +81,16 @@ export default function NutritionScreen() {
       {summary && summary.entriesMissingEnergy > 0 ? <Text style={s.hint}>
         {summary.entriesMissingEnergy === 1 ? '1 comida no tiene' : `${summary.entriesMissingEnergy} comidas no tienen`} calorías: lo consumido es al menos esto.
       </Text> : null}
-    </Card> : day && !error ? <Pressable accessibilityRole="button" onPress={() => router.push('/nutrition/plan')} style={s.cta}>
-      <Ionicons name="flag-outline" size={18} color={colors.blue}/>
-      <View style={s.flex}><Text style={s.mealText}>Define tu meta diaria</Text><Text style={s.hint}>Captura el plan de tu nutriólogo o calcula uno provisional.</Text></View>
-      <Ionicons name="chevron-forward" size={18} color={colors.secondary}/>
-    </Pressable> : null}
+    </Card> : day && !error ? <View style={s.group}>
+      <Eyebrow>ELIGE TU PLAN DE NUTRICIÓN</Eyebrow>
+      <NutritionOptions/>
+    </View> : null}
+
+    {day?.plan ? <Card>
+      <View style={s.targetHead}><Eyebrow>TU PLAN</Eyebrow>
+        <Pressable accessibilityRole="button" accessibilityLabel="Editar plan" onPress={() => router.push('/nutrition/plan-editor' as never)}><Text style={s.link}>Editar</Text></Pressable></View>
+      <PlanView plan={day.plan}/>
+    </Card> : null}
 
     {!day?.target && summary && summary.entryCount > 0 ? <Card accent={colors.blue}>
       <Eyebrow>TOTAL DEL DÍA</Eyebrow>

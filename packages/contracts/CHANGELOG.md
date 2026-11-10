@@ -4,6 +4,17 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y 
 Mientras la versión sea `0.x`, los contratos son **borrador**: pueden cambiar sin incremento mayor,
 pero todo cambio debe registrarse aquí y revisarse con Codex (ADR-0001, regla 4).
 
+## [0.8.0] — 2026-11-10 — Plan nutricional SMAE y modo nutriólogo (Claude, aprobado por el propietario)
+
+Cambio aditivo.
+
+### Añadido
+- `nutrition`: `SmaeGroupId`, `PlanEquivalents`, `NutritionPlanMeal`, `NutritionPlanSource` (`self` | `assigned`),
+  `NutritionPlan` y `SaveNutritionPlanInput`. Entidad de sync `nutrition_plan`.
+- `NutritionRepository.savePlan()` y `getPlanFor()`.
+- Servidor: migración `20261111000100` (tabla `nutrition_plans`, rol `nutritionist`, vínculo con código de invitación
+  y RPC `pro_*`). El nutriólogo asigna el plan y la meta del día; le llegan al cliente por su sync.
+
 ## [0.6.0] — 2026-11-08 — Catálogo con rasgos y nivel de acceso (Claude, aprobado por el propietario)
 
 Cambio aditivo.
