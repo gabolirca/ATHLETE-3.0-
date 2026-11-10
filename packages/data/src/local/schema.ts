@@ -123,6 +123,8 @@ const MIGRATIONS: ReadonlyArray<Migration> = [
   async (tx) => {
     for (const column of ['goal_weight_kg', 'goal_waist_cm', 'goal_chest_cm', 'goal_hip_cm']) await addColumnIfMissing(tx, 'profiles', column, 'REAL');
   },
+  // v8 (Nutrición Pro): estimación original de la IA en la comida.
+  async (tx) => { await addColumnIfMissing(tx, 'meal_entries', 'ai_estimate', 'TEXT'); },
 ];
 
 export const LOCAL_SCHEMA_VERSION = MIGRATIONS.length;

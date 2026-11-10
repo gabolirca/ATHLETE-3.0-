@@ -25,6 +25,8 @@ export const MealEntry = SyncedRecord.extend({
   ...nutrientFields,
   source: DataSource,
   notes: Notes.nullable(),
+  /** Nutrición Pro: lo que reconoció la IA sin corregir (platillos, equivalentes SMAE, confianza, modelo). */
+  aiEstimate: z.record(z.string(), z.unknown()).nullable().optional(),
 });
 export type MealEntry = z.infer<typeof MealEntry>;
 
@@ -40,6 +42,7 @@ export const LogMealEntryInput = z.object({
   fatG: nutrientFields.fatG.default(null),
   source: DataSource.default('manual'),
   notes: Notes.nullable().default(null),
+  aiEstimate: z.record(z.string(), z.unknown()).nullable().default(null),
 });
 export type LogMealEntryInput = z.input<typeof LogMealEntryInput>;
 

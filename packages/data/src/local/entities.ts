@@ -201,6 +201,7 @@ export const ENTITIES: Readonly<Record<SyncEntity, EntityMeta>> = {
     columns: {
       consumed_at: 'text', time_zone: 'text', local_date: 'text', meal_type: 'text', description: 'text',
       energy_kcal: 'real', protein_g: 'real', carbs_g: 'real', fat_g: 'real', source: 'text', notes: 'text',
+      ai_estimate: 'json',
     },
     toContract: parseWith(MealEntry),
   },

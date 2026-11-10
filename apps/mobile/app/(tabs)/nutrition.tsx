@@ -108,7 +108,8 @@ export default function NutritionScreen() {
       </View>;
     })}
 
-    {!isFuture ? <ActionButton disabled={!nutrition} onPress={() => router.push({ pathname: '/nutrition/new', params: { date } })}>Registrar comida</ActionButton> : null}
+    {!isFuture ? <ActionButton disabled={!nutrition} onPress={() => router.push({ pathname: '/nutrition/photo', params: { date } })}>📷 Comida por foto</ActionButton> : null}
+    {!isFuture ? <ActionButton secondary disabled={!nutrition} onPress={() => router.push({ pathname: '/nutrition/new', params: { date } })}>Registrar a mano</ActionButton> : null}
   </Screen>;
 }
 
