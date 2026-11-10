@@ -18,6 +18,7 @@ import { AdherenceCard, BenchmarksCard, CycleCard } from '@/progress/HybridProgr
 import { StreakCard } from '@/progress/StreakCard';
 import { localDateOfDevice } from '@/lib/localDate';
 import { BodyMeasurementSchema } from '@/data/trainingSchemas';
+import { BodyGoalCard } from '@/progress/BodyGoalCard';
 import { colors } from '@/theme/colors';
 
 const kinds = [
@@ -40,11 +41,13 @@ export default function ProgressScreen() {
   const [inputKey, setInputKey] = useState(0);
   const [formError, setFormError] = useState('');
   const [saving, setSaving] = useState(false);
+  const [goals, setGoals] = useState<Record<BodyMeasurement['type'], number | null> | null>(null);
   const refresh = useCallback(async () => {
     if (!repository) return;
     try { setSummary(await repository.getProgress()); setLoadingError(false); } catch { setLoadingError(true); }
     repository.getWeeklyMuscleVolume().then(setVolume).catch(() => setVolume(null));
     repository.getWeeklyLoad(4).then(setLoad).catch(() => setLoad(null));
+    repository.getBodyGoals().then(setGoals).catch(() => setGoals(null));
     (async () => {
       const [program] = await repository.listPrograms();
       const [weeks, benchmarks, streak] = await Promise.all([
@@ -98,6 +101,8 @@ export default function ProgressScreen() {
       <ActionButton onPress={addMeasurement} loading={saving}>Guardar medición</ActionButton>
       <Text style={s.note}>Se guarda en tu teléfono y, si iniciaste sesión, se respalda en tu cuenta.</Text>
     </Card>
+    <BodyGoalCard kind={selectedKind} measurements={summary?.measurements ?? []} goal={goals?.[kind] ?? null}
+      onSaveGoal={async (v) => { await repository?.saveBodyGoal(kind, v); setGoals(await repository!.getBodyGoals()); }}/>
     {summary?.measurements.length ? summary.measurements.map((item) => <Card key={item.id}><Row><View><Label>{kinds.find((entry) => entry.id === item.type)?.title ?? 'Medición'}</Label><Text style={s.note}>{new Date(item.measuredAt).toLocaleString('es-MX', { dateStyle: 'medium', timeStyle: 'short' })}</Text></View><Text style={s.record}>{item.value} {item.unit}</Text><Pressable accessibilityRole="button" accessibilityLabel="Eliminar medición" onPress={() => void removeMeasurement(item)}><Text style={s.delete}>×</Text></Pressable></Row></Card>) : <EmptyState icon="body-outline" title="Sin mediciones registradas" detail="Agrega el primer peso o medida para empezar un historial real."/>}
   </Screen>;
 }

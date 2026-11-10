@@ -119,6 +119,10 @@ const MIGRATIONS: ReadonlyArray<Migration> = [
     await tx.exec('CREATE INDEX IF NOT EXISTS training_blocks_day_idx ON training_blocks (training_day_id);');
     await tx.exec('CREATE INDEX IF NOT EXISTS session_block_results_session_idx ON session_block_results (session_id);');
   },
+  // v7 (10-nov): metas corporales en el perfil (peso, cintura, pecho y cadera).
+  async (tx) => {
+    for (const column of ['goal_weight_kg', 'goal_waist_cm', 'goal_chest_cm', 'goal_hip_cm']) await addColumnIfMissing(tx, 'profiles', column, 'REAL');
+  },
 ];
 
 export const LOCAL_SCHEMA_VERSION = MIGRATIONS.length;

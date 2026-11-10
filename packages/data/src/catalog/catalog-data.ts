@@ -7,7 +7,7 @@
  * Reglas: los números (→ UUID) y los slugs NUNCA cambian ni se reutilizan; solo se agregan al final.
  * Para retirar un ejercicio se archiva en una migración, no se borra de aquí.
  */
-export const CATALOG_VERSION = '2026-11-09.2';
+export const CATALOG_VERSION = '2026-11-10.1';
 
 // [n, slug, nombre]
 export const MUSCLE_GROUPS: ReadonlyArray<readonly [number, string, string]> = [
@@ -201,4 +201,23 @@ export const EXERCISES: ReadonlyArray<CatalogExerciseRow> = [
   [120, 'sled-pull', 'Arrastre de trineo', 'external', [2, 9], [6, 10], [23], 'horizontal_pull', C, 0, P],
   [121, 'burpee-broad-jump', 'Burpee con salto largo', 'bodyweight', [12], [8, 10, 1], [5], 'power', C, 0, P],
   [122, 'sandbag-lunge', 'Zancadas con sandbag', 'external', [8, 10], [7, 9], [24], 'lunge', C, 0, P],
+  // --- 10-nov: peso corporal y core por tiempo (pruebas reales de Gabo) ---
+  [123, 'mountain-climber', 'Escaladores', 'bodyweight', [7], [12, 3], [5], 'core_anti_extension', C, 0, F],
+  [124, 'jumping-jack', 'Jumping jacks', 'bodyweight', [12], [11], [5], 'power', C, 0, F],
+  [125, 'bodyweight-lunge', 'Zancadas sin peso', 'bodyweight', [8, 10], [9], [5], 'lunge', C, 0, F],
+  [126, 'jump-squat', 'Sentadilla con salto', 'bodyweight', [8, 10], [11], [5], 'power', C, 0, F],
+  [127, 'wall-sit', 'Sentadilla isométrica en pared', 'time', [8], [10], [5], 'squat', I, 0, F],
+  [128, 'diamond-push-up', 'Lagartijas diamante', 'bodyweight', [5, 1], [3], [5], 'horizontal_push', C, 0, P],
+  [129, 'pike-push-up', 'Lagartijas pike', 'bodyweight', [3], [5], [5], 'vertical_push', C, 0, P],
+  [130, 'incline-push-up', 'Lagartijas inclinadas', 'bodyweight', [1], [3, 5], [5, 8], 'horizontal_push', C, 0, F],
+  [131, 'superman', 'Superman', 'bodyweight', [14], [10], [5], 'hip_extension', I, 0, F],
+  [132, 'bicycle-crunch', 'Crunch bicicleta', 'bodyweight', [7], [], [5], 'core_rotation', I, 0, F],
+  [133, 'lying-leg-raise', 'Elevación de piernas acostado', 'bodyweight', [7], [], [5], 'core_flexion', I, 0, F],
+  [134, 'v-up', 'V-ups', 'bodyweight', [7], [], [5], 'core_flexion', I, 0, P],
+  [135, 'flutter-kicks', 'Patadas de tijera', 'time', [7], [], [5], 'core_flexion', I, 0, F],
+  [136, 'bear-crawl', 'Caminata de oso', 'time', [12], [3, 7], [5], 'carry', C, 0, P],
+  [137, 'single-leg-glute-bridge', 'Puente de glúteo a una pierna', 'bodyweight', [10], [9], [5], 'hip_extension', I, 1, P],
+  [138, 'bodyweight-calf-raise', 'Elevación de pantorrillas sin peso', 'bodyweight', [11], [], [5], 'calf_raise', I, 0, F],
+  [139, 'plank-shoulder-tap', 'Plancha con toque de hombro', 'bodyweight', [7], [3], [5], 'core_anti_extension', I, 0, P],
+  [140, 'l-sit', 'L-sit', 'time', [7], [5], [5], 'core_flexion', I, 0, P],
 ];

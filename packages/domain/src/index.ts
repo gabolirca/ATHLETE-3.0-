@@ -16,3 +16,4 @@ export * from './load';
 export * from './templates/moreTemplates';
 export * from './streak';
 export * from './benchmarks';
+export * from './bodyweight';

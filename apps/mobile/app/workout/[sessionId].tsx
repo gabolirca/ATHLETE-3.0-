@@ -1,19 +1,21 @@
 import { useCallback, useRef, useState } from 'react';
 import { DEFAULT_REST_SECONDS, RestTimerBar, RestTimerFullScreen, useRestTimer } from '@/components/RestTimer';
 import { useStrictRest } from '@/settings/devicePrefs';
+import { formatWeight, useWeightUnits, type WeightUnit } from '@/settings/weightUnits';
+import { clock } from '@/workout/blocks';
 import { exerciseProgress, isLoggedWorkingSet, nextStepLabel, workoutGuide, type ExerciseProgress, type ExerciseStatus } from '@/workout/guide';
 import { NewRecordBadge } from '@/progress/records';
 import { exerciseSuggestion, formatSuggestion } from '@/workout/coach';
 import { BlockHeader, isWholeBlock } from '@/workout/blocks';
 import { TimedSetEditor } from '@/components/TimedSetEditor';
 import { formatPrescription } from '@/program/format';
-import type { SessionExercise, WorkoutBlock } from '@/data/trainingTypes';
+import type { SessionExercise, TrainingSet, WorkoutBlock } from '@/data/trainingTypes';
 import { AppInput } from '@/components/AppInput';
 import { isPastWorkout } from '@/data/OfficialTrainingRepository';
 import { dayLabel, localDateOfDevice } from '@/lib/localDate';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { ActionButton } from '@/components/ActionButton';
 import { Card } from '@/components/Card';
 import { EmptyState } from '@/components/EmptyState';
@@ -41,6 +43,8 @@ export default function WorkoutScreen() {
   const timer = useRestTimer();
   const timerStarted = useRef(new Set<string>());
   const [toggled, setToggled] = useState<Set<string>>(new Set());
+  const [openSets, setOpenSets] = useState<Set<string>>(new Set());
+  const [units, setUnit] = useWeightUnits();
   const [strictRest] = useStrictRest();
   const [sessionRpe, setSessionRpe] = useState<number | null>(null);
 
@@ -77,6 +81,13 @@ export default function WorkoutScreen() {
   const hasBlocks = blocks.length > 0;
   const active = detail.workout.state === 'active';
   const prescription = (e: SessionExercise) => formatPrescription({ sets: e.setsTarget, repsMin: e.repsTarget, repsMax: e.repsMax ?? e.repsTarget, durationSeconds: e.targetDurationSeconds ?? null, distanceMeters: e.targetDistanceMeters ?? null, perSide: e.perSide ?? false });
+  const confirmRemove = (exercise: SessionExercise) => Alert.alert(`¿Quitar ${exercise.exerciseName}?`, exercise.sets.some((x) => x.reps !== null || x.durationSeconds || x.distanceMeters) ? 'Se borran también sus series de hoy.' : undefined, [
+    { text: 'Cancelar', style: 'cancel' },
+    { text: 'Quitar', style: 'destructive', onPress: () => { void (async () => {
+      try { await repository?.removeWorkoutExercise(sessionId, exercise.id); setActionError(''); await refresh(false); }
+      catch { setActionError('No se pudo quitar el ejercicio. Intenta de nuevo.'); }
+    })(); } },
+  ]);
   const refreshQuiet = async () => { const updated = repository ? await repository.getWorkout(sessionId) : null; if (updated) setDetail(updated); };
   const renderExercise = (exercise: SessionExercise, exIndex: number) => {
       const status = guide.statuses[exIndex] ?? 'free';
@@ -97,14 +108,14 @@ export default function WorkoutScreen() {
         </View>
         <Text style={s.exerciseName}>{exercise.exerciseName}</Text>
         <Text style={s.detail}>{progress.target !== null ? (progress.complete ? `${progress.done} de ${progress.target} series hechas` : `Serie ${progress.done + 1} de ${progress.target}`) : `${progress.done} ${progress.done === 1 ? 'serie' : 'series'}`}{exercise.restSeconds ? ` · descanso ${exercise.restSeconds} s` : ''}</Text>
-        {!open && loggedSets.length ? <Text style={s.summary}>{loggedSets.map((x) => `${x.weightKg ?? '—'}×${x.reps}`).join(' · ')}</Text> : null}
+        {!open && loggedSets.length ? <Text style={s.summary}>{loggedSets.map((x) => setSummary(x, units[exercise.exerciseId] ?? 'kg')).join(' · ')}</Text> : null}
       </View>
       {open ? <Pressable accessibilityRole="button" accessibilityLabel={`Agregar serie a ${exercise.exerciseName}`} onPress={async () => { try { await repository?.addSet(sessionId, exercise.id); setActionError(''); await refresh(false); } catch { setActionError('No se pudo agregar la serie. Intenta de nuevo.'); } }} style={s.addSet}><Ionicons name="add" size={18} color={colors.blue}/><Text style={s.addSetText}>Serie</Text></Pressable>
         : <Ionicons name="chevron-down" size={18} color={colors.secondary}/>}
       </Row></Card></Pressable>
       {open ? <>
       {exercise.previous ? <Text style={s.previous}>
-        La vez pasada · {dayLabel(exercise.previous.localDate, localDateOfDevice(new Date()))}: {exercise.previous.sets.map((p) => `${p.weightKg ?? '—'}×${p.reps ?? '—'}`).join(' · ')}
+        La vez pasada · {dayLabel(exercise.previous.localDate, localDateOfDevice(new Date()))}: {exercise.previous.sets.map((p) => p.weightKg === null ? `${p.reps ?? '—'} reps` : `${formatWeight(p.weightKg, units[exercise.exerciseId] ?? 'kg')} × ${p.reps ?? '—'}`).join(' · ')}
       </Text> : null}
       {suggestion ? <View style={s.suggestBox} accessibilityLabel={`Sugerencia de hoy: ${formatSuggestion(suggestion)}. ${suggestion.reason}`}>
         <Text style={s.suggestTitle}>Sugerencia de hoy · {formatSuggestion(suggestion)}</Text>
@@ -113,10 +124,35 @@ export default function WorkoutScreen() {
       <NewRecordBadge records={exercise.newRecords ?? []}/>
       {exercise.modality === 'cardio' || exercise.loadType === 'time' ? exercise.sets.filter((set, i) => i < Math.max(exercise.setsTarget ?? 1, exercise.sets.filter((x) => x.durationSeconds || x.distanceMeters).length + (active ? 1 : 0))).map((set, index) =>
         <TimedSetEditor key={set.id} set={set} label={(exercise.setsTarget ?? 1) > 1 ? `SERIE ${index + 1}` : 'REGISTRO'} targetSeconds={exercise.targetDurationSeconds ?? null} targetMeters={exercise.targetDistanceMeters ?? null}
-          onSave={async (values) => { await repository?.saveSet(sessionId, set.id, values); await refreshQuiet(); }}/>)
-      : exercise.sets.filter((set) => !(progress.complete && set.reps === null && set.weightKg === null && !toggled.has(exercise.id))).map((set, index) => {
-        const prev = exercise.previous?.sets[index] ?? null;
-        return <SetEditor key={set.id} set={set} targetRir={exercise.targetRir ?? null} previous={prev ? { weightKg: prev.weightKg, reps: prev.reps } : null} suggestion={suggestion ? { weightKg: suggestion.weightKg, reps: suggestion.reps } : null} onSave={async (values) => {
+          withTimer={exercise.loadType === 'time'}
+          onSave={async (values) => {
+            await repository?.saveSet(sessionId, set.id, values);
+            const updated = repository ? await repository.getWorkout(sessionId) : null;
+            if (updated) setDetail(updated);
+            if (active && exercise.loadType === 'time' && !timerStarted.current.has(set.id)) {
+              timerStarted.current.add(set.id);
+              const finishedAll = updated ? workoutGuide(updated.exercises).allComplete : false;
+              if (!finishedAll) timer.start(exercise.restSeconds ?? DEFAULT_REST_SECONDS, updated ? nextStepLabel(updated.exercises, exIndex) : `Siguiente: ${exercise.exerciseName}`);
+            }
+          }}/>)
+      : (() => {
+        const unit: WeightUnit = units[exercise.exerciseId] ?? 'kg';
+        const isDone = (x: TrainingSet) => isLoggedWorkingSet(x) || (x.isWarmup && x.reps !== null);
+        const firstOpen = exercise.sets.find((x) => !isDone(x)) ?? null;
+        // Una serie hecha se pliega cuando ya respondiste el esfuerzo o ya registraste la siguiente: así no se cierra mientras eliges.
+        const folded = (x: TrainingSet) => isDone(x) && !openSets.has(x.id) && (x.rir !== null || x.isWarmup || exercise.sets.some((y) => y.setIndex > x.setIndex && isDone(y)));
+        const showCurrent = firstOpen !== null && !(progress.complete && !toggled.has(exercise.id));
+        const visible = exercise.sets.filter((x) => isDone(x) || (showCurrent && x.id === firstOpen?.id));
+        return visible.map((set) => folded(set)
+          ? <Pressable key={set.id} accessibilityRole="button" accessibilityLabel={`Serie ${set.setIndex + 1} hecha: ${setSummary(set, unit)}. Tocar para editar`} onPress={() => setOpenSets((cur) => new Set(cur).add(set.id))} style={s.doneSet}>
+              <Text style={s.doneSetText}>✓ SERIE {set.setIndex + 1}{exercise.setsTarget && set.setIndex < exercise.setsTarget ? `/${exercise.setsTarget}` : ''}{set.isWarmup ? ' · calentamiento' : ''}</Text>
+              <Text style={s.doneSetValue}>{setSummary(set, unit)}{set.rir !== null ? ` · ${set.rir} en reserva` : ''}</Text>
+            </Pressable>
+          : renderSetEditor(set, unit));
+        function renderSetEditor(set: TrainingSet, unit: WeightUnit) {
+        const prev = exercise.previous?.sets[set.setIndex] ?? null;
+        return <SetEditor key={set.id} set={set} unit={unit} onUnitChange={(u) => setUnit(exercise.exerciseId, u)} bodyweight={exercise.loadType === 'bodyweight' || exercise.loadType === 'assisted'} total={exercise.setsTarget}
+          targetRir={exercise.targetRir ?? null} previous={prev ? { weightKg: prev.weightKg, reps: prev.reps } : null} suggestion={suggestion ? { weightKg: suggestion.weightKg, reps: suggestion.reps } : null} onSave={async (values) => {
           await repository?.saveSet(sessionId, set.id, values);
           const updated = repository ? await repository.getWorkout(sessionId) : null;
           if (updated) setDetail(updated);
@@ -128,7 +164,10 @@ export default function WorkoutScreen() {
             if (!finishedAll) timer.start(exercise.restSeconds ?? DEFAULT_REST_SECONDS, label);
           }
         }} />;
-      })}
+        }
+      })()}
+      {active && (!detail.trainingDayId || !exercise.fromPlan) ? <Pressable accessibilityRole="button" accessibilityLabel={`Quitar ${exercise.exerciseName}`} onPress={() => confirmRemove(exercise)} style={s.remove}>
+        <Ionicons name="trash-outline" size={14} color={colors.red}/><Text style={s.removeText}>Quitar ejercicio</Text></Pressable> : null}
       </> : null}
     </View>;
   };
@@ -171,6 +210,13 @@ export default function WorkoutScreen() {
   </Screen>{strictRest ? <RestTimerFullScreen timer={timer}/> : <RestTimerBar timer={timer}/>}</View>;
 }
 
+/** "60 kg × 10", "135 lb × 8", "12 reps", "0:45", "500 m". */
+export function setSummary(set: Pick<TrainingSet, 'weightKg' | 'reps' | 'durationSeconds' | 'distanceMeters'>, unit: WeightUnit = 'kg'): string {
+  if (set.reps === null && (set.durationSeconds || set.distanceMeters)) return [set.durationSeconds ? clock(set.durationSeconds) : null, set.distanceMeters ? `${set.distanceMeters} m` : null].filter(Boolean).join(' · ');
+  if (set.weightKg === null) return `${set.reps ?? '—'} reps`;
+  return `${formatWeight(set.weightKg, unit)} × ${set.reps ?? '—'}`;
+}
+
 function statusLabel(status: ExerciseStatus, p: ExerciseProgress): string {
   if (status === 'done') return 'completado';
   if (status === 'current') return p.target ? `ahora, serie ${p.done + 1} de ${p.target}` : 'ahora';
@@ -178,4 +224,4 @@ function statusLabel(status: ExerciseStatus, p: ExerciseProgress): string {
   return `${p.done} series`;
 }
 
-const s=StyleSheet.create({root:{flex:1},block:{gap:9},wodRow:{flexDirection:'row',justifyContent:'space-between',gap:10},wodName:{flex:1,color:colors.text,fontSize:13},wodPresc:{color:colors.text,fontSize:13,fontWeight:'800'},rpeRow:{flexDirection:'row',flexWrap:'wrap',gap:6},rpe:{width:40,height:40,borderRadius:11,borderWidth:1,borderColor:colors.border,alignItems:'center',justifyContent:'center',backgroundColor:colors.surfaceRaised},rpeOn:{borderColor:'#F5B841',backgroundColor:'#2A2410'},rpeText:{color:colors.secondary,fontSize:15,fontWeight:'800'},rpeTextOn:{color:'#F5B841'},suggestBox:{borderWidth:1,borderColor:colors.green,backgroundColor:'#12291F',borderRadius:12,padding:10,gap:3},suggestTitle:{color:colors.green,fontSize:13,fontWeight:'800'},suggestReason:{color:colors.secondary,fontSize:11,lineHeight:16},guideTitle:{color:colors.text,fontSize:16,fontWeight:'800'},track:{height:8,borderRadius:4,backgroundColor:colors.surfaceRaised,overflow:'hidden'},fill:{height:8,borderRadius:4,backgroundColor:colors.blue},fillDone:{backgroundColor:colors.green},statusRow:{flexDirection:'row',alignItems:'center',gap:8,flexWrap:'wrap'},now:{color:'white',backgroundColor:colors.blue,fontSize:10,fontWeight:'800',paddingHorizontal:6,paddingVertical:2,borderRadius:6,overflow:'hidden'},doneTag:{color:colors.green,fontSize:10,fontWeight:'800'},upcoming:{color:colors.muted,fontSize:10,fontWeight:'800'},summary:{color:colors.secondary,fontSize:12,marginTop:4},previous:{color:'#9DBDFF',fontSize:12,lineHeight:17,paddingHorizontal:4},exerciseBlock:{gap:9},exerciseName:{color:colors.text,fontSize:18,fontWeight:'800',marginTop:5},detail:{color:colors.secondary,fontSize:11,lineHeight:16},addSet:{flexDirection:'row',alignItems:'center',gap:3,padding:7},addSetText:{color:colors.blue,fontSize:11,fontWeight:'800'},error:{color:colors.red,fontSize:12,lineHeight:18}});
+const s=StyleSheet.create({root:{flex:1},doneSet:{flexDirection:'row',justifyContent:'space-between',alignItems:'center',gap:8,borderWidth:1,borderColor:colors.border,borderRadius:12,paddingHorizontal:12,paddingVertical:10,backgroundColor:colors.surface},doneSetText:{color:colors.green,fontSize:11,fontWeight:'800',letterSpacing:0.5},doneSetValue:{color:colors.text,fontSize:13,fontWeight:'700'},remove:{flexDirection:'row',alignItems:'center',gap:5,alignSelf:'flex-start',paddingVertical:6,paddingHorizontal:4},removeText:{color:colors.red,fontSize:12,fontWeight:'700'},block:{gap:9},wodRow:{flexDirection:'row',justifyContent:'space-between',gap:10},wodName:{flex:1,color:colors.text,fontSize:13},wodPresc:{color:colors.text,fontSize:13,fontWeight:'800'},rpeRow:{flexDirection:'row',flexWrap:'wrap',gap:6},rpe:{width:40,height:40,borderRadius:11,borderWidth:1,borderColor:colors.border,alignItems:'center',justifyContent:'center',backgroundColor:colors.surfaceRaised},rpeOn:{borderColor:'#F5B841',backgroundColor:'#2A2410'},rpeText:{color:colors.secondary,fontSize:15,fontWeight:'800'},rpeTextOn:{color:'#F5B841'},suggestBox:{borderWidth:1,borderColor:colors.green,backgroundColor:'#12291F',borderRadius:12,padding:10,gap:3},suggestTitle:{color:colors.green,fontSize:13,fontWeight:'800'},suggestReason:{color:colors.secondary,fontSize:11,lineHeight:16},guideTitle:{color:colors.text,fontSize:16,fontWeight:'800'},track:{height:8,borderRadius:4,backgroundColor:colors.surfaceRaised,overflow:'hidden'},fill:{height:8,borderRadius:4,backgroundColor:colors.blue},fillDone:{backgroundColor:colors.green},statusRow:{flexDirection:'row',alignItems:'center',gap:8,flexWrap:'wrap'},now:{color:'white',backgroundColor:colors.blue,fontSize:10,fontWeight:'800',paddingHorizontal:6,paddingVertical:2,borderRadius:6,overflow:'hidden'},doneTag:{color:colors.green,fontSize:10,fontWeight:'800'},upcoming:{color:colors.muted,fontSize:10,fontWeight:'800'},summary:{color:colors.secondary,fontSize:12,marginTop:4},previous:{color:'#9DBDFF',fontSize:12,lineHeight:17,paddingHorizontal:4},exerciseBlock:{gap:9},exerciseName:{color:colors.text,fontSize:18,fontWeight:'800',marginTop:5},detail:{color:colors.secondary,fontSize:11,lineHeight:16},addSet:{flexDirection:'row',alignItems:'center',gap:3,padding:7},addSetText:{color:colors.blue,fontSize:11,fontWeight:'800'},error:{color:colors.red,fontSize:12,lineHeight:18}});

@@ -40,11 +40,11 @@ test('muestra en qué vas: ejercicio actual abierto, terminados plegados con su 
   expect(screen.getByText('✓ COMPLETADO')).toBeTruthy();
   expect(screen.getByText('AHORA')).toBeTruthy();
   expect(screen.getByText('Serie 2 de 3 · descanso 120 s')).toBeTruthy();
-  expect(screen.getByText('80×5 · 80×5')).toBeTruthy(); // resumen del ejercicio terminado
-  expect(screen.getAllByText(/^SERIE \d$/)).toHaveLength(2); // solo las series del ejercicio actual
+  expect(screen.getByText('80 kg × 5 · 80 kg × 5')).toBeTruthy(); // resumen del ejercicio terminado
+  expect(screen.getAllByText(/^SERIE \d(\/\d)?$/)).toHaveLength(2); // solo las series del ejercicio actual
   // Tocar un ejercicio plegado lo abre.
   await fireEvent.press(screen.getByLabelText('Curl femoral, después'));
-  expect(screen.getAllByText(/^SERIE \d$/)).toHaveLength(3);
+  expect(screen.getAllByText(/^SERIE \d(\/\d)?$/)).toHaveLength(3);
 });
 
 test('al guardar una serie arranca el descanso diciendo qué sigue; con descanso obligatorio va a pantalla completa', async () => {

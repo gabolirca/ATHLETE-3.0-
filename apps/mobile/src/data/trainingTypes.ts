@@ -31,6 +31,7 @@ export type SessionExercise = { id: string; exerciseId: string; exerciseName: st
   /** 0.7.0 (programa): bloque, objetivos de tiempo/distancia, por lado y cómo se registra. */
   blockId?: string | null; targetDurationSeconds?: number | null; targetDistanceMeters?: number | null; perSide?: boolean;
   modality?: 'strength' | 'cardio'; loadType?: string; repsMax?: number | null; notes?: string | null;
+  /** Viene del plan (no se puede quitar en un entrenamiento del plan). */ fromPlan?: boolean;
 };
 export type Workout = { id: string; state: 'active' | 'completed'; startedAt: string; completedAt: string | null; localVersion: number | null; serverVersion: number | null; syncStatus: 'pending' | 'synced' | 'conflict' | 'failed'; exerciseCount: number; setCount: number; durationMinutes: number | null };
 export type WorkoutDetail = {

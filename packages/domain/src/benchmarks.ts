@@ -58,6 +58,18 @@ export function swimPaces(sessions: readonly CardioStatInput[]): Array<{ localDa
 }
 
 /** Número de semana del programa (desde que se empezó) y su lugar en un ciclo de `cycle` semanas (la última es de descarga). */
+/**
+ * Fecha en que arranca la semana 1 del programa. Si lo adoptas en sábado o domingo, la semana 1 es la siguiente
+ * (empieza el lunes): adoptarlo el domingo y entrenar el lunes no debe decir "Semana 2".
+ */
+export function programStartDate(adoptedOn: string): string {
+  const d = new Date(`${adoptedOn}T12:00:00Z`);
+  const dow = d.getUTCDay(); // 0 domingo … 6 sábado
+  if (dow !== 0 && dow !== 6) return adoptedOn;
+  d.setUTCDate(d.getUTCDate() + (dow === 6 ? 2 : 1));
+  return d.toISOString().slice(0, 10);
+}
+
 export function programCycle(startedOn: string, today: string, cycle = 6): { week: number; cycleWeek: number; cycleLength: number; deloadWeek: boolean } {
   const diff = Math.round((Date.parse(`${startOfWeek(today, 1)}T12:00:00Z`) - Date.parse(`${startOfWeek(startedOn, 1)}T12:00:00Z`)) / (7 * 86_400_000));
   const week = Math.max(1, diff + 1);

@@ -6,6 +6,7 @@ import { LoggedSetSchema, type LoggedSetInput } from '@/data/trainingSchemas';
 import type { TrainingSet } from '@/data/trainingTypes';
 import { colors } from '@/theme/colors';
 import { rirLabel, rirOptions } from './rirOptions';
+import { toDisplay, toKg, type WeightUnit } from '@/settings/weightUnits';
 
 /** Lo que hiciste en esta misma serie la vez pasada (guía, no se guarda solo). */
 export type PreviousSet = { weightKg: number | null; reps: number | null };
@@ -15,8 +16,17 @@ const fmt = (n: number | null) => (n === null ? '—' : String(n));
 /** Carga sugerida para hoy (ver `suggestLoad`). */
 export type SuggestedSet = { weightKg: number | null; reps: number };
 
-export function SetEditor({ set, onSave, targetRir = null, previous = null, suggestion = null }: { set: TrainingSet; onSave: (input: LoggedSetInput) => Promise<void>; targetRir?: number | null; previous?: PreviousSet | null; suggestion?: SuggestedSet | null }) {
-  const [weight, setWeight] = useState(set.weightKg === null ? '' : String(set.weightKg));
+/**
+ * Una serie de fuerza. `unit` solo cambia cómo se escribe el peso: siempre se guarda en kg.
+ * `bodyweight`: ejercicio con peso corporal; el peso es lastre opcional y basta con las repeticiones.
+ * `total`: series del plan, para mostrar "SERIE 2/3".
+ */
+export function SetEditor({ set, onSave, targetRir = null, previous = null, suggestion = null, unit = 'kg', onUnitChange, bodyweight = false, total = null }: {
+  set: TrainingSet; onSave: (input: LoggedSetInput) => Promise<void>; targetRir?: number | null; previous?: PreviousSet | null; suggestion?: SuggestedSet | null;
+  unit?: WeightUnit; onUnitChange?: (unit: WeightUnit) => void; bodyweight?: boolean; total?: number | null;
+}) {
+  const shown = (kg: number | null) => { const v = toDisplay(kg, unit); return v === null ? '' : String(v); };
+  const [weight, setWeight] = useState(shown(set.weightKg));
   const [reps, setReps] = useState(set.reps === null ? '' : String(set.reps));
   const [rir, setRir] = useState<number | null>(set.rir);
   const [warmup, setWarmup] = useState(set.isWarmup);
@@ -33,19 +43,20 @@ export function SetEditor({ set, onSave, targetRir = null, previous = null, sugg
 
   useEffect(() => {
     lastSaved.current = { weightKg: set.weightKg, reps: set.reps, rir: set.rir, isWarmup: set.isWarmup };
-    setWeight(set.weightKg === null ? '' : String(set.weightKg));
+    setWeight(shown(set.weightKg));
     setReps(set.reps === null ? '' : String(set.reps));
     setRir(set.rir);
     setWarmup(set.isWarmup);
     setInputKey((k) => k + 1);
-  }, [set.id, set.weightKg, set.reps, set.rir, set.isWarmup]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [set.id, set.weightKg, set.reps, set.rir, set.isWarmup, unit]);
 
   async function persist(nextRir = rir, warmupValue = warmup, values: { weight: string; reps: string } = { weight, reps }) {
     if (saving) return;
     const w = values.weight.trim().replace(',', '.');
     const r = values.reps.trim();
     const parsed = LoggedSetSchema.safeParse({
-      weightKg: w === '' ? null : Number(w),
+      weightKg: w === '' ? null : toKg(Number(w), unit),
       reps: r === '' ? null : Number(r),
       rir: nextRir,
       isWarmup: warmupValue,
@@ -59,7 +70,7 @@ export function SetEditor({ set, onSave, targetRir = null, previous = null, sugg
 
   /** Llena peso y reps (de la vez pasada o de la sugerencia) y guarda. */
   function fill(values: { weightKg: number | null; reps: number | null }) {
-    const next = { weight: values.weightKg === null ? '' : String(values.weightKg), reps: values.reps === null ? '' : String(values.reps) };
+    const next = { weight: shown(values.weightKg), reps: values.reps === null ? '' : String(values.reps) };
     setWeight(next.weight); setReps(next.reps); setInputKey((k) => k + 1);
     void persist(rir, warmup, next);
   }
@@ -73,19 +84,22 @@ export function SetEditor({ set, onSave, targetRir = null, previous = null, sugg
 
   return <Card>
     <View style={styles.header}>
-      <Text style={styles.setLabel}>SERIE {set.setIndex + 1}</Text>
+      <Text style={styles.setLabel}>SERIE {set.setIndex + 1}{total && set.setIndex < total ? `/${total}` : ''}</Text>
+      {onUnitChange ? <View style={styles.units} accessibilityLabel="Unidad del peso">{(['kg', 'lb'] as const).map((u) =>
+        <Pressable key={u} accessibilityRole="button" accessibilityLabel={u === 'kg' ? 'Kilos' : 'Libras'} accessibilityState={{ selected: unit === u }} onPress={() => { if (u !== unit) onUnitChange(u); }} style={[styles.unit, unit === u && styles.unitOn]}>
+          <Text style={[styles.unitText, unit === u && styles.unitTextOn]}>{u}</Text></Pressable>)}</View> : null}
       <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: warmup }} onPress={() => { const next = !warmup; setWarmup(next); void persist(rir, next); }} style={[styles.warmup, warmup && styles.warmupActive]}><Text style={[styles.warmupText, warmup && styles.warmupTextActive]}>Calentamiento</Text></Pressable>
     </View>
     <View style={styles.fields}>
-      <AppInput key={`w-${inputKey}`} label="Peso (kg)" defaultValue={weight} onChangeText={setWeight} onBlur={() => { void persist(); }} keyboardType="decimal-pad" placeholder={hint ? fmt(hint.weightKg) : '—'} returnKeyType="done" autoCorrect={false} spellCheck={false} />
+      <AppInput key={`w-${inputKey}`} label={bodyweight ? `Lastre (${unit}, opcional)` : `Peso (${unit})`} defaultValue={weight} onChangeText={setWeight} onBlur={() => { void persist(); }} keyboardType="decimal-pad" placeholder={hint ? fmt(toDisplay(hint.weightKg, unit)) : bodyweight ? '0' : '—'} returnKeyType="done" autoCorrect={false} spellCheck={false} />
       <AppInput key={`r-${inputKey}`} label="Repeticiones" defaultValue={reps} onChangeText={setReps} onBlur={() => { void persist(); }} keyboardType="number-pad" placeholder={hint ? fmt(hint.reps) : '—'} returnKeyType="done" autoCorrect={false} spellCheck={false} />
     </View>
     {(previous || suggestion) && weight === '' && reps === '' ? <View style={styles.quick}>
-      {suggestion && !warmup ? <Pressable accessibilityRole="button" accessibilityLabel={`Usar sugerencia: ${suggestion.weightKg === null ? '' : `${suggestion.weightKg} kilos por `}${suggestion.reps}`} onPress={() => fill(suggestion)} style={[styles.repeat, styles.suggest]}>
-        <Text style={styles.suggestText}>→ Sugerido · {suggestion.weightKg === null ? `${suggestion.reps} reps` : `${suggestion.weightKg} kg × ${suggestion.reps}`}</Text>
+      {suggestion && !warmup ? <Pressable accessibilityRole="button" accessibilityLabel={`Usar sugerencia: ${suggestion.weightKg === null ? '' : `${toDisplay(suggestion.weightKg, unit)} ${unit === 'kg' ? 'kilos' : 'libras'} por `}${suggestion.reps}`} onPress={() => fill(suggestion)} style={[styles.repeat, styles.suggest]}>
+        <Text style={styles.suggestText}>→ Sugerido · {suggestion.weightKg === null ? `${suggestion.reps} reps` : `${toDisplay(suggestion.weightKg, unit)} ${unit} × ${suggestion.reps}`}</Text>
       </Pressable> : null}
-      {previous ? <Pressable accessibilityRole="button" accessibilityLabel={`Igual que la vez pasada: ${fmt(previous.weightKg)} kilos por ${fmt(previous.reps)}`} onPress={() => fill(previous)} style={styles.repeat}>
-        <Text style={styles.repeatText}>↻ Igual que la vez pasada · {fmt(previous.weightKg)} kg × {fmt(previous.reps)}</Text>
+      {previous ? <Pressable accessibilityRole="button" accessibilityLabel={`Igual que la vez pasada: ${fmt(toDisplay(previous.weightKg, unit))} ${unit === 'kg' ? 'kilos' : 'libras'} por ${fmt(previous.reps)}`} onPress={() => fill(previous)} style={styles.repeat}>
+        <Text style={styles.repeatText}>↻ Igual que la vez pasada · {previous.weightKg === null ? '' : `${fmt(toDisplay(previous.weightKg, unit))} ${unit} × `}{fmt(previous.reps)}{previous.weightKg === null ? ' reps' : ''}</Text>
       </Pressable> : null}
     </View> : null}
     {warmup ? null : <View style={styles.effortSection}>
@@ -120,7 +134,12 @@ const styles=StyleSheet.create({
   suggestText:{color:colors.green,fontSize:12,fontWeight:'800'},
   repeat:{alignSelf:'flex-start',paddingVertical:6,paddingHorizontal:10,borderRadius:10,borderWidth:1,borderColor:colors.border,backgroundColor:colors.surfaceRaised},
   repeatText:{color:'#9DBDFF',fontSize:12,fontWeight:'700'},
-  header:{flexDirection:'row',alignItems:'center',justifyContent:'space-between'},
+  header:{flexDirection:'row',alignItems:'center',justifyContent:'space-between',gap:8},
+  units:{flexDirection:'row',borderWidth:1,borderColor:colors.border,borderRadius:10,overflow:'hidden',marginLeft:'auto'},
+  unit:{paddingHorizontal:10,paddingVertical:7,minWidth:38,alignItems:'center'},
+  unitOn:{backgroundColor:'#172849'},
+  unitText:{color:colors.secondary,fontSize:11,fontWeight:'800'},
+  unitTextOn:{color:'#9DBDFF'},
   setLabel:{color:colors.secondary,fontSize:10,fontWeight:'800',letterSpacing:1},
   warmup:{minHeight:44,justifyContent:'center',borderRadius:12,borderWidth:1,borderColor:colors.border,paddingHorizontal:12,paddingVertical:8},
   warmupActive:{borderColor:colors.blue,backgroundColor:'#172849'},

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, Vibration, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '@/theme/colors';
+import { cancelRestEnd, scheduleRestEnd } from '@/notifications/restNotification';
 
 /** "1:28". Redondea hacia arriba: 0.3 s restantes se muestran como 0:01, no 0:00. */
 export function formatClock(ms: number): string {
@@ -15,7 +16,8 @@ type TimerState = { endAt: number; totalMs: number; label: string } | null;
 
 /**
  * Temporizador de descanso basado en la hora de fin (no en restar segundos): si la app pasa a segundo plano y
- * vuelve, muestra el tiempo correcto. Vibra al terminar mientras la app está abierta.
+ * vuelve, muestra el tiempo correcto. Vibra al terminar mientras la app está abierta y, con la pantalla apagada,
+ * avisa con una notificación local.
  */
 export function useRestTimer(now: () => number = Date.now) {
   const [state, setState] = useState<TimerState>(null);
@@ -36,6 +38,12 @@ export function useRestTimer(now: () => number = Date.now) {
   }, [now]);
 
   const stop = useCallback(() => { setState(null); setDone(false); }, []);
+
+  // La notificación sigue a la hora de fin: al iniciar, sumar/restar o saltar el descanso.
+  useEffect(() => {
+    if (state) void scheduleRestEnd(state.endAt, state.label);
+    else void cancelRestEnd();
+  }, [state]);
 
   useEffect(() => {
     if (!state) return;

@@ -11,6 +11,9 @@ export interface TrainingRepository {
   /** Sin `startedAt` empieza ahora (o retoma la sesión en curso). Con `startedAt` registra un entrenamiento pasado. */
   startWorkout(routineId?: string, options?: { startedAt?: string }): Promise<string>;
   addExercise(sessionId: string, exerciseId: string): Promise<void>;
+  removeWorkoutExercise(sessionId: string, sessionExerciseId: string): Promise<void>;
+  getBodyGoals(): Promise<Record<import('./trainingTypes').BodyMeasurement['type'], number | null>>;
+  saveBodyGoal(type: import('./trainingTypes').BodyMeasurement['type'], value: number | null): Promise<void>;
   addSet(sessionId: string, sessionExerciseId: string): Promise<string>;
   saveSet(sessionId: string, setId: string, input: LoggedSetInput): Promise<void>;
   /** En un entrenamiento pasado, `durationMinutes` fija la hora de fin (inicio + duración). */

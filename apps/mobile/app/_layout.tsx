@@ -13,6 +13,7 @@ import { AthleteDataProvider, useAthleteData } from '@/data/AthleteDataProvider'
 import { OfficialTrainingProvider } from '@/data/OfficialTrainingProvider';
 import { AccountProvider } from '@/account/AccountProvider';
 import type { OpenErrorSelection } from '@athlete/data';
+import { BrandIntro } from '@/brand/BrandIntro';
 
 export default function RootLayout() {
   return (
@@ -21,6 +22,7 @@ export default function RootLayout() {
       <AthleteDataProvider>
         <RootStorageGate />
       </AthleteDataProvider>
+      <BrandIntro />
     </SafeAreaProvider>
   );
 }

@@ -38,6 +38,7 @@
       "expo-secure-store",
       "expo-font",
       "expo-status-bar",
+      "expo-notifications",
       [
         "expo-splash-screen",
         {
