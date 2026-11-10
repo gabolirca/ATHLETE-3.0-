@@ -13,6 +13,7 @@ import { useTrainingRepository } from '@/data/MobileTrainingContext';
 import type { Exercise, Routine, TrainingOverview } from '@/data/trainingTypes';
 import { routineFocus } from '@/routines/diagnosis';
 import { HybridCard } from '@/program/HybridCard';
+import { TrainProfessionalRows } from '@/coach/ProfessionalLinks';
 import { useProgram } from '@/program/useProgram';
 import { colors } from '@/theme/colors';
 
@@ -34,6 +35,7 @@ export default function TrainScreen() {
 
   return <Screen>
     <View><Eyebrow>PLANIFICA Y REGISTRA</Eyebrow><Title>Entrenar</Title></View>
+    <TrainProfessionalRows/>
     <HybridCard program={hybrid.program} status={hybrid.status} loaded={hybrid.loaded}/>
     <Card accent={colors.blue}>
       <Eyebrow>SESIÓN LOCAL</Eyebrow>
@@ -54,7 +56,7 @@ export default function TrainScreen() {
     {loadError ? <EmptyState icon="alert-circle-outline" title="No pudimos cargar tus rutinas" detail="Los registros locales no se eliminaron. Vuelve a cargar esta sección." action="Reintentar" onAction={() => repository?.listRoutines().then(setRoutines).catch(() => setLoadError(true))}/> : null}
     {routines.length === 0 && !loadError ? <EmptyState icon="clipboard-outline" title="Todavía no hay rutinas" detail="Elige ejercicios y define tus objetivos por serie. Puedes hacerlo sin conexión." action="Crear primera rutina" onAction={() => router.push('/routines/new')}/> : null}
     {routines.map((routine) => <Card key={routine.id}>
-      <Row><View style={s.routineHeading}><View style={s.icon}><Ionicons name="barbell-outline" size={19} color={colors.blue}/></View><View style={{ flex: 1 }}><Label>{routine.name}</Label><Text style={s.detail}>{routine.exercises.length} ejercicios · editada {new Date(routine.updatedAt).toLocaleDateString('es-MX')}</Text></View></View></Row>
+      <Row><View style={s.routineHeading}><View style={s.icon}><Ionicons name="barbell-outline" size={19} color={colors.blue}/></View><View style={{ flex: 1 }}><Label>{routine.name}</Label><Text style={s.detail}>{routine.coachName ? `De tu coach ${routine.coachName} · ` : ''}{routine.exercises.length} ejercicios · editada {new Date(routine.updatedAt).toLocaleDateString('es-MX')}</Text></View></View></Row>
       <Text style={s.exerciseNames} numberOfLines={2}>{routine.exercises.map((exercise) => exercise.exerciseName).join(' · ')}</Text>
       {(() => {
         const focus = routineFocus(routine.exercises.flatMap((e) => { const ex = catalog.get(e.exerciseId); return ex ? [{ exercise: ex, sets: e.sets }] : []; }));

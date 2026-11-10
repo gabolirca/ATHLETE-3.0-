@@ -64,7 +64,7 @@ describe('modo nutriólogo', () => {
     expect((await pgError(rpc(client, 'athlete3.pro_create_invite()'))).message).toBe('ATHLETE:FORBIDDEN');
     expect((await pgError(rpc(client, 'athlete3.pro_list_clients()'))).message).toBe('ATHLETE:FORBIDDEN');
     const status = await rpc(nutri, 'athlete3.pro_status()');
-    expect(status).toEqual({ isNutritionist: true, professional: null });
+    expect(status).toEqual({ isNutritionist: true, isCoach: false, professional: null, coach: null });
   });
 
   it('código inválido o ya usado no vincula', async () => {
@@ -124,7 +124,7 @@ describe('modo nutriólogo', () => {
   it('al terminar el vínculo el nutriólogo pierde acceso; el plan se queda con el cliente', async () => {
     const status = await rpc(client, 'athlete3.pro_status()');
     await rpc(client, 'athlete3.pro_end_link($1)', [status.professional.linkId]);
-    expect(await rpc(client, 'athlete3.pro_status()')).toEqual({ isNutritionist: false, professional: null });
+    expect(await rpc(client, 'athlete3.pro_status()')).toEqual({ isNutritionist: false, isCoach: false, professional: null, coach: null });
     expect((await pgError(rpc(nutri, 'athlete3.pro_get_client_plan($1)', [client]))).message).toBe('ATHLETE:NOT_FOUND');
     const { rows } = await pool.query('select count(*)::int as n from athlete3.nutrition_plans where user_id = $1 and deleted_at is null', [client]);
     expect(rows[0].n).toBe(1);

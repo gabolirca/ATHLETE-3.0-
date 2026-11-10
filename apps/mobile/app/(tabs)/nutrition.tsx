@@ -45,7 +45,12 @@ export default function NutritionScreen() {
   const isFuture = date > today;
 
   return <Screen>
-    <View><Eyebrow>REGISTRO DE COMIDAS</Eyebrow><Title>Nutrición</Title></View>
+    <View style={s.titleRow}>
+      <View><Eyebrow>REGISTRO DE COMIDAS</Eyebrow><Title>Nutrición</Title></View>
+      <Pressable accessibilityRole="button" accessibilityLabel="Cambiar mi plan de nutrición" hitSlop={10} onPress={() => router.push('/nutrition/plan')} style={s.planBtn}>
+        <Ionicons name="options-outline" size={17} color={colors.blue}/><Text style={s.link}>Mi plan</Text>
+      </Pressable>
+    </View>
 
     {isNutritionist ? <Pressable accessibilityRole="button" accessibilityLabel="Modo nutriólogo" onPress={() => router.push('/pro' as never)} style={s.cta}>
       <Ionicons name="people-outline" size={18} color={colors.blue}/>
@@ -156,6 +161,8 @@ function Macro({ label, value }: { label: string; value: number | null }) {
 
 const s = StyleSheet.create({
   dayRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  titleRow: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' },
+  planBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 11, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface },
   arrow: { width: 44, height: 44, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
   disabled: { opacity: 0.35 },
   dayCenter: { flex: 1, alignItems: 'center' },

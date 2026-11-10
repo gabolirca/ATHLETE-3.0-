@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { CoachComments } from '@/coach/CoachComments';
 import { Ionicons } from '@expo/vector-icons';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { PROGRAM_TEMPLATES } from '@athlete/domain';
@@ -48,7 +49,8 @@ export default function ProgramWeekScreen() {
   }
 
   return <Screen>
-    <View><Eyebrow>MODO HÍBRIDO</Eyebrow><Title>{program.name}</Title></View>
+    <View><Eyebrow>{program.coachName ? `DE TU COACH · ${program.coachName.toUpperCase()}` : 'MODO HÍBRIDO'}</Eyebrow><Title>{program.name}</Title></View>
+    <CoachComments targetType="plan" targetId={program.id}/>
     <Card accent={HYBRID_COLOR}>
       <Text style={s.big}>{done} de {program.days.length}</Text>
       <Text style={s.muted}>sesiones hechas esta semana (lunes a domingo)</Text>

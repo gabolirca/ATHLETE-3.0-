@@ -217,3 +217,15 @@ describe('0.8.0 — plan nutricional SMAE', () => {
     expect(SaveNutritionPlanInput.safeParse({ ...base, meals: [] }).success).toBe(false);
   });
 });
+
+describe('0.9.0 — modo coach', () => {
+  it('comentario del coach y plan asignado', async () => {
+    const { CoachComment } = await import('../src/coach');
+    const { TrainingPlan } = await import('../src/programs');
+    const base = { id: '0190f0f0-0000-7000-8000-000000000001', userId: '0190f0f0-0000-7000-8000-000000000002', createdAt: '2026-11-10T00:00:00Z', updatedAt: '2026-11-10T00:00:00Z', deletedAt: null, revision: 1 };
+    expect(CoachComment.safeParse({ ...base, authorId: null, authorName: 'Coach', targetType: 'general', targetId: null, body: 'Bien' }).success).toBe(true);
+    expect(CoachComment.safeParse({ ...base, authorId: null, authorName: 'Coach', targetType: 'chat', targetId: null, body: 'x' }).success).toBe(false);
+    const plan = TrainingPlan.parse({ ...base, name: 'P', kind: 'program', templateSlug: null, description: null, status: 'active', startsOn: null, endsOn: null });
+    expect(plan).toMatchObject({ assignedBy: null, assignedByName: null });
+  });
+});

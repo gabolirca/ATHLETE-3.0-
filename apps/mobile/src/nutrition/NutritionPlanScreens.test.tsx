@@ -142,3 +142,12 @@ test('cargar mi plan: calcula kcal con el SMAE y guarda plan y meta', async () =
   expect(arg.meals[1].equivalents).toEqual({ leguminosas: 6 });
   expect(mockRouter.dismissTo).toHaveBeenCalledWith('/nutrition');
 });
+
+test('aunque ya tengas plan, "Mi plan" en Nutrición lleva a elegir otra opción', async () => {
+  mockNutrition.loadDay.mockResolvedValue({ meals: [], summary: { localDate: today, entryCount: 0, energyKcal: null, proteinG: null, carbsG: null, fatG: null, entriesMissingEnergy: 0 } });
+  mockNutrition.getTarget.mockResolvedValue({ id: 't', effectiveFrom: today, energyKcal: 1800, proteinG: null, carbsG: null, fatG: null, source: 'professional' });
+  const screen = await render(<NutritionScreen />);
+  await waitFor(() => expect(screen.getByText('META DEL DÍA')).toBeTruthy());
+  await fireEvent.press(screen.getByLabelText('Cambiar mi plan de nutrición'));
+  expect(mockRouter.push).toHaveBeenCalledWith('/nutrition/plan');
+});

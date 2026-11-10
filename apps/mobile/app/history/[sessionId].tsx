@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { CoachComments } from '@/coach/CoachComments';
 import { ActionButton } from '@/components/ActionButton';
 import { Card } from '@/components/Card';
 import { EmptyState } from '@/components/EmptyState';
@@ -42,6 +43,7 @@ export default function HistoryDetailScreen() {
   return <Screen>
     <View><Eyebrow>{new Date(detail.workout.startedAt).toLocaleString('es-MX', { dateStyle: 'long', timeStyle: 'short' })}</Eyebrow><Title>Entrenamiento</Title></View>
     <LocalSaveBadge status={detail.workout.syncStatus}/>
+    <CoachComments targetType="session" targetId={detail.workout.id}/>
     {score ? <ScoreCard score={score}/> : null}
     {detail.workout.state === 'completed' ? <ActionButton onPress={() => router.push(`/share/session/${detail.workout.id}`)}>Compartir</ActionButton> : null}
     {detail.sessionRpe || detail.blocks?.some((b) => b.result) ? <Card>

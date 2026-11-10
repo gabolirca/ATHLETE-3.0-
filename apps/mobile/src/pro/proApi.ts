@@ -5,7 +5,9 @@ import { getCloud } from '@/account/cloud';
  * Modo nutriólogo: RPC `athlete3.pro_*` (migración 20261111000100). Requieren sesión y red.
  * El plan asignado se escribe en las filas del cliente y le llega por su sincronización normal.
  */
-export type ProStatus = { isNutritionist: boolean; professional: { linkId: string; name: string; since: string } | null };
+export type ProLink = { linkId: string; name: string; since: string };
+/** `professional` = nutriólogo (alcance nutrición); `coach` = coach (alcance entrenamiento). */
+export type ProStatus = { isNutritionist: boolean; isCoach?: boolean; professional: ProLink | null; coach?: ProLink | null };
 export type ProClient = {
   linkId: string; clientId: string; name: string; email: string | null; since: string;
   plan: { name: string; effectiveFrom: string; source: 'self' | 'assigned' } | null;
@@ -40,7 +42,7 @@ export function proErrorMessage(error: { message?: string; code?: string } | nul
   return 'No se pudo completar. Intenta de nuevo.';
 }
 
-async function call<T>(fn: string, args?: Record<string, unknown>, notFound?: string): Promise<T> {
+async function call<T>(fn: string, args?: Record<string, unknown>, notFound?: string, invalid?: string): Promise<T> {
   const cloud = getCloud();
   if (!cloud) throw new ProError('La nube no está configurada en esta compilación.');
   let res: { data: unknown; error: { message?: string; code?: string } | null };
@@ -49,7 +51,10 @@ async function call<T>(fn: string, args?: Record<string, unknown>, notFound?: st
   } catch (cause) {
     throw new ProError(proErrorMessage(cause as { message?: string }, notFound));
   }
-  if (res.error) throw new ProError(proErrorMessage(res.error, notFound));
+  if (res.error) {
+    if (invalid && /ATHLETE:VALIDATION_FAILED/.test(res.error.message ?? '')) throw new ProError(invalid);
+    throw new ProError(proErrorMessage(res.error, notFound));
+  }
   return res.data as T;
 }
 
@@ -67,11 +72,45 @@ export async function fetchProStatus(): Promise<ProStatus | null> {
 export const proApi = {
   status: () => call<ProStatus>('pro_status'),
   createInvite: () => call<{ code: string; expiresAt: string }>('pro_create_invite'),
-  acceptInvite: (code: string) => call<{ linkId: string; name: string }>('pro_accept_invite', { p_code: code.trim().toUpperCase() },
+  acceptInvite: (code: string) => call<{ linkId: string; name: string; scope?: 'nutrition' | 'training' }>('pro_accept_invite', { p_code: code.trim().toUpperCase() },
     'El código no es válido, ya se usó o venció. Pídele uno nuevo a tu nutriólogo.'),
   endLink: (linkId: string) => call<void>('pro_end_link', { p_link_id: linkId }),
   listClients: () => call<ProClient[]>('pro_list_clients'),
   getClientPlan: (clientId: string) => call<ClientPlan | null>('pro_get_client_plan', { p_client_id: clientId }, 'Esta persona ya no es tu cliente.'),
   assignPlan: (clientId: string, plan: AssignPlanInput) =>
     call<{ planId: string }>('pro_assign_plan', { p_client_id: clientId, p_plan: plan }, 'Esta persona ya no es tu cliente.'),
+};
+
+// ---------------- Modo coach (0.9.0) ----------------
+export type CoachClient = {
+  linkId: string; clientId: string; name: string; email: string | null; since: string;
+  lastSessionDate: string | null; sessionsLast7Days: number; assignedPlans: number;
+};
+export type CoachSummary = {
+  fromDate: string;
+  plannedPerWeek: number | null;
+  sessions: Array<{ id: string; localDate: string; title: string; planName: string | null; minutes: number | null; sessionRpe: number | null; workingSets: number; volumeKg: number }>;
+  cardio: Array<{ id: string; localDate: string; activity: string; minutes: number; distanceM: number | null; rpe: number | null }>;
+  weeks: Array<{ weekStart: string; done: number }>;
+  topLifts: Array<{ exercise: string; e1rmKg: number; bestWeightKg: number }>;
+};
+export type CoachClientPlan = { id: string; name: string; kind: 'routine' | 'program'; status: string; updatedAt: string; assignedByMe: boolean; assignedByName: string | null; days: number };
+export type CoachCommentRow = { id: string; targetType: 'general' | 'session' | 'plan'; targetId: string | null; body: string; createdAt: string };
+
+const NOT_CLIENT = 'Esta persona ya no es tu atleta.';
+export const coachApi = {
+  createInvite: () => call<{ code: string; expiresAt: string }>('coach_create_invite'),
+  listClients: () => call<CoachClient[]>('coach_list_clients'),
+  summary: (clientId: string, days = 28) => call<CoachSummary>('coach_client_summary', { p_client_id: clientId, p_days: days }, NOT_CLIENT),
+  clientPlans: (clientId: string) => call<CoachClientPlan[]>('coach_list_client_plans', { p_client_id: clientId }, NOT_CLIENT),
+  assignPlan: (clientId: string, planId: string) => call<{ planId: string }>('coach_assign_plan', { p_client_id: clientId, p_plan_id: planId },
+    'No encontramos ese programa en tu cuenta. Sincroniza (Perfil → Cuenta) e intenta de nuevo.',
+    'Ese programa usa ejercicios personalizados o no tiene días. Usa ejercicios del catálogo para poder asignarlo.'),
+  removePlan: (clientId: string, planId: string) => call<void>('coach_remove_plan', { p_client_id: clientId, p_plan_id: planId }, 'Ese programa ya no está.'),
+  addComment: (clientId: string, targetType: 'general' | 'session' | 'plan', targetId: string | null, body: string) =>
+    call<{ id: string }>('coach_add_comment', { p_client_id: clientId, p_target_type: targetType, p_target_id: targetId, p_body: body }, NOT_CLIENT,
+      'El comentario debe tener de 1 a 1000 caracteres.'),
+  listComments: (clientId: string) => call<CoachCommentRow[]>('coach_list_comments', { p_client_id: clientId }, NOT_CLIENT),
+  deleteComment: (id: string) => call<void>('coach_delete_comment', { p_comment_id: id }, 'Ese comentario ya no existe.'),
+  endLink: (linkId: string) => call<void>('pro_end_link', { p_link_id: linkId }, 'Ese vínculo ya terminó.'),
 };

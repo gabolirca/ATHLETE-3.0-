@@ -3,6 +3,7 @@ import { LocalStore } from './local/store';
 import type { Logger } from './logging';
 import { LocalBodyRepository, LocalCardioRepository } from './repositories/cardio-body';
 import { LocalNutritionRepository } from './repositories/nutrition';
+import { LocalCoachRepository } from './repositories/coach';
 import { LocalExerciseRepository, LocalProfileRepository, LocalTrainingPlanRepository } from './repositories/catalog-profile-plans';
 import { LocalWorkoutSessionRepository } from './repositories/workout-sessions';
 import type { SqlDatabase } from './sql/types';
@@ -43,6 +44,7 @@ export function buildAthleteData(
     cardio: new LocalCardioRepository(store),
     body: new LocalBodyRepository(store),
     nutrition: new LocalNutritionRepository(store),
+    coach: new LocalCoachRepository(store),
     sync,
     close: () => options.db.close(),
   };

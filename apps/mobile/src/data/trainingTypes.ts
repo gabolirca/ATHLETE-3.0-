@@ -16,7 +16,7 @@ export type Exercise = {
 /** Lo que hiciste en este ejercicio la última vez (series de trabajo, sin calentamiento). */
 export type PreviousPerformance = { localDate: string; sets: Array<{ weightKg: number | null; reps: number | null; rir: number | null }> };
 export type RoutineExercise = { exerciseId: string; exerciseName: string; sortOrder: number; sets: number | null; reps: number | null; restSeconds: number | null };
-export type Routine = { id: string; name: string; exercises: RoutineExercise[]; updatedAt: string };
+export type Routine = { id: string; name: string; exercises: RoutineExercise[]; updatedAt: string; /** Coach que la asignó (0.9.0). */ coachName?: string | null };
 export type TrainingSet = LoggedSetInput & { id: string; setIndex: number };
 
 /** Récord que esta sesión supera (peso máximo o 1RM estimado). La primera vez que haces un ejercicio no cuenta como récord. */
@@ -90,7 +90,7 @@ export type ProgramDay = {
   targetDurationMinutes: number | null; notes: string | null; blocks: ProgramBlock[];
 };
 /** `startedOn`: fecha local en que se empezó (para "Semana X de 6"). */
-export type Program = { id: string; name: string; templateSlug: string | null; days: ProgramDay[]; startedOn?: string };
+export type Program = { id: string; name: string; templateSlug: string | null; days: ProgramDay[]; startedOn?: string; /** Coach que lo asignó (0.9.0). */ coachName?: string | null };
 /** Lo hecho esta semana (lunes a domingo) por cada día del programa. */
 export type ProgramWeekStatus = Record<string, { workoutId?: string; cardioId?: string; active?: boolean }>;
 export type WeeklyLoad = { weeks: Array<{ weekStart: string; total: number; byKind: { strength: number; conditioning: number; cardio: number }; sessions: number; missingRpe: number }>; trend: { ratio: number | null; status: 'low_data' | 'ok' | 'spike' } };
