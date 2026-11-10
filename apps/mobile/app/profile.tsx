@@ -1,7 +1,8 @@
 import { useCallback, useState } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { pickAvatar, removeAvatar, useAvatar } from '@/profile/avatar';
 import { AnimatedA } from '@/brand/AnimatedA';
 import { Card } from '@/components/Card';
 import { Screen } from '@/components/Screen';
@@ -25,6 +26,12 @@ export default function ProfileScreen() {
   const router = useRouter();
   const repository = useTrainingRepository();
   const [tab, setTab] = useState<Tab>('grid');
+  const avatar = useAvatar();
+  const changePhoto = () => Alert.alert('Foto de perfil', 'Se guarda solo en este teléfono.', [
+    { text: avatar ? 'Cambiar foto' : 'Elegir foto', onPress: () => { void pickAvatar().then((r) => { if (r === 'denied') Alert.alert('Sin permiso de fotos', 'Actívalo en Ajustes del iPhone.'); }).catch(() => Alert.alert('No se pudo guardar la foto.')); } },
+    ...(avatar ? [{ text: 'Quitar foto', style: 'destructive' as const, onPress: () => { void removeAvatar(); } }] : []),
+    { text: 'Cancelar', style: 'cancel' as const },
+  ]);
   const [data, setData] = useState<{
     name: string; goal: string | null; level: string | null; workouts: Workout[]; cardio: CardioEntry[]; streak: StreakSummary | null;
     records: ExerciseRecord[]; benchmarks: BenchmarkItem[]; program: Program | null; status: Record<string, unknown>;
@@ -72,7 +79,10 @@ export default function ProfileScreen() {
     </View>
 
     <View style={s.header}>
-      <View style={s.avatar}><Text style={s.avatarText}>{data?.name ? initials(data.name) : ''}</Text>{!data?.name ? <Ionicons name="person" size={30} color={colors.secondary}/> : null}</View>
+      <Pressable accessibilityRole="button" accessibilityLabel={avatar ? 'Cambiar foto de perfil' : 'Agregar foto de perfil'} onPress={changePhoto} style={s.avatar}>
+        {avatar ? <Image source={{ uri: avatar }} style={s.avatarImg}/> : data?.name ? <Text style={s.avatarText}>{initials(data.name)}</Text> : <Ionicons name="person" size={30} color={colors.secondary}/>}
+        <View style={s.camera}><Ionicons name="camera" size={12} color="white"/></View>
+      </Pressable>
       <View style={s.stats}>
         <Stat value={String(total)} label="Sesiones"/>
         <View style={s.stat}><View style={s.streakRow}><AnimatedA lit={(data?.streak?.days.current ?? 0) > 0} size={26}/><Text style={s.statValue}>{data?.streak?.days.current ?? 0}</Text></View><Text style={s.statLabel}>Racha</Text></View>
@@ -130,6 +140,8 @@ const s = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', gap: 18 },
   avatar: { width: 84, height: 84, borderRadius: 42, backgroundColor: colors.surfaceRaised, borderWidth: 2, borderColor: colors.blue, alignItems: 'center', justifyContent: 'center' },
   avatarText: { color: colors.text, fontSize: 28, fontWeight: '800' },
+  avatarImg: { width: 80, height: 80, borderRadius: 40 },
+  camera: { position: 'absolute', right: -2, bottom: -2, width: 24, height: 24, borderRadius: 12, backgroundColor: colors.blue, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: colors.black },
   stats: { flex: 1, flexDirection: 'row', justifyContent: 'space-around' },
   stat: { alignItems: 'center', gap: 2 }, streakRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   statValue: { color: colors.text, fontSize: 20, fontWeight: '800' }, statLabel: { color: colors.secondary, fontSize: 11 },

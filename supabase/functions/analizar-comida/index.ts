@@ -59,7 +59,7 @@ const modelos = (env: string, porDefecto: string[]) => { const v = Deno.env.get(
 function proveedores(): Proveedor[] {
   const lista: Proveedor[] = [];
   const cfCuenta = Deno.env.get('CF_ACCOUNT_ID')?.trim(); const cfToken = Deno.env.get('CF_API_TOKEN')?.trim();
-  if (cfCuenta && cfToken) for (const modelo of modelos('CF_MODEL', ['@cf/google/gemma-3-12b-it', '@cf/meta/llama-4-scout-17b-16e-instruct'])) {
+  if (cfCuenta && cfToken) for (const modelo of modelos('CF_MODEL', ['@cf/meta/llama-4-scout-17b-16e-instruct', '@cf/google/gemma-3-12b-it'])) {
     lista.push({ nombre: 'cloudflare', url: `https://api.cloudflare.com/client/v4/accounts/${cfCuenta}/ai/v1/chat/completions`, llave: cfToken, modelo });
   }
   const groq = Deno.env.get('GROQ_API_KEY')?.trim();

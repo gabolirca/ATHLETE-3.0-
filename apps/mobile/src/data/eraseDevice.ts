@@ -3,7 +3,7 @@ import { ACTIVE_STORE_KEY, IDENTITY_KEY, databaseKeyName } from '@athlete/data';
 /** Llaves del teléfono que no dependen de una base concreta. */
 export const DEVICE_KEYS = [
   IDENTITY_KEY, ACTIVE_STORE_KEY,
-  'athlete3.onboarding.v1', 'athlete3.pref.strict-rest', 'athlete3.nutrition-disclaimer',
+  'athlete3.onboarding.v1', 'athlete3.pref.strict-rest', 'athlete3.nutrition-disclaimer', 'athlete3.avatar.v1', 'athlete3.theme', 'athlete3.units.v1', 'athlete3.food-photo-consent.v1',
 ] as const;
 
 export type EraseDeps = {

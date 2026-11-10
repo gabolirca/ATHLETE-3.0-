@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useAvatar } from '@/profile/avatar';
 import { BRAND, LOCKUP_RATIO } from '@/brand/assets';
 import { Card } from '@/components/Card';
 import { ActionButton } from '@/components/ActionButton';
@@ -42,6 +43,7 @@ export default function HomeScreen() {
   const [volume, setVolume] = useState<WeeklyMuscleVolume | null>(null);
   const hybrid = useProgram();
   const [streak, setStreak] = useState<StreakSummary | null>(null);
+  const avatar = useAvatar();
 
   // Primera vez en este teléfono: el asistente de bienvenida (una sola vez; después se repite desde el Perfil).
   useEffect(() => {
@@ -67,7 +69,7 @@ export default function HomeScreen() {
     <Image source={BRAND.lockup} accessibilityLabel="ATHLETE" resizeMode="contain" style={s.logo}/>
     <Row><View style={s.flex}><Eyebrow>{date}</Eyebrow><Title>{greeting(new Date())}{name ? `, ${name.split(' ')[0]}` : ''}</Title></View>
       <Pressable accessibilityRole="button" accessibilityLabel="Abrir perfil" onPress={() => router.push('/profile')} style={s.avatar}>
-        {initials(name) ? <Text style={s.initials}>{initials(name)}</Text> : <Ionicons name="person" size={18} color={colors.secondary}/>}
+        {avatar ? <Image source={{ uri: avatar }} style={s.avatarImg}/> : initials(name) ? <Text style={s.initials}>{initials(name)}</Text> : <Ionicons name="person" size={18} color={colors.secondary}/>}
       </Pressable></Row>
     {streak ? <StreakCard streak={streak}/> : null}
     {repository ? <DailyWeightCard repository={repository}/> : null}
@@ -116,4 +118,4 @@ const s = StyleSheet.create({ flex: { flex: 1 }, logo: { height: 18, width: 18 *
   legendName: { flex: 1, color: colors.text, fontSize: 12, fontWeight: '600' }, legendValue: { color: colors.secondary, fontSize: 12, fontWeight: '800' },
   stats: { flexDirection: 'row', borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 12 }, stat: { flex: 1, alignItems: 'center' },
   statValue: { color: colors.text, fontSize: 18, fontWeight: '800' }, statLabel: { color: colors.secondary, fontSize: 10, fontWeight: '600' },
-  lowHint: { color: colors.amber, fontSize: 11, lineHeight: 16 }, initials: { color: colors.text, fontSize: 15, fontWeight: '800' }, hint: { color: colors.muted, fontSize: 11, lineHeight: 16 }, avatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.graphite, borderWidth: 2, borderColor: colors.blue, alignItems: 'center', justifyContent: 'center' }, pill: { backgroundColor: colors.accentSoft, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6 }, pillText: { color: colors.accentText, fontWeight: '800', fontSize: 10, letterSpacing: 1 }, heroTitle: { color: colors.text, fontSize: 22, fontWeight: '800', letterSpacing: -0.5 }, muted: { color: colors.secondary, fontSize: 12, lineHeight: 18 }, bigNumber: { color: colors.text, fontSize: 25, fontWeight: '800', marginTop: 7 } });
+  lowHint: { color: colors.amber, fontSize: 11, lineHeight: 16 }, initials: { color: colors.text, fontSize: 15, fontWeight: '800' }, hint: { color: colors.muted, fontSize: 11, lineHeight: 16 }, avatarImg: { width: 40, height: 40, borderRadius: 20 }, avatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.graphite, borderWidth: 2, borderColor: colors.blue, alignItems: 'center', justifyContent: 'center' }, pill: { backgroundColor: colors.accentSoft, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6 }, pillText: { color: colors.accentText, fontWeight: '800', fontSize: 10, letterSpacing: 1 }, heroTitle: { color: colors.text, fontSize: 22, fontWeight: '800', letterSpacing: -0.5 }, muted: { color: colors.secondary, fontSize: 12, lineHeight: 18 }, bigNumber: { color: colors.text, fontSize: 25, fontWeight: '800', marginTop: 7 } });
