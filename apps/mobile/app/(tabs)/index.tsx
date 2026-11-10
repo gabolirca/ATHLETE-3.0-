@@ -17,6 +17,7 @@ import { formatSets, lowMuscles, muscleSegments } from '@/progress/muscleVolume'
 import { HybridCard } from '@/program/HybridCard';
 import { useProgram } from '@/program/useProgram';
 import { StreakCard } from '@/progress/StreakCard';
+import { DailyWeightCard } from '@/progress/DailyWeightCard';
 import { getOnboardingDone } from '@/settings/devicePrefs';
 import { colors } from '@/theme/colors';
 
@@ -69,6 +70,7 @@ export default function HomeScreen() {
         {initials(name) ? <Text style={s.initials}>{initials(name)}</Text> : <Ionicons name="person" size={18} color={colors.secondary}/>}
       </Pressable></Row>
     {streak ? <StreakCard streak={streak}/> : null}
+    {repository ? <DailyWeightCard repository={repository}/> : null}
     {hybrid.program ? <HybridCard program={hybrid.program} status={hybrid.status} loaded={hybrid.loaded}/> : null}
     <Card accent={colors.blue}>
       <Row><Eyebrow>ENTRENAMIENTO DE HOY</Eyebrow><View style={s.pill}><Text style={s.pillText}>LOCAL</Text></View></Row>

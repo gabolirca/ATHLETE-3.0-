@@ -25,7 +25,7 @@ function mealColumns(i: MealInput) {
     meal_type: i.mealType, description: i.description,
     energy_kcal: toServerScale(i.energyKcal, 1), protein_g: toServerScale(i.proteinG, 1),
     carbs_g: toServerScale(i.carbsG, 1), fat_g: toServerScale(i.fatG, 1),
-    source: i.source, notes: i.notes,
+    source: i.source, notes: i.notes, ai_estimate: i.aiEstimate ?? null,
   };
 }
 
