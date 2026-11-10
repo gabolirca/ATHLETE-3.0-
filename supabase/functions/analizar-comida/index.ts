@@ -116,7 +116,12 @@ Deno.serve(async (req) => {
   if (!imagen || imagen.length > MAX_BASE64 || !/^[A-Za-z0-9+/=]+$/.test(imagen.slice(0, 200))) return responder({ error: 'VALIDATION_FAILED' }, 400);
 
   const cuota = await sb.rpc('consume_food_photo_quota', { p_max: LIMITE });
-  if (cuota.error) return responder({ error: cuota.error.message.includes('RATE_LIMITED') ? 'RATE_LIMITED' : 'INTERNAL' }, cuota.error.message.includes('RATE_LIMITED') ? 429 : 500);
+  if (cuota.error) {
+    if (cuota.error.message.includes('RATE_LIMITED')) return responder({ error: 'RATE_LIMITED' }, 429);
+    // Sin la función de cuota (falta la migración 20261110000300) o la base no responde.
+    console.warn('analizar-comida: cuota no disponible', cuota.error.code ?? '', cuota.error.message.slice(0, 120));
+    return responder({ error: 'NOT_READY' }, 503);
+  }
 
   const lista = proveedores();
   if (!lista.length) return responder({ error: 'NOT_CONFIGURED' }, 503);
