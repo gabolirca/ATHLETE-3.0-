@@ -122,7 +122,7 @@ export default function WorkoutScreen() {
         <Text style={s.suggestReason}>{suggestion.reason}</Text>
       </View> : null}
       <NewRecordBadge records={exercise.newRecords ?? []}/>
-      {exercise.modality === 'cardio' || exercise.loadType === 'time' ? exercise.sets.filter((set, i) => i < Math.max(exercise.setsTarget ?? 1, exercise.sets.filter((x) => x.durationSeconds || x.distanceMeters).length + (active ? 1 : 0))).map((set, index) =>
+      {exercise.modality === 'cardio' || exercise.loadType === 'time' ? exercise.sets.filter((set, i) => i < Math.max(exercise.setsTarget ?? 1, exercise.sets.filter((x) => x.durationSeconds || x.distanceMeters).length + (active && !progress.complete ? 1 : 0))).map((set, index) =>
         <TimedSetEditor key={set.id} set={set} label={(exercise.setsTarget ?? 1) > 1 ? `SERIE ${index + 1}` : 'REGISTRO'} targetSeconds={exercise.targetDurationSeconds ?? null} targetMeters={exercise.targetDistanceMeters ?? null}
           withTimer={exercise.loadType === 'time'}
           onSave={async (values) => {
@@ -185,7 +185,7 @@ export default function WorkoutScreen() {
     {hasBlocks ? blocks.map((block) => {
       const inBlock = detail.exercises.map((e, i) => [e, i] as const).filter(([e]) => e.blockId === block.id);
       return <View key={block.id} style={s.block}>
-        <BlockHeader block={block} editable={active} onSaveResult={async (r) => { await repository?.saveBlockResult(sessionId, block.id, r); await refreshQuiet(); }}/>
+        <BlockHeader block={block} editable={active} onRest={(seconds, label) => timer.start(seconds, label)} onSaveResult={async (r) => { await repository?.saveBlockResult(sessionId, block.id, r); await refreshQuiet(); }}/>
         {isWholeBlock(block.format)
           ? <Card>{inBlock.map(([e]) => <View key={e.id} style={s.wodRow}><Text style={s.wodName}>{e.exerciseName}</Text><Text style={s.wodPresc}>{prescription(e)}</Text></View>)}</Card>
           : inBlock.map(([e, i]) => renderExercise(e, i))}

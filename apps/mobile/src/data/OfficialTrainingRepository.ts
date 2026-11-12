@@ -260,7 +260,11 @@ export class OfficialTrainingRepository implements TrainingRepository {
         };
       });
     }
-    return { workout, exercises, blocks, sessionRpe: detail.sessionRpe, trainingDayId: detail.trainingDayId, dayName: day?.name ?? null };
+    // Un ejercicio del plan sin series (remo 5 min, movilidad, caminata) se hace UNA vez: sin esto nunca se daba por terminado
+    // y pedía otro registro. En rondas, AMRAP, EMOM y por tiempo se registra el bloque completo, no serie por serie.
+    const whole = new Set(blocks.filter((b) => ['rounds', 'amrap', 'emom', 'for_time'].includes(b.format)).map((b) => b.id));
+    const withTargets = exercises.map((e) => (e.fromPlan && e.setsTarget === null && !(e.blockId && whole.has(e.blockId)) ? { ...e, setsTarget: 1 } : e));
+    return { workout, exercises: withTargets, blocks, sessionRpe: detail.sessionRpe, trainingDayId: detail.trainingDayId, dayName: day?.name ?? null };
   }
 
   /** Día planificado (con ejercicios y bloques) por id, buscándolo en los planes del usuario. */

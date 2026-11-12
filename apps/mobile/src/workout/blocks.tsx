@@ -58,13 +58,18 @@ export function useBlockClock(countdownFrom: number | null, now: () => number = 
 /**
  * Encabezado de un bloque del programa. En AMRAP, EMOM, por tiempo y rondas trae su reloj y el registro del resultado.
  */
-export function BlockHeader({ block, editable, onSaveResult }: {
+export function BlockHeader({ block, editable, onSaveResult, onRest }: {
   block: WorkoutBlock; editable: boolean;
   onSaveResult: (r: { roundsCompleted: number | null; extraReps: number | null; durationSeconds: number | null }) => Promise<void>;
+  /** Descanso entre rondas del circuito (usa el temporizador de descanso de la sesión). */
+  onRest?: (seconds: number, label: string) => void;
 }) {
   const whole = isWholeBlock(block.format);
-  const timed = block.format === 'amrap' || block.format === 'emom' || block.format === 'for_time';
-  const clockState = useBlockClock(block.format === 'for_time' ? null : block.timeCapSeconds);
+  // Rondas: cronómetro que cuenta hacia arriba (tiempo total del circuito) y contador de vueltas.
+  const timed = block.format === 'amrap' || block.format === 'emom' || block.format === 'for_time' || block.format === 'rounds';
+  const roundsMode = block.format === 'rounds';
+  const [roundsDone, setRoundsDone] = useState(block.result?.roundsCompleted ?? 0);
+  const clockState = useBlockClock(block.format === 'for_time' || block.format === 'rounds' ? null : block.timeCapSeconds);
   const [rounds, setRounds] = useState(block.result?.roundsCompleted != null ? String(block.result.roundsCompleted) : '');
   const [reps, setReps] = useState(block.result?.extraReps != null ? String(block.result.extraReps) : '');
   const [time, setTime] = useState(block.result?.durationSeconds && block.format === 'for_time' ? clock(block.result.durationSeconds) : '');
@@ -76,6 +81,23 @@ export function BlockHeader({ block, editable, onSaveResult }: {
   function stopClock() {
     clockState.stop();
     if (block.format === 'for_time') { setTime(clock(clockState.elapsed)); setInputKey((k) => k + 1); }
+  }
+
+  async function finishRound() {
+    const next = roundsDone + 1;
+    setRoundsDone(next);
+    setRounds(String(next)); setInputKey((k) => k + 1);
+    if (!clockState.started) clockState.start();
+    const total = block.rounds ?? null;
+    if (total !== null && next >= total) {
+      clockState.stop();
+      setSaving(true);
+      try { await onSaveResult({ roundsCompleted: next, extraReps: null, durationSeconds: Math.max(1, clockState.elapsed) || null }); setError(''); }
+      catch { setError('No se pudo guardar el resultado. Intenta de nuevo.'); }
+      finally { setSaving(false); }
+      return;
+    }
+    if (block.restSeconds) onRest?.(block.restSeconds, total ? `Descanso · sigue la ronda ${next + 1} de ${total}` : `Descanso · ronda ${next + 1}`);
   }
 
   async function save() {
@@ -92,7 +114,7 @@ export function BlockHeader({ block, editable, onSaveResult }: {
       await onSaveResult({
         roundsCompleted: block.format === 'for_time' ? null : r,
         extraReps: block.format === 'amrap' ? x : null,
-        durationSeconds: block.format === 'for_time' ? t : block.format === 'amrap' || block.format === 'emom' ? block.timeCapSeconds : null,
+        durationSeconds: block.format === 'for_time' ? t : block.format === 'amrap' || block.format === 'emom' ? block.timeCapSeconds : roundsMode && clockState.started ? Math.max(1, clockState.elapsed) : null,
       });
     } catch { setError('No se pudo guardar el resultado. Intenta de nuevo.'); }
     finally { setSaving(false); }
@@ -113,13 +135,22 @@ export function BlockHeader({ block, editable, onSaveResult }: {
           : <Pressable accessibilityRole="button" onPress={clockState.reset} style={s.clockBtn}><Text style={s.clockBtnText}>Reiniciar</Text></Pressable>}
     </View> : null}
     {clockState.finished ? <Text style={s.finished}>¡Tiempo! Anota tus rondas.</Text> : null}
+    {roundsMode && editable ? <View style={s.roundsBox}>
+      <Text style={s.roundsCount} accessibilityLabel={`${roundsDone} de ${block.rounds ?? '—'} rondas`}>Ronda {Math.min(roundsDone + 1, block.rounds ?? roundsDone + 1)}{block.rounds ? ` de ${block.rounds}` : ''}</Text>
+      {block.rounds && roundsDone >= block.rounds
+        ? <Text style={s.finished}>¡Circuito completo!</Text>
+        : <Pressable accessibilityRole="button" accessibilityLabel={`Terminé la ronda ${roundsDone + 1}`} disabled={saving} onPress={() => void finishRound()} style={s.roundBtn}>
+            <Text style={s.roundBtnText}>✓ Terminé la ronda {roundsDone + 1}</Text>
+          </Pressable>}
+      {block.restSeconds ? <Text style={s.note}>Descanso de {block.restSeconds} s entre rondas.</Text> : null}
+    </View> : null}
     {whole && saved ? <Text style={s.saved}>Resultado: {saved}</Text> : null}
     {whole && editable ? <>
       <View style={s.fields}>
         {block.format === 'for_time'
           ? <View style={s.flex}><AppInput key={`t-${inputKey}`} label="Tu tiempo (min:seg)" defaultValue={time} onChangeText={setTime} keyboardType="numbers-and-punctuation" placeholder="12:34" autoCorrect={false} spellCheck={false}/></View>
           : <>
-            <View style={s.flex}><AppInput label="Rondas completas" defaultValue={rounds} onChangeText={setRounds} keyboardType="number-pad" placeholder={block.rounds ? String(block.rounds) : '0'} autoCorrect={false} spellCheck={false}/></View>
+            <View style={s.flex}><AppInput key={`r-${inputKey}`} label="Rondas completas" defaultValue={rounds} onChangeText={setRounds} keyboardType="number-pad" placeholder={block.rounds ? String(block.rounds) : '0'} autoCorrect={false} spellCheck={false}/></View>
             {block.format === 'amrap' ? <View style={s.flex}><AppInput label="Reps extra" defaultValue={reps} onChangeText={setReps} keyboardType="number-pad" placeholder="0" autoCorrect={false} spellCheck={false}/></View> : null}
           </>}
       </View>
@@ -139,6 +170,8 @@ const s = StyleSheet.create({
   clockBtn: { backgroundColor: HYBRID_COLOR, borderRadius: 12, paddingHorizontal: 18, paddingVertical: 11 }, clockBtnText: { color: colors.amberSoft, fontSize: 14, fontWeight: '800' },
   finished: { color: colors.green, fontSize: 13, fontWeight: '800' },
   saved: { color: colors.green, fontSize: 14, fontWeight: '800' },
+  roundsBox: { gap: 8 }, roundsCount: { color: colors.text, fontSize: 20, fontWeight: '800' },
+  roundBtn: { backgroundColor: HYBRID_COLOR, borderRadius: 12, paddingVertical: 13, alignItems: 'center' }, roundBtnText: { color: colors.amberSoft, fontSize: 15, fontWeight: '800' },
   fields: { flexDirection: 'row', gap: 9 }, flex: { flex: 1 },
   error: { color: colors.red, fontSize: 11 },
   save: { alignSelf: 'flex-start', borderWidth: 1, borderColor: HYBRID_COLOR, borderRadius: 11, paddingHorizontal: 14, paddingVertical: 9 },

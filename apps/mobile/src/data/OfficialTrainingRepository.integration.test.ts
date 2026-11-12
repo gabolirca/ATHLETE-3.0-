@@ -1,3 +1,4 @@
+import { exerciseProgress } from '@/workout/guide';
 /**
  * Integración real (sin mocks de datos): adaptador móvil + @athlete/data sobre node:sqlite en un archivo temporal.
  * Protege invariantes de integridad que las pruebas con mocks no pueden detectar.
@@ -383,5 +384,24 @@ test('asistente: las respuestas quedan en el perfil', async () => {
   await repository.saveOnboarding({ displayName: 'Gabo', goal: 'Prepararme para Hyrox', level: 'advanced', sports: ['strength', 'functional_fitness', 'running'], heightCm: 176, weightKg: 82.5, trainingDays: 5 });
   expect(await repository.getAthleteProfile()).toEqual({ displayName: 'Gabo', goals: ['Prepararme para Hyrox', '5 días por semana'], experienceLevel: 'advanced', heightCm: 176, weightKg: 82.5, sports: ['strength', 'functional_fitness', 'running'] });
   expect((await repository.getPreferences()).displayName).toBe('Gabo');
+  await data.close?.();
+});
+
+test('híbrido: el remo del calentamiento cuenta UNA vez; el circuito por rondas se registra como bloque', async () => {
+  const { data, repository, sessionId } = await setup({ catalog: true });
+  await repository.finishWorkout(sessionId);
+  await repository.adoptProgramTemplate('hybrid-athlete-1-0');
+  const [program] = await repository.listPrograms();
+  const engine = program!.days.find((d) => d.name === 'Engine · Acondicionamiento')!;
+  const id = await repository.startProgramDay(engine.id);
+  const workout = (await repository.getWorkout(id))!;
+  const [warmup, circuit] = workout.blocks!;
+  expect([warmup!.format, circuit!.format, circuit!.rounds, circuit!.restSeconds]).toEqual(['continuous', 'rounds', 3, 90]);
+  const warmRow = workout.exercises.find((e) => e.blockId === warmup!.id && e.exerciseName === 'Remo ergómetro')!;
+  expect(warmRow.setsTarget).toBe(1); // antes: null → nunca terminaba y pedía otro registro
+  expect(workout.exercises.filter((e) => e.blockId === circuit!.id).every((e) => e.setsTarget === null)).toBe(true);
+  await repository.saveSet(id, warmRow.sets[0]!.id, { weightKg: null, reps: null, rir: null, isWarmup: false, durationSeconds: 300, distanceMeters: null });
+  const after = (await repository.getWorkout(id))!;
+  expect(exerciseProgress(after.exercises.find((e) => e.id === warmRow.id)!)).toEqual({ done: 1, target: 1, complete: true });
   await data.close?.();
 });
