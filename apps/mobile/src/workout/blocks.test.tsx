@@ -66,3 +66,20 @@ test('serie por tiempo/distancia: "Como el plan" guarda el objetivo', async () =
   await fireEvent.press(screen.getByLabelText('Como el plan: REGISTRO'));
   await waitFor(() => expect(onSave).toHaveBeenCalledWith({ weightKg: null, reps: null, rir: null, isWarmup: false, durationSeconds: null, distanceMeters: 400 }));
 });
+
+test('circuito por rondas: cuenta las vueltas, arranca el descanso y guarda solo al terminar la última', async () => {
+  const circuit: WorkoutBlock = { id: 'c', name: 'B · Circuito', kind: 'conditioning', format: 'rounds', rounds: 3, timeCapSeconds: null, restSeconds: 90, targetRpe: 6.5, notes: null, result: null };
+  const onSaveResult = jest.fn().mockResolvedValue(undefined);
+  const onRest = jest.fn();
+  const screen = await render(<BlockHeader block={circuit} editable onSaveResult={onSaveResult} onRest={onRest}/>);
+  expect(screen.getByText('Ronda 1 de 3')).toBeTruthy();
+  expect(screen.getByLabelText('Reloj del bloque')).toBeTruthy(); // el circuito ya tiene su reloj
+  await fireEvent.press(screen.getByLabelText('Terminé la ronda 1'));
+  expect(onRest).toHaveBeenLastCalledWith(90, 'Descanso · sigue la ronda 2 de 3');
+  await fireEvent.press(screen.getByLabelText('Terminé la ronda 2'));
+  expect(onSaveResult).not.toHaveBeenCalled();
+  await fireEvent.press(screen.getByLabelText('Terminé la ronda 3'));
+  await waitFor(() => expect(onSaveResult).toHaveBeenCalledWith(expect.objectContaining({ roundsCompleted: 3, extraReps: null })));
+  expect(onRest).toHaveBeenCalledTimes(2); // sin descanso después de la última
+  expect(screen.getByText('¡Circuito completo!')).toBeTruthy();
+});
