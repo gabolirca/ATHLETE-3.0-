@@ -95,7 +95,7 @@ El motor de sincronización será independiente de la interfaz.
 
 ### 6. Contratos
 
-`packages/contracts` será la fuente compartida de:
+`shared/contracts` será la fuente compartida de:
 
 - Tipos.
 - Esquemas Zod.
@@ -108,7 +108,7 @@ Los contratos tendrán versionado semántico y CHANGELOG.
 
 ### 7. Lógica de dominio
 
-`packages/domain` contendrá lógica pura:
+`shared/domain` contendrá lógica pura:
 
 - Cálculos de entrenamiento.
 - Volumen.

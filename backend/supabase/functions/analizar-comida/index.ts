@@ -2,7 +2,7 @@
 // ATHLETE 3.0 · Nutrición Pro: reconocer el platillo de una foto (Claude, 2026-11-09)
 //
 // La IA SOLO reconoce qué hay en el plato y la porción, expresada en equivalentes del SMAE. Las kcal y los
-// macros los calcula la app con la tabla SMAE (packages/domain/src/smae.ts): la cuenta es nuestra.
+// macros los calcula la app con la tabla SMAE (shared/domain/src/smae.ts): la cuenta es nuestra.
 //
 // - La foto llega en el cuerpo, se manda al proveedor y se descarta: no se escribe en Storage, base ni logs.
 // - Las llaves viven aquí como secretos del proyecto, nunca en la app:

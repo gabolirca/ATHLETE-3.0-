@@ -1,7 +1,7 @@
 # Contratos compartidos — ATHLETE 3.0
 
 **Responsables:** Claude y Codex  
-**Fuente de verdad:** `packages/contracts`
+**Fuente de verdad:** `shared/contracts`
 
 ## 1. Objetivo
 
@@ -26,7 +26,7 @@ Se organizarán por dominio:
 
 ## 3. Estructura propuesta
 
-    packages/contracts/
+    shared/contracts/
     ├── src/
     │   ├── index.ts
     │   ├── common.ts

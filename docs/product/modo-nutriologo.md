@@ -21,4 +21,4 @@
 - Migración `20261111000100`: tabla `athlete3.nutrition_plans` (entidad de sync `nutrition_plan`), rol, `pro_links`,
   `pro_invites` y RPC `pro_*` (SECURITY DEFINER). El origen `assigned` solo lo escribe el servidor (trigger).
 - Si el cliente edita un plan asignado, el local elimina el asignado y crea uno propio.
-- Pruebas: `supabase/tests/db/nutrition-pro.test.ts`, `packages/data/test/integration/nutrition-plan-sync.test.ts`.
+- Pruebas: `backend/supabase/tests/db/nutrition-pro.test.ts`, `shared/data/test/integration/nutrition-plan-sync.test.ts`.

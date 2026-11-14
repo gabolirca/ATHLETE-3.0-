@@ -2,7 +2,7 @@ import * as SecureStore from 'expo-secure-store';
 import { cleanEquivalents, macrosFromEquivalents, sumMacros, type Equivalents, type Macros } from '@athlete/domain';
 import { getCloud } from '@/account/cloud';
 
-/** Lo que reconoce la IA (ver supabase/functions/analizar-comida). Sin kcal: esas se calculan con el SMAE. */
+/** Lo que reconoce la IA (ver backend/supabase/functions/analizar-comida). Sin kcal: esas se calculan con el SMAE. */
 export type FoodPhotoResult = {
   es_comida: boolean;
   platillos: Array<{ nombre: string; porcion: string; equivalentes: Equivalents }>;

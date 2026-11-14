@@ -3,7 +3,7 @@
  *
  * Reglas (ADR-0002 §2, ADR-0003):
  * - Las pantallas usan estos repositorios; nunca consultan SQLite ni Supabase directamente.
- * - Las implementaciones viven en `packages/data` (SQLite local como fuente de lectura/escritura;
+ * - Las implementaciones viven en `shared/data` (SQLite local como fuente de lectura/escritura;
  *   Supabase solo a través del motor de sincronización).
  * - Toda escritura es local primero, encola una `SyncMutation` y devuelve sin esperar la red.
  * - El `userId` sale de la sesión autenticada del adaptador, nunca de la entrada.

@@ -1,5 +1,5 @@
 /**
- * Genera el SQL del catálogo global a partir de la fuente única `packages/data/src/catalog/catalog-data.ts`.
+ * Genera el SQL del catálogo global a partir de la fuente única `shared/data/src/catalog/catalog-data.ts`.
  *
  *   node --experimental-strip-types scripts/catalog-sql.ts > /tmp/catalogo.sql
  *
@@ -8,7 +8,7 @@
  *  - actualiza nombre y rasgos de los ejercicios globales cuyo valor difiera.
  * Pégalo dentro de una migración nueva (las migraciones ya aplicadas no se editan).
  */
-import { EQUIPMENT, EXERCISES, MUSCLE_GROUPS, modalityOf } from '../packages/data/src/catalog/catalog-data.ts';
+import { EQUIPMENT, EXERCISES, MUSCLE_GROUPS, modalityOf } from '../shared/data/src/catalog/catalog-data.ts';
 
 const mg = (n: number) => `10000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
 const eq = (n: number) => `20000000-0000-4000-8000-${String(n).padStart(12, '0')}`;

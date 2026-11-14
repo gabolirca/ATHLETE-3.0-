@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Recrea la base de pruebas local (Postgres sin Supabase) y aplica stub + migraciones.
-# Uso: DATABASE_URL=postgresql://postgres@127.0.0.1:54329/postgres supabase/tests/harness/reset-local-db.sh
+# Uso: DATABASE_URL=postgresql://postgres@127.0.0.1:54329/postgres backend/supabase/tests/harness/reset-local-db.sh
 # NUNCA apunta a un proyecto remoto: rechaza cualquier host que no sea local.
 set -euo pipefail
 : "${DATABASE_URL:?Define DATABASE_URL (solo local)}"

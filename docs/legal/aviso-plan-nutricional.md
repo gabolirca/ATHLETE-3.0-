@@ -4,7 +4,7 @@
 > Antes del lanzamiento público debe revisarlo un abogado, junto con los Términos de uso y el Aviso de privacidad
 > (LFPDPPP; los datos de salud y alimentación son datos personales sensibles).
 
-**Versión en la app:** `nutricion-provisional-v1-2026-11-07`, en `apps/mobile/src/legal/nutritionDisclaimer.ts`.
+**Versión en la app:** `nutricion-provisional-v1-2026-11-07`, en `frontend/mobile/src/legal/nutritionDisclaimer.ts`.
 Si cambia el texto, se sube la versión y la app vuelve a pedir la aceptación.
 
 ## Texto que acepta el usuario
