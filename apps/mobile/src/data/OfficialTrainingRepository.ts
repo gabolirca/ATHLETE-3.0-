@@ -3,6 +3,7 @@ import { CATALOG_EXERCISE_ID, type OpenedAthleteData } from '@athlete/data';
 import type { CardioDraft } from '@/cardio/cardioForm';
 import type { TrainingRepository } from './TrainingRepository';
 import { splitSharedTargets } from '@/workout/sharedTargets';
+import { createDataCache } from './cachedData';
 import { PROGRAM_TEMPLATES, benchmarks, programStartDate, computeStreak, localDateOf, weeksStreak, computePersonalRecords, diagnoseWeeklyVolume, isEffectiveSet, loadTrend, weekStartOf, weeklyLoads, type LoadItem, newRecordsInSession, setVolumeKg, summarizeWeek, weeklySetsByMuscle, type ExerciseMuscles } from '@athlete/domain';
 import type { BodyMeasurementInput, LocalAthletePreferencesInput, LoggedSetInput, RoutineInput } from './trainingSchemas';
 import type { BodyMeasurement, CardioEntry, Exercise, ExerciseRecord, LocalAthletePreferences, PreviousPerformance, ProgressSummary, Routine, SessionRecord, WeeklyMuscleVolume, Program, ProgramBlock, ProgramDay, ProgramExercise, ProgramWeekStatus, WeeklyLoad, WorkoutBlock, ProgramBlockInput, ProgramExercisePatch, SessionModality, StreakSummary, ProgramWeekCount, BenchmarkItem, TrainingOverview, Workout, WorkoutDetail, TrainingSet } from './trainingTypes';
@@ -55,7 +56,43 @@ function toCardioEntry(c: CardioSession): CardioEntry {
 export class OfficialTrainingRepository implements TrainingRepository {
   private readonly drafts = new Map<string, DraftSet>();
 
-  constructor(private readonly data: OpenedAthleteData, private readonly newId: IdFactory) {}
+  private readonly data: OpenedAthleteData;
+  /** Vacía la caché de catálogo y planes (tras sincronizar). */
+  readonly invalidateCache: () => void;
+
+  constructor(data: OpenedAthleteData, private readonly newId: IdFactory) {
+    const cache = createDataCache(data);
+    this.data = cache.data;
+    this.invalidateCache = () => { cache.invalidate(); this.clearSetHistory(); };
+  }
+
+  /**
+   * Historial por ejercicio (series de todas las sesiones), en memoria. Durante el entrenamiento cada serie guardada
+   * recargaba el historial completo de TODOS los ejercicios de la rutina; ahora solo el del ejercicio que cambió.
+   */
+  private readonly setHistory = new Map<string, ReturnType<OpenedAthleteData['sessions']['listSetsForExercise']>>();
+  private readonly exerciseOfSet = new Map<string, string>();
+  private historyGeneration = 0;
+
+  private listSetsForExercise(exerciseId: string) {
+    const hit = this.setHistory.get(exerciseId);
+    if (hit) return hit;
+    const gen = this.historyGeneration;
+    const promise = this.data.sessions.listSetsForExercise(exerciseId).then((r) => {
+      if (!r.ok || gen !== this.historyGeneration) this.setHistory.delete(exerciseId);
+      return r;
+    });
+    this.setHistory.set(exerciseId, promise);
+    return promise;
+  }
+
+  private forgetSetHistory(exerciseId: string | undefined) {
+    if (exerciseId === undefined) { this.clearSetHistory(); return; }
+    this.setHistory.delete(exerciseId);
+    this.historyGeneration++;
+  }
+
+  private clearSetHistory() { this.setHistory.clear(); this.historyGeneration++; }
 
   async searchExercises(query = '', options: { modality?: 'strength' | 'cardio' | 'all' } = {}): Promise<Exercise[]> {
     const modality = options.modality ?? 'strength';
@@ -148,6 +185,7 @@ export class OfficialTrainingRepository implements TrainingRepository {
 
   /** Quita un ejercicio de la sesión con sus series (los del plan solo se pueden quitar en entrenamiento libre; eso lo decide la pantalla). */
   async removeWorkoutExercise(sessionId: string, sessionExerciseId: string): Promise<void> {
+    this.clearSetHistory();
     const detail = unwrap(await this.data.sessions.getDetail(sessionId));
     const exercise = detail.exercises.find((e) => e.id === sessionExerciseId);
     if (!exercise) return;
@@ -161,6 +199,7 @@ export class OfficialTrainingRepository implements TrainingRepository {
    * con las series que faltan (ver splitSharedTargets). Primero se agrega y luego se quita: si falla, no se pierde nada.
    */
   async swapWorkoutExercise(sessionId: string, sessionExerciseId: string, exerciseId: string): Promise<string> {
+    this.clearSetHistory();
     const detail = unwrap(await this.data.sessions.getDetail(sessionId));
     const old = detail.exercises.find((e) => e.id === sessionExerciseId);
     if (!old) throw new Error('EXERCISE_NOT_FOUND');
@@ -188,6 +227,14 @@ export class OfficialTrainingRepository implements TrainingRepository {
 
   async saveSet(sessionId: string, setId: string, input: LoggedSetInput): Promise<void> {
     const draft = this.drafts.get(setId);
+    try { await this.writeSet(sessionId, setId, input, draft); } finally {
+      const exerciseId = this.exerciseOfSet.get(draft?.sessionExerciseId ?? setId);
+      if (exerciseId) this.exerciseOfSet.set(setId, exerciseId);
+      this.forgetSetHistory(exerciseId);
+    }
+  }
+
+  private async writeSet(sessionId: string, setId: string, input: LoggedSetInput, draft: DraftSet | undefined): Promise<void> {
     if (draft) {
       unwrap(await this.data.sessions.logSet({
         // Sin `position`: el backend asigna la siguiente posición libre al guardar (`nextPosition`).
@@ -227,7 +274,7 @@ export class OfficialTrainingRepository implements TrainingRepository {
     }
     unwrap(await this.data.sessions.complete({ sessionId, endedAt, ...(options.sessionRpe !== undefined ? { sessionRpe: options.sessionRpe } : {}) }));
   }
-  async tombstoneWorkout(sessionId: string): Promise<void> { unwrap(await this.data.sessions.delete(sessionId)); }
+  async tombstoneWorkout(sessionId: string): Promise<void> { try { unwrap(await this.data.sessions.delete(sessionId)); } finally { this.clearSetHistory(); } }
 
   async getWorkout(sessionId: string): Promise<WorkoutDetail | null> {
     const result = await this.data.sessions.getDetail(sessionId);
@@ -243,6 +290,8 @@ export class OfficialTrainingRepository implements TrainingRepository {
     const planned = new Map((day?.exercises ?? []).map((e) => [e.id, e]));
     const exercises = await Promise.all(detail.exercises.map(async (exercise) => {
       const catalog = unwrap(await this.data.exercises.getById(exercise.exerciseId));
+      this.exerciseOfSet.set(exercise.id, exercise.exerciseId);
+      for (const set of exercise.sets) this.exerciseOfSet.set(set.id, exercise.exerciseId);
       const metadata = exercise.trainingDayExerciseId ? planned.get(exercise.trainingDayExerciseId) ?? null : null;
       const persisted: TrainingSet[] = exercise.sets.map((set, index) => ({
         id: set.id, setIndex: index, weightKg: set.weightKg, reps: set.reps, rir: set.rir, isWarmup: set.setType === 'warmup',
@@ -307,7 +356,7 @@ export class OfficialTrainingRepository implements TrainingRepository {
    * que esta sesión supera (peso máximo y 1RM estimado).
    */
   private async exerciseHistory(exerciseId: string, sessionId: string, hasSets: boolean): Promise<{ newRecords: SessionRecord[]; previous: PreviousPerformance | null }> {
-    const all = await this.data.sessions.listSetsForExercise(exerciseId);
+    const all = await this.listSetsForExercise(exerciseId);
     if (!all.ok) return { newRecords: [], previous: null };
     const history = { value: upToSession(all.value, sessionId) };
     const newRecords = hasSets
@@ -357,7 +406,7 @@ export class OfficialTrainingRepository implements TrainingRepository {
     });
     const exerciseIds = [...new Set(allDetails.flatMap((item) => item.exercises.map((exercise) => exercise.exerciseId)))];
     const records = (await Promise.all(exerciseIds.map(async (exerciseId) => {
-      const [exercise, sets] = await Promise.all([this.data.exercises.getById(exerciseId), this.data.sessions.listSetsForExercise(exerciseId)]);
+      const [exercise, sets] = await Promise.all([this.data.exercises.getById(exerciseId), this.listSetsForExercise(exerciseId)]);
       const personal = computePersonalRecords(unwrap(sets));
       const record = personal.max_weight;
       const e1rm = personal.best_e1rm;

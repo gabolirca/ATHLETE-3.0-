@@ -7,7 +7,7 @@ import { useAthleteData } from './AthleteDataProvider';
 import { MobileTrainingContext } from './MobileTrainingContext';
 import { OfficialTrainingRepository } from './OfficialTrainingRepository';
 import type { TrainingRepository } from './TrainingRepository';
-import { withChangeNotifications } from './localChanges';
+import { onRemoteChange, withChangeNotifications } from './localChanges';
 
 export function OfficialTrainingProvider({ children }: PropsWithChildren) {
   const { status, data, newId, retry } = useAthleteData();
@@ -18,6 +18,7 @@ export function OfficialTrainingProvider({ children }: PropsWithChildren) {
     let active = true;
     setRepository(null);
     setProfileError(null);
+    let unsubscribe = () => {};
     if (status !== 'ready' || !data) return () => { active = false; };
     void (async () => {
       const contractsVersion: string = CONTRACTS_VERSION;
@@ -29,11 +30,14 @@ export function OfficialTrainingProvider({ children }: PropsWithChildren) {
         const initialized = await data.profile.initialize(Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC');
         if (!initialized.ok) throw new Error(initialized.error.message);
       } else if (!profile.ok) throw new Error(profile.error.message);
-      if (active) setRepository(withChangeNotifications(new OfficialTrainingRepository(data, newId)));
+      if (!active) return;
+      const official = new OfficialTrainingRepository(data, newId);
+      unsubscribe = onRemoteChange(official.invalidateCache);
+      setRepository(withChangeNotifications(official));
     })().catch((cause: unknown) => {
       if (active) setProfileError(cause instanceof Error ? cause : new Error('No se pudo preparar el perfil local.'));
     });
-    return () => { active = false; };
+    return () => { active = false; unsubscribe(); };
   }, [status, data, newId]);
 
   const error = status === 'error' || profileError !== null;

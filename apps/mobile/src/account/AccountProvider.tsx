@@ -4,7 +4,7 @@ import type { AuthState, SyncStatus } from '@athlete/contracts';
 import { useAthleteData } from '@/data/AthleteDataProvider';
 import { cloudUnavailableReason, getCloud } from './cloud';
 import { linkAccountIfNeeded } from './linkAccount';
-import { onLocalChange } from '@/data/localChanges';
+import { emitRemoteChange, onLocalChange } from '@/data/localChanges';
 import { DEFAULT_SCHEDULER_OPTIONS, SyncScheduler, type SyncOutcome, type SyncSchedulerOptions } from './syncScheduler';
 
 export type AccountLink = 'none' | 'linked' | 'other-account';
@@ -55,7 +55,7 @@ export function AccountProvider({ children, syncOptions = DEFAULT_SCHEDULER_OPTI
     setSyncing(true);
     try {
       const result = await current.sync.syncNow();
-      if (result.ok) { setStatus(result.value); setSyncError(null); return 'ok'; }
+      if (result.ok) { emitRemoteChange(); setStatus(result.value); setSyncError(null); return 'ok'; }
       const offline = result.error.code === 'NETWORK_UNAVAILABLE';
       setSyncError(offline ? 'Sin conexión: tus datos están guardados en el teléfono y se subirán solos cuando vuelva la red.' : result.error.message);
       void refreshStatus();

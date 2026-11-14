@@ -437,3 +437,23 @@ test('máquina ocupada: la variante toma el lugar y lo planeado; a medias, se ll
   expect(exerciseProgress(w.exercises[0]!).complete).toBe(true);
   await data.close?.();
 });
+
+test('caché: con el historial ya en memoria, una serie nueva sí actualiza el récord y la rutina nueva aparece', async () => {
+  const { data, repository, sessionId } = await setup();
+  let w = (await repository.getWorkout(sessionId))!;
+  await repository.saveSet(sessionId, w.exercises[0]!.sets.at(-1)!.id, { weightKg: 100, reps: 5, rir: 2, isWarmup: false });
+  await repository.finishWorkout(sessionId);
+  const exerciseId = w.exercises[0]!.exerciseId;
+  expect(await repository.listRoutines()).toEqual([]);
+  await repository.createRoutine({ name: 'Fuerza', exercises: [{ exerciseId, sets: 3, reps: 5, restSeconds: 120 }] } as never);
+  expect((await repository.listRoutines()).map((r) => r.name)).toEqual(['Fuerza']);
+
+  const next = await repository.startWorkout();
+  await repository.addExercise(next, exerciseId);
+  w = (await repository.getWorkout(next))!; // deja el historial del ejercicio en memoria
+  expect(w.exercises[0]!.previous?.sets[0]).toMatchObject({ weightKg: 100, reps: 5 });
+  await repository.saveSet(next, w.exercises[0]!.sets.at(-1)!.id, { weightKg: 110, reps: 5, rir: 1, isWarmup: false });
+  w = (await repository.getWorkout(next))!;
+  expect(w.exercises[0]!.newRecords?.map((r) => r.kind)).toContain('max_weight');
+  await data.close?.();
+});

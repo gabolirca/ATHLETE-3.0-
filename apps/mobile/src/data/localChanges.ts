@@ -23,6 +23,12 @@ export const MUTATING_METHODS = [
   'createRoutine', 'tombstoneRoutine', 'startWorkout', 'addExercise', 'addSet', 'saveSet',
   'finishWorkout', 'tombstoneWorkout', 'addBodyMeasurement', 'tombstoneBodyMeasurement',
   'savePreferences', 'logCardio', 'tombstoneCardio',
+  // Antes faltaban: estas escrituras quedaban pendientes de subir hasta la siguiente serie u otro cambio.
+  'removeWorkoutExercise', 'swapWorkoutExercise', 'saveBodyGoal', 'updateCardio', 'saveOnboarding',
+  'adoptProgramTemplate', 'deleteProgram', 'startProgramDay', 'saveBlockResult',
+  'addProgramDay', 'updateProgramDay', 'duplicateProgramDay', 'deleteProgramDay',
+  'addProgramBlock', 'updateProgramBlock', 'deleteProgramBlock',
+  'addProgramExercise', 'updateProgramExercise', 'removeProgramExercise',
 ] as const satisfies readonly (keyof TrainingRepository)[];
 
 /** Devuelve el mismo repositorio, pero cada escritura exitosa avisa del cambio. */
@@ -43,4 +49,16 @@ export function withChangeNotifications<T extends TrainingRepository>(repository
       return typeof value === 'function' ? value.bind(target) : value;
     },
   });
+}
+
+/** Cambios que llegan de fuera (una sincronización trajo datos): quien guarda caché la vacía. */
+const remoteListeners = new Set<Listener>();
+export function onRemoteChange(listener: Listener): () => void {
+  remoteListeners.add(listener);
+  return () => { remoteListeners.delete(listener); };
+}
+export function emitRemoteChange() {
+  for (const listener of [...remoteListeners]) {
+    try { listener(); } catch { /* no rompe la sincronización */ }
+  }
 }
