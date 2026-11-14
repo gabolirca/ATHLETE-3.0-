@@ -8,6 +8,7 @@ import { NewRecordBadge } from '@/progress/records';
 import { exerciseSuggestion, formatSuggestion } from '@/workout/coach';
 import { BlockHeader, isWholeBlock } from '@/workout/blocks';
 import { TimedSetEditor } from '@/components/TimedSetEditor';
+import { BusyMachineSheet } from '@/workout/BusyMachineSheet';
 import { formatPrescription } from '@/program/format';
 import type { SessionExercise, TrainingSet, WorkoutBlock } from '@/data/trainingTypes';
 import { AppInput } from '@/components/AppInput';
@@ -47,6 +48,7 @@ export default function WorkoutScreen() {
   const [units, setUnit] = useWeightUnits();
   const [strictRest] = useStrictRest();
   const [sessionRpe, setSessionRpe] = useState<number | null>(null);
+  const [busyFor, setBusyFor] = useState<SessionExercise | null>(null);
 
   const refresh = useCallback(async (showLoading = true) => {
     if (!repository) return;
@@ -166,6 +168,8 @@ export default function WorkoutScreen() {
         }} />;
         }
       })()}
+      {active && status !== 'done' ? <Pressable accessibilityRole="button" accessibilityLabel={`Máquina ocupada: ver variantes de ${exercise.exerciseName}`} onPress={() => setBusyFor(exercise)} style={s.busy}>
+        <Ionicons name="swap-horizontal" size={15} color={colors.amber}/><Text style={s.busyText}>Máquina ocupada · ver variantes</Text></Pressable> : null}
       {active && (!detail.trainingDayId || !exercise.fromPlan) ? <Pressable accessibilityRole="button" accessibilityLabel={`Quitar ${exercise.exerciseName}`} onPress={() => confirmRemove(exercise)} style={s.remove}>
         <Ionicons name="trash-outline" size={14} color={colors.red}/><Text style={s.removeText}>Quitar ejercicio</Text></Pressable> : null}
       </> : null}
@@ -207,6 +211,7 @@ export default function WorkoutScreen() {
     {finishError ? <Text accessibilityRole="alert" style={s.error}>{finishError}</Text> : null}
     <ActionButton onPress={finish} loading={finishing} disabled={detail.workout.state !== 'active'}>Finalizar y guardar sesión</ActionButton>
     {timer.active ? <View style={{ height: 84 }}/> : null}
+    <BusyMachineSheet exercise={busyFor} onClose={() => setBusyFor(null)} onPick={async (e) => { await repository?.swapWorkoutExercise(sessionId, busyFor!.id, e.id); setActionError(''); await refresh(false); }}/>
   </Screen>{strictRest ? <RestTimerFullScreen timer={timer}/> : <RestTimerBar timer={timer}/>}</View>;
 }
 
@@ -224,4 +229,4 @@ function statusLabel(status: ExerciseStatus, p: ExerciseProgress): string {
   return `${p.done} series`;
 }
 
-const s=StyleSheet.create({root:{flex:1},doneSet:{flexDirection:'row',justifyContent:'space-between',alignItems:'center',gap:8,borderWidth:1,borderColor:colors.border,borderRadius:12,paddingHorizontal:12,paddingVertical:10,backgroundColor:colors.surface},doneSetText:{color:colors.green,fontSize:11,fontWeight:'800',letterSpacing:0.5},doneSetValue:{color:colors.text,fontSize:13,fontWeight:'700'},remove:{flexDirection:'row',alignItems:'center',gap:5,alignSelf:'flex-start',paddingVertical:6,paddingHorizontal:4},removeText:{color:colors.red,fontSize:12,fontWeight:'700'},block:{gap:9},wodRow:{flexDirection:'row',justifyContent:'space-between',gap:10},wodName:{flex:1,color:colors.text,fontSize:13},wodPresc:{color:colors.text,fontSize:13,fontWeight:'800'},rpeRow:{flexDirection:'row',flexWrap:'wrap',gap:6},rpe:{width:40,height:40,borderRadius:11,borderWidth:1,borderColor:colors.border,alignItems:'center',justifyContent:'center',backgroundColor:colors.surfaceRaised},rpeOn:{borderColor:colors.amber,backgroundColor:colors.amberSoft},rpeText:{color:colors.secondary,fontSize:15,fontWeight:'800'},rpeTextOn:{color:colors.amber},suggestBox:{borderWidth:1,borderColor:colors.green,backgroundColor:colors.greenSoft,borderRadius:12,padding:10,gap:3},suggestTitle:{color:colors.green,fontSize:13,fontWeight:'800'},suggestReason:{color:colors.secondary,fontSize:11,lineHeight:16},guideTitle:{color:colors.text,fontSize:16,fontWeight:'800'},track:{height:8,borderRadius:4,backgroundColor:colors.surfaceRaised,overflow:'hidden'},fill:{height:8,borderRadius:4,backgroundColor:colors.blue},fillDone:{backgroundColor:colors.green},statusRow:{flexDirection:'row',alignItems:'center',gap:8,flexWrap:'wrap'},now:{color:'white',backgroundColor:colors.blue,fontSize:10,fontWeight:'800',paddingHorizontal:6,paddingVertical:2,borderRadius:6,overflow:'hidden'},doneTag:{color:colors.green,fontSize:10,fontWeight:'800'},upcoming:{color:colors.muted,fontSize:10,fontWeight:'800'},summary:{color:colors.secondary,fontSize:12,marginTop:4},previous:{color:colors.accentText,fontSize:12,lineHeight:17,paddingHorizontal:4},exerciseBlock:{gap:9},exerciseName:{color:colors.text,fontSize:18,fontWeight:'800',marginTop:5},detail:{color:colors.secondary,fontSize:11,lineHeight:16},addSet:{flexDirection:'row',alignItems:'center',gap:3,padding:7},addSetText:{color:colors.blue,fontSize:11,fontWeight:'800'},error:{color:colors.red,fontSize:12,lineHeight:18}});
+const s=StyleSheet.create({root:{flex:1},busy:{flexDirection:'row',alignItems:'center',gap:6,alignSelf:'flex-start',paddingVertical:8,paddingHorizontal:12,borderRadius:10,borderWidth:1,borderColor:colors.amber,backgroundColor:colors.amberSoft},busyText:{color:colors.amber,fontSize:12,fontWeight:'800'},doneSet:{flexDirection:'row',justifyContent:'space-between',alignItems:'center',gap:8,borderWidth:1,borderColor:colors.border,borderRadius:12,paddingHorizontal:12,paddingVertical:10,backgroundColor:colors.surface},doneSetText:{color:colors.green,fontSize:11,fontWeight:'800',letterSpacing:0.5},doneSetValue:{color:colors.text,fontSize:13,fontWeight:'700'},remove:{flexDirection:'row',alignItems:'center',gap:5,alignSelf:'flex-start',paddingVertical:6,paddingHorizontal:4},removeText:{color:colors.red,fontSize:12,fontWeight:'700'},block:{gap:9},wodRow:{flexDirection:'row',justifyContent:'space-between',gap:10},wodName:{flex:1,color:colors.text,fontSize:13},wodPresc:{color:colors.text,fontSize:13,fontWeight:'800'},rpeRow:{flexDirection:'row',flexWrap:'wrap',gap:6},rpe:{width:40,height:40,borderRadius:11,borderWidth:1,borderColor:colors.border,alignItems:'center',justifyContent:'center',backgroundColor:colors.surfaceRaised},rpeOn:{borderColor:colors.amber,backgroundColor:colors.amberSoft},rpeText:{color:colors.secondary,fontSize:15,fontWeight:'800'},rpeTextOn:{color:colors.amber},suggestBox:{borderWidth:1,borderColor:colors.green,backgroundColor:colors.greenSoft,borderRadius:12,padding:10,gap:3},suggestTitle:{color:colors.green,fontSize:13,fontWeight:'800'},suggestReason:{color:colors.secondary,fontSize:11,lineHeight:16},guideTitle:{color:colors.text,fontSize:16,fontWeight:'800'},track:{height:8,borderRadius:4,backgroundColor:colors.surfaceRaised,overflow:'hidden'},fill:{height:8,borderRadius:4,backgroundColor:colors.blue},fillDone:{backgroundColor:colors.green},statusRow:{flexDirection:'row',alignItems:'center',gap:8,flexWrap:'wrap'},now:{color:'white',backgroundColor:colors.blue,fontSize:10,fontWeight:'800',paddingHorizontal:6,paddingVertical:2,borderRadius:6,overflow:'hidden'},doneTag:{color:colors.green,fontSize:10,fontWeight:'800'},upcoming:{color:colors.muted,fontSize:10,fontWeight:'800'},summary:{color:colors.secondary,fontSize:12,marginTop:4},previous:{color:colors.accentText,fontSize:12,lineHeight:17,paddingHorizontal:4},exerciseBlock:{gap:9},exerciseName:{color:colors.text,fontSize:18,fontWeight:'800',marginTop:5},detail:{color:colors.secondary,fontSize:11,lineHeight:16},addSet:{flexDirection:'row',alignItems:'center',gap:3,padding:7},addSetText:{color:colors.blue,fontSize:11,fontWeight:'800'},error:{color:colors.red,fontSize:12,lineHeight:18}});

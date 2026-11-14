@@ -14,7 +14,7 @@ const workout = (exercises: ReturnType<typeof exercise>[], trainingDayId: string
   workout: { id: 's1', state: 'active', startedAt: new Date().toISOString(), completedAt: null, localVersion: 1, serverVersion: null, syncStatus: 'pending', exerciseCount: exercises.length, setCount: 0, durationMinutes: null },
   exercises, trainingDayId,
 });
-const mockRepository = { getWorkout: jest.fn(), saveSet: jest.fn().mockResolvedValue(undefined), finishWorkout: jest.fn(), addSet: jest.fn(), addExercise: jest.fn(), removeWorkoutExercise: jest.fn().mockResolvedValue(undefined) };
+const mockRepository = { getWorkout: jest.fn(), saveSet: jest.fn().mockResolvedValue(undefined), finishWorkout: jest.fn(), addSet: jest.fn(), addExercise: jest.fn(), removeWorkoutExercise: jest.fn().mockResolvedValue(undefined), swapWorkoutExercise: jest.fn().mockResolvedValue('se-new'), searchExercises: jest.fn() };
 
 jest.mock('expo-router', () => {
   const { useEffect } = jest.requireActual('react');
@@ -75,4 +75,15 @@ test('peso corporal: pide lastre opcional, no peso', async () => {
   mockRepository.getWorkout.mockResolvedValue(workout([exercise('a', 'Lagartijas', 3, [set('a1', 0, null, null)], { loadType: 'bodyweight' })]));
   const screen = await render(<WorkoutScreen />);
   await waitFor(() => expect(screen.getByLabelText('Lastre (kg, opcional)')).toBeTruthy());
+});
+
+test('máquina ocupada: abre variantes del ejercicio actual y al elegir una lo cambia', async () => {
+  const cat = (id: string, name: string, pattern: string, eq: string) => ({ id, name, muscleGroup: 'Cuádriceps', equipment: eq, equipmentList: [eq], origin: 'sample', movementPattern: pattern, modality: 'strength', muscleRoles: { primary: [{ slug: 'quads', name: 'Cuádriceps' }], secondary: [] } });
+  mockRepository.searchExercises.mockResolvedValue([cat('e-a', 'Prensa', 'squat', 'Máquina de prensa'), cat('e-h', 'Hack squat', 'squat', 'Máquina hack'), cat('e-x', 'Remo', 'horizontal_pull', 'Polea')].map((e, i) => i === 2 ? { ...e, muscleRoles: { primary: [{ slug: 'back', name: 'Espalda' }], secondary: [] } } : e));
+  mockRepository.getWorkout.mockResolvedValue(workout([exercise('a', 'Prensa', 4, [set('d1', 0, null, null)], { fromPlan: true })]));
+  const screen = await render(<WorkoutScreen/>);
+  fireEvent.press(await screen.findByLabelText('Máquina ocupada: ver variantes de Prensa'));
+  expect(screen.queryByLabelText('Cambiar por Remo')).toBeNull();
+  fireEvent.press(await screen.findByLabelText('Cambiar por Hack squat'));
+  await waitFor(() => expect(mockRepository.swapWorkoutExercise).toHaveBeenCalledWith('s1', 'a', 'e-h'));
 });

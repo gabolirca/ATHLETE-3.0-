@@ -2,6 +2,7 @@ import type { CardioSession } from '@athlete/contracts';
 import { CATALOG_EXERCISE_ID, type OpenedAthleteData } from '@athlete/data';
 import type { CardioDraft } from '@/cardio/cardioForm';
 import type { TrainingRepository } from './TrainingRepository';
+import { splitSharedTargets } from '@/workout/sharedTargets';
 import { PROGRAM_TEMPLATES, benchmarks, programStartDate, computeStreak, localDateOf, weeksStreak, computePersonalRecords, diagnoseWeeklyVolume, isEffectiveSet, loadTrend, weekStartOf, weeklyLoads, type LoadItem, newRecordsInSession, setVolumeKg, summarizeWeek, weeklySetsByMuscle, type ExerciseMuscles } from '@athlete/domain';
 import type { BodyMeasurementInput, LocalAthletePreferencesInput, LoggedSetInput, RoutineInput } from './trainingSchemas';
 import type { BodyMeasurement, CardioEntry, Exercise, ExerciseRecord, LocalAthletePreferences, PreviousPerformance, ProgressSummary, Routine, SessionRecord, WeeklyMuscleVolume, Program, ProgramBlock, ProgramDay, ProgramExercise, ProgramWeekStatus, WeeklyLoad, WorkoutBlock, ProgramBlockInput, ProgramExercisePatch, SessionModality, StreakSummary, ProgramWeekCount, BenchmarkItem, TrainingOverview, Workout, WorkoutDetail, TrainingSet } from './trainingTypes';
@@ -154,6 +155,29 @@ export class OfficialTrainingRepository implements TrainingRepository {
     unwrap(await this.data.sessions.removeExercise(sessionExerciseId));
   }
 
+  /**
+   * Máquina ocupada: cambia el ejercicio por una variante. Sin series registradas la variante toma su lugar y hereda
+   * lo planeado (series, reps, descanso). Con series, el original se queda con lo hecho y la variante va justo después
+   * con las series que faltan (ver splitSharedTargets). Primero se agrega y luego se quita: si falla, no se pierde nada.
+   */
+  async swapWorkoutExercise(sessionId: string, sessionExerciseId: string, exerciseId: string): Promise<string> {
+    const detail = unwrap(await this.data.sessions.getDetail(sessionId));
+    const old = detail.exercises.find((e) => e.id === sessionExerciseId);
+    if (!old) throw new Error('EXERCISE_NOT_FOUND');
+    const id = this.newId();
+    if (old.sets.length === 0) {
+      unwrap(await this.data.sessions.addExercise({ id, sessionId, exerciseId, trainingDayExerciseId: old.trainingDayExerciseId, position: old.position }));
+      unwrap(await this.data.sessions.removeExercise(old.id));
+      for (const [draftId, draft] of this.drafts) if (draft.sessionExerciseId === old.id) this.drafts.delete(draftId);
+    } else {
+      unwrap(await this.data.sessions.addExercise({ id, sessionId, exerciseId, trainingDayExerciseId: old.trainingDayExerciseId }));
+      const order = [...detail.exercises].sort((a, b) => a.position - b.position).map((e) => e.id);
+      order.splice(order.indexOf(old.id) + 1, 0, id);
+      unwrap(await this.data.sessions.reorderExercises({ sessionId, orderedSessionExerciseIds: order }));
+    }
+    return id;
+  }
+
   async addSet(_sessionId: string, sessionExerciseId: string): Promise<string> {
     const id = this.newId();
     const detail = unwrap(await this.data.sessions.getDetail(_sessionId));
@@ -264,7 +288,8 @@ export class OfficialTrainingRepository implements TrainingRepository {
     // y pedía otro registro. En rondas, AMRAP, EMOM y por tiempo se registra el bloque completo, no serie por serie.
     const whole = new Set(blocks.filter((b) => ['rounds', 'amrap', 'emom', 'for_time'].includes(b.format)).map((b) => b.id));
     const withTargets = exercises.map((e) => (e.fromPlan && e.setsTarget === null && !(e.blockId && whole.has(e.blockId)) ? { ...e, setsTarget: 1 } : e));
-    return { workout, exercises: withTargets, blocks, sessionRpe: detail.sessionRpe, trainingDayId: detail.trainingDayId, dayName: day?.name ?? null };
+    const split = splitSharedTargets(withTargets, detail.exercises.map((e) => e.trainingDayExerciseId));
+    return { workout, exercises: split, blocks, sessionRpe: detail.sessionRpe, trainingDayId: detail.trainingDayId, dayName: day?.name ?? null };
   }
 
   /** Día planificado (con ejercicios y bloques) por id, buscándolo en los planes del usuario. */

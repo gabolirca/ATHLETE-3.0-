@@ -405,3 +405,35 @@ test('híbrido: el remo del calentamiento cuenta UNA vez; el circuito por rondas
   expect(exerciseProgress(after.exercises.find((e) => e.id === warmRow.id)!)).toEqual({ done: 1, target: 1, complete: true });
   await data.close?.();
 });
+
+test('máquina ocupada: la variante toma el lugar y lo planeado; a medias, se lleva solo las series que faltan', async () => {
+  const { data, repository } = await setup();
+  const custom = async (name: string) => {
+    const id = newId();
+    const r = await data.exercises.createCustom({ id, name, modality: 'strength', loadType: 'external', primaryMuscleGroupIds: [], secondaryMuscleGroupIds: [], equipmentIds: [] });
+    if (!r.ok) throw new Error(r.error.message);
+    return id;
+  };
+  const [prensa, hack, goblet, curl] = [await custom('Prensa'), await custom('Hack squat'), await custom('Goblet'), await custom('Curl femoral')];
+  const active = await data.sessions.getActive();
+  if (active.ok && active.value) await data.sessions.discard({ sessionId: active.value.id });
+  const planId = await repository.createRoutine({ name: 'Pierna', exercises: [
+    { exerciseId: prensa, sets: 4, reps: 10, restSeconds: 120 }, { exerciseId: curl, sets: 3, reps: 12, restSeconds: 60 },
+  ] } as never);
+  const sessionId = await repository.startWorkout(planId);
+
+  // 1) Sin series: Hack squat reemplaza a la prensa en su lugar, con 4 × 10 y 120 s.
+  let w = (await repository.getWorkout(sessionId))!;
+  await repository.swapWorkoutExercise(sessionId, w.exercises[0]!.id, hack);
+  w = (await repository.getWorkout(sessionId))!;
+  expect(w.exercises.map((e) => e.exerciseName)).toEqual(['Hack squat', 'Curl femoral']);
+  expect(w.exercises[0]).toMatchObject({ setsTarget: 4, repsTarget: 10, restSeconds: 120, fromPlan: true });
+
+  // 2) Con 1 serie hecha: el hack se queda con 1, Goblet va justo después con las 3 que faltan.
+  await repository.saveSet(sessionId, w.exercises[0]!.sets.at(-1)!.id, { weightKg: 80, reps: 10, rir: 2, isWarmup: false });
+  await repository.swapWorkoutExercise(sessionId, w.exercises[0]!.id, goblet);
+  w = (await repository.getWorkout(sessionId))!;
+  expect(w.exercises.map((e) => [e.exerciseName, e.setsTarget])).toEqual([['Hack squat', 1], ['Goblet', 3], ['Curl femoral', 3]]);
+  expect(exerciseProgress(w.exercises[0]!).complete).toBe(true);
+  await data.close?.();
+});
