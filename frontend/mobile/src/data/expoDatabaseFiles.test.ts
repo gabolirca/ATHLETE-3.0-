@@ -90,3 +90,9 @@ describe('expoDatabaseFiles', () => {
     });
   });
 });
+
+import { databaseDirectoryUri } from './expoDatabaseFiles';
+test('Android: la ruta simple de la carpeta de bases se convierte en file:// (iOS ya la trae así)', () => {
+  expect(databaseDirectoryUri('/data/user/0/com.atheletsoftliirca.mundofit/files/SQLite')).toBe('file:///data/user/0/com.atheletsoftliirca.mundofit/files/SQLite');
+  expect(databaseDirectoryUri('file:///var/mobile/Containers/Data/SQLite')).toBe('file:///var/mobile/Containers/Data/SQLite');
+});
