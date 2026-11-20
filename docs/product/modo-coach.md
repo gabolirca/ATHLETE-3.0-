@@ -25,4 +25,4 @@ on conflict do nothing;
 ## Técnico
 - Migración `20261112000100`: `pro_links.scope`, `pro_invites.scope`, rol `coach`, `training_plans.assigned_by(_name)`
   (trigger de origen), tabla `coach_comments` (entidad `coach_comment`, solo escribible por RPC) y RPC `coach_*`.
-- Pruebas: `supabase/tests/db/coach.test.ts`, `packages/data/test/integration/coach-sync.test.ts`, `apps/mobile/src/coach/CoachScreens.test.tsx`.
+- Pruebas: `backend/supabase/tests/db/coach.test.ts`, `shared/data/test/integration/coach-sync.test.ts`, `frontend/mobile/src/coach/CoachScreens.test.tsx`.

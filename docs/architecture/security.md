@@ -2,7 +2,7 @@
 
 **Estado:** Implementado y probado en entorno LOCAL. Nada aplicado a proyectos remotos.
 **Autor:** Claude · **Fecha:** 3 de noviembre de 2026
-**Alcance:** `supabase/migrations/*`, `packages/data`, `packages/contracts`.
+**Alcance:** `backend/supabase/migrations/*`, `shared/data`, `shared/contracts`.
 
 ## 1. Principios
 

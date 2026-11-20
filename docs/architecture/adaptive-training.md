@@ -9,7 +9,7 @@ nutrición y actividad).
 
 ## 1. Inventario de datos y variables
 
-Estado en ATHLETE 3.0, verificado en `packages/contracts`, `packages/data` y migraciones `athlete3`:
+Estado en ATHLETE 3.0, verificado en `shared/contracts`, `shared/data` y migraciones `athlete3`:
 - **✅** contrato, almacenamiento local y servidor con pruebas;
 - **📄** solo contrato;
 - **—** no existe.
@@ -116,7 +116,7 @@ A + C + plan (objetivo, RIR objetivo) + restricciones de seguridad ──► B: 
 | Constructor de características | `@athlete/domain` (puro) | Calcula variables **a un instante de corte** (`asOf`): solo usa registros con `completedAt`/`measuredAt` < `asOf` y la versión del perfil vigente entonces. Mismo código para entrenar y para inferir |
 | Modelos A y C | `@athlete/domain` (inferencia ligera) + entrenamiento fuera de línea (Python o TS) | Empezar con modelos **personales e interpretables** (§4). Artefacto versionado con hash |
 | Política B | `@athlete/domain` | Reglas explícitas + salidas de A y C. Capa de seguridad con **redondeo al final** (corrige el error 1 de `carga-v1`) |
-| Registro de predicciones | `packages/data` (local, sincronizable) | Ver §2.3 |
+| Registro de predicciones | `shared/data` (local, sincronizable) | Ver §2.3 |
 | Inferencia | En el dispositivo | Funciona sin conexión, los datos de salud no salen del teléfono y no hay que descargar el modelo de una URL pública |
 
 ### 2.3 Registro de predicciones y recomendaciones (corrige `carga-v1`)
@@ -209,7 +209,7 @@ Cada etapa tiene criterios de entrada y salida. **Ninguna incluye entrenar con d
 
 | Etapa | Contenido | Criterio de salida |
 |---|---|---|
-| **0. Fundamentos de datos** (ahora → integración) | Integración móvil ↔ `packages/data`. Contratos: sRPE de sesión, sueño (horas y calidad), cuestionario de bienestar, `Profile.sports`, incremento mínimo por ejercicio. Nutrición local y en servidor. Versionado del perfil | Ciclo completo validado en el simulador; las nuevas entidades sincronizan con pruebas |
+| **0. Fundamentos de datos** (ahora → integración) | Integración móvil ↔ `shared/data`. Contratos: sRPE de sesión, sueño (horas y calidad), cuestionario de bienestar, `Profile.sports`, incremento mínimo por ejercicio. Nutrición local y en servidor. Versionado del perfil | Ciclo completo validado en el simulador; las nuevas entidades sincronizan con pruebas |
 | **1. Registro y líneas base** | `ModelOutput` (§2.3). Constructor de características con `asOf` y pruebas anti-fuga (una característica nunca cambia al añadir datos posteriores al corte). Política base B: doble progresión por RIR con capa de seguridad (redondeo al final). Métricas §3 calculadas en `domain` | La línea base se emite, registra y evalúa de punta a punta; panel interno con las métricas |
 | **2. Modelo A personal** | Modelo jerárquico/bayesiano sencillo por persona y ejercicio (relación carga–reps–RIR con incertidumbre), con un *prior* poblacional ligero. Inferencia en el dispositivo | Con ≥ N exposiciones (N fijado por la curva de aprendizaje): mejora frente a las líneas base de §3.1 y cobertura calibrada |
 | **3. Política B informada por A** | B elige la carga que, según A, deja el RIR objetivo, con límites. Comparación frente a la política base | Mejor acierto del objetivo de RIR y fallos no previstos ≤ base, durante ≥ 8 semanas de uso real |

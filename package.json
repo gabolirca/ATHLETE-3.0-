@@ -2,11 +2,11 @@
   "name": "athlete-3",
   "private": true,
   "version": "0.0.0",
-  "description": "ATHLETE 3.0 \u2014 monorepo TypeScript",
+  "description": "Mundo Fit (LIRCA) \u2014 monorepo: frontend / backend / shared",
   "workspaces": [
-    "packages/*",
-    "apps/mobile",
-    "supabase/tests"
+    "shared/*",
+    "frontend/mobile",
+    "backend/supabase/tests"
   ],
   "engines": {
     "node": ">=22"

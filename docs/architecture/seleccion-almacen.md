@@ -1,7 +1,7 @@
 # Selección y apertura del almacén local
 
-**Implementación:** `packages/data/src/storage/active-store.ts` · **Contrato:** `docs/contracts/contrato-seleccion-almacen.md`
-· **Pruebas:** `packages/data/test/unit/active-store.test.ts` · Versión 2 (5-nov-2026): solo almacén oficial.
+**Implementación:** `shared/data/src/storage/active-store.ts` · **Contrato:** `docs/contracts/contrato-seleccion-almacen.md`
+· **Pruebas:** `shared/data/test/unit/active-store.test.ts` · Versión 2 (5-nov-2026): solo almacén oficial.
 
 ## 1. Problema
 La base local cifrada (`athlete3-<localUserId>.db`) depende de tres datos en el almacén seguro: la identidad, la clave y el marcador. El sistema operativo puede separar los archivos de esos secretos:

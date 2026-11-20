@@ -19,13 +19,13 @@ pide documentar en una ADR técnica la generación de UUID y el versionado de re
 ### 2.1 Capas y dependencias
 
 ```
-apps/mobile (Codex)          pantallas, hooks, TanStack Query, Zustand
+frontend/mobile (Codex)          pantallas, hooks, TanStack Query, Zustand
         │  consume interfaces
         ▼
-packages/contracts           Zod + tipos + errores + puertos (interfaces de repositorio y sync)
+shared/contracts           Zod + tipos + errores + puertos (interfaces de repositorio y sync)
         ▲            ▲
         │            │ implementa
-packages/domain      packages/data (futuro, Claude)
+shared/domain      shared/data (futuro, Claude)
 lógica pura          ├─ sqlite/    repositorios sobre expo-sqlite + outbox
                      ├─ sync/      motor de sincronización (push/pull) independiente de la UI
                      └─ supabase/  SyncTransport + tipos generados de `athlete3`
@@ -35,7 +35,7 @@ lógica pura          ├─ sqlite/    repositorios sobre expo-sqlite + outbox
   implícitos (el reloj y los ids se inyectan con los puertos `Clock` e `IdGenerator`).
 - `data` depende de `contracts` y `domain`. Es el único paquete que conoce nombres de tablas.
 - La UI nunca toca SQLite ni Supabase: usa los repositorios de `contracts/src/repositories.ts`.
-- Los tipos generados por `supabase gen types` vivirán en `packages/data/src/supabase/` (ver §5, punto 1).
+- Los tipos generados por `supabase gen types` vivirán en `shared/data/src/supabase/` (ver §5, punto 1).
 
 ### 2.2 Identificadores
 
@@ -64,7 +64,7 @@ Cada tabla sincronizable de `athlete3` llevará:
 
 En SQLite se replican las columnas de negocio con los mismos nombres `snake_case`, más `revision`
 (la última conocida del servidor; null si nunca sincronizó). El mapeo `camelCase ↔ snake_case` se hace
-en `packages/data`, y cada fila leída se valida con el esquema Zod antes de salir del repositorio.
+en `shared/data`, y cada fila leída se valida con el esquema Zod antes de salir del repositorio.
 
 ### 2.4 Escrituras locales (autoguardado)
 
@@ -153,14 +153,14 @@ en `packages/data`, y cada fila leída se valida con el esquema Zod antes de sal
 
 - La app funciona íntegramente sin red; la sincronización es un proceso de fondo.
 - Hay que mantener dos esquemas físicos (SQLite y Postgres) alineados: lo cubrirán pruebas de contrato
-  en `packages/data` que validen filas de ambos lados con los mismos esquemas Zod.
+  en `shared/data` que validen filas de ambos lados con los mismos esquemas Zod.
 - El servidor necesita una tabla de mutaciones aplicadas con política de retención.
 
 ## 5. Cuestiones abiertas (requieren decisión)
 
 1. Ubicación de los tipos generados de Supabase: `docs/contracts/README.md §4` los menciona en contratos
-   y el diagnóstico de Codex propone `packages/contracts/src/database.types.ts`. Esta ADR propone
-   `packages/data` para que la app no dependa de nombres de tablas (`docs/contracts/README.md §1`).
+   y el diagnóstico de Codex propone `shared/contracts/src/database.types.ts`. Esta ADR propone
+   `shared/data` para que la app no dependa de nombres de tablas (`docs/contracts/README.md §1`).
 2. Forma del contrato de sesión: el diagnóstico de Codex propone `CreateSessionInput` con ejercicios y
    series anidados en una sola llamada; esta propuesta usa operaciones incrementales (iniciar, añadir
    ejercicio, registrar serie, completar) porque el autoguardado serie a serie lo exige.

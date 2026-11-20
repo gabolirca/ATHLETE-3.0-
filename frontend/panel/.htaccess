@@ -1,0 +1,14 @@
+# Panel ATHLETE (estático). Fuerza HTTPS y agrega cabeceras de seguridad.
+RewriteEngine On
+RewriteCond %{HTTPS} !=on
+RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+<IfModule mod_headers.c>
+  Header set X-Frame-Options "DENY"
+  Header set X-Content-Type-Options "nosniff"
+  Header set Referrer-Policy "strict-origin-when-cross-origin"
+  Header set X-Robots-Tag "noindex, nofollow"
+  Header set Content-Security-Policy "default-src 'self'; script-src 'self' https://esm.sh; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src https://cdn.jsdelivr.net; img-src 'self' data:; connect-src https://npdrjhbkilicuieecbgd.supabase.co wss://npdrjhbkilicuieecbgd.supabase.co https://esm.sh"
+</IfModule>
+<FilesMatch "\.(html|js|css)$">
+  Header set Cache-Control "no-cache"
+</FilesMatch>

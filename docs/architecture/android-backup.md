@@ -1,6 +1,6 @@
 # Android Auto Backup y bases cifradas
 
-**Fecha:** 5-nov-2026 · **Revisó:** backend (Claude Code) · **Afecta a:** `apps/mobile/app.json` (equipo móvil) y `@athlete/data`
+**Fecha:** 5-nov-2026 · **Revisó:** backend (Claude Code) · **Afecta a:** `frontend/mobile/app.json` (equipo móvil) y `@athlete/data`
 
 ## 1. Configuración actual (integración `6fa0c61`)
 
@@ -36,7 +36,7 @@ Al restaurar habría archivos sin claves.
 
 1. **Ninguna base cifrada se respalda con el mecanismo del sistema.** La recuperación entre dispositivos se hace con
    la cuenta y la sync (Supabase), que no depende de mover claves.
-2. **Cambio solicitado al equipo móvil en `apps/mobile/app.json`:** `"android": { "package": "com.athlete.mobile",
+2. **Cambio solicitado al equipo móvil en `frontend/mobile/app.json`:** `"android": { "package": "com.athlete.mobile",
    "allowBackup": false }`. Además:
    - mantener el plugin `expo-secure-store` con `configureAndroidBackup` por defecto, porque sus
      `dataExtractionRules` siguen excluyendo las bases y SecureStore en la transferencia entre dispositivos;

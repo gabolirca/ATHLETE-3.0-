@@ -17,7 +17,7 @@ startNewStore(options & { confirm: 'start-new-store' }): Promise<ActiveStore>  /
 ```
 
 `OpenActiveStoreOptions` = `OpenAthleteDataOptions` + `files: DatabaseFiles`.
-`DatabaseFiles` solo tiene `listDatabases()`. La app lo implementa en `apps/mobile/src/data/expoDatabaseFiles.ts`.
+`DatabaseFiles` solo tiene `listDatabases()`. La app lo implementa en `frontend/mobile/src/data/expoDatabaseFiles.ts`.
 
 ## 2. Estados
 
@@ -37,7 +37,7 @@ Acciones de `recovery`:
 - Nunca se borra ni sobrescribe un archivo o un secreto: todas las transiciones son comparar-y-escribir. Las bases abandonadas quedan en `retained`.
 - Un `athlete3.db` de la capa retirada se ignora: nunca se abre ni se toca.
 - Selección y recuperación se serializan en el proceso.
-- Pruebas: `packages/data/test/unit/active-store.test.ts`.
+- Pruebas: `shared/data/test/unit/active-store.test.ts`.
 
 ## 4. Obligaciones de la app
 1. **Una sola apertura por proceso:** `AthleteDataProvider` comparte la promesa y cuenta *leases*.

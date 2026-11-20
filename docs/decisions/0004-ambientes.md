@@ -25,7 +25,7 @@ Reglas:
 2. **La app solo recibe valores públicos** (URL + clave publicable) vía `EXPO_PUBLIC_*`.
    Plantillas en `config/environments/*.env.example`; los `.env` reales están ignorados por git.
 3. **Secretos de servidor** (service_role, SMTP, OAuth) solo en el panel/secretos del proyecto o en `env(...)` de
-   `supabase/config.toml`; nunca en el repositorio ni en la app.
+   `backend/supabase/config.toml`; nunca en el repositorio ni en la app.
 4. `loadEnvironment` valida: `local` ⇒ host local; resto ⇒ https y host remoto; clave no privilegiada; producción ⇒
    coincide con la referencia aprobada.
 5. **Migraciones**: mismas migraciones para todos los ambientes, promovidas en orden local → development → testing →

@@ -11,13 +11,13 @@ Decisión: ADR-0004. Este documento explica cómo usar cada ambiente.
 
 ## Configuración local de Supabase
 
-`supabase/config.toml` (solo afecta al stack local): Data API expone **solo** `athlete3`; contraseñas ≥ 10 con letras
+`backend/supabase/config.toml` (solo afecta al stack local): Data API expone **solo** `athlete3`; contraseñas ≥ 10 con letras
 y dígitos; confirmación de correo; cambio de contraseña seguro; refresh tokens rotativos; límites de Auth.
 Al crear los proyectos remotos se deben replicar estos ajustes en el panel (Auth y Data API → *Exposed schemas*).
 
 ## Promoción de migraciones
 
-1. Escribir la migración en `supabase/migrations/` (terminar siempre con el bloque de 0900 o reubicar 0900 al final).
+1. Escribir la migración en `backend/supabase/migrations/` (terminar siempre con el bloque de 0900 o reubicar 0900 al final).
 2. `npm run test:db` en local (debe pasar todo).
 3. Development → testing → production. En cada ambiente remoto: `supabase migration list` (solo lectura) para
    reconciliar el historial, revisar el diff y aplicar **solo con autorización explícita**.
