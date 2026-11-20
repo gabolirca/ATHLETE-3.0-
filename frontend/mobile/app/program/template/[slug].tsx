@@ -12,7 +12,6 @@ import { Screen } from '@/components/Screen';
 import { useTrainingRepository } from '@/data/MobileTrainingContext';
 import type { ProgramBlock } from '@/data/trainingTypes';
 import { DayPlan, ProgramNotes } from '@/program/DayPlan';
-import { HYBRID_COLOR } from '@/program/HybridCard';
 import { modalityInfo, weekdayLabel } from '@/program/format';
 import { colors, themed } from '@/theme/colors';
 
@@ -55,7 +54,7 @@ export default function ProgramTemplateScreen() {
 
   return <Screen>
     <View><Eyebrow>MODO HÍBRIDO · PLANTILLA</Eyebrow><Title>{template.name}</Title></View>
-    <Card accent={HYBRID_COLOR}>
+    <Card accent={colors.amber}>
       <Text style={s.summary}>{template.summary}</Text>
       <Text style={s.muted}>Al empezarlo se copia a tus programas: puedes entrenarlo tal cual y, más adelante, editarlo.</Text>
       <ActionButton onPress={() => void adopt()} loading={saving}>Empezar este programa</ActionButton>

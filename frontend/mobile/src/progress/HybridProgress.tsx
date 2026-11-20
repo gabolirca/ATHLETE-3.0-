@@ -3,7 +3,6 @@ import { programCycle } from '@athlete/domain';
 import { Card } from '@/components/Card';
 import { Eyebrow } from '@/components/Typography';
 import type { BenchmarkItem, Program, ProgramWeekCount, WeeklyLoad } from '@/data/trainingTypes';
-import { HYBRID_COLOR } from '@/program/HybridCard';
 import { clock } from '@/workout/blocks';
 import { colors, themed } from '@/theme/colors';
 
@@ -21,7 +20,7 @@ export function CycleCard({ program, load, today }: { program: Program; load: We
   const c = programCycle(program.startedOn ?? today, today);
   const spike = load?.trend.status === 'spike';
   const deload = c.deloadWeek || spike;
-  return <Card accent={deload ? colors.amber : HYBRID_COLOR}>
+  return <Card accent={deload ? colors.amber : colors.amber}>
     <Eyebrow>{program.name.toUpperCase()}</Eyebrow>
     <Text style={s.big}>Semana {c.cycleWeek} <Text style={s.unit}>de {c.cycleLength}</Text></Text>
     <View style={s.cycle}>{Array.from({ length: c.cycleLength }, (_, i) => <View key={i} style={[s.seg, i < c.cycleWeek && s.segOn, i === c.cycleLength - 1 && s.segDeload]}/>)}</View>
@@ -43,7 +42,7 @@ export function AdherenceCard({ weeks }: { weeks: ProgramWeekCount[] }) {
       const pct = Math.min(1, w.done / Math.max(1, w.planned));
       return <View key={w.weekStart} style={s.barCol}>
         <Text style={s.barNum}>{w.done}</Text>
-        <View style={s.barTrack}><View style={[s.barFill, { height: `${Math.max(4, pct * 100)}%`, backgroundColor: pct >= 0.8 ? colors.green : HYBRID_COLOR }]}/></View>
+        <View style={s.barTrack}><View style={[s.barFill, { height: `${Math.max(4, pct * 100)}%`, backgroundColor: pct >= 0.8 ? colors.green : colors.amber }]}/></View>
         <Text style={[s.barLabel, i === weeks.length - 1 && s.now]}>{i === weeks.length - 1 ? 'Esta' : shortDate(w.weekStart)}</Text>
       </View>;
     })}</View>
@@ -73,12 +72,12 @@ export function BenchmarksCard({ items }: { items: BenchmarkItem[] }) {
 const s = themed(() => StyleSheet.create({
   big: { color: colors.text, fontSize: 26, fontWeight: '800' }, unit: { color: colors.secondary, fontSize: 15, fontWeight: '700' },
   cycle: { flexDirection: 'row', gap: 5 }, seg: { flex: 1, height: 8, borderRadius: 4, backgroundColor: colors.graphite },
-  segOn: { backgroundColor: HYBRID_COLOR }, segDeload: { borderWidth: 1, borderColor: colors.green },
+  segOn: { backgroundColor: colors.amber }, segDeload: { borderWidth: 1, borderColor: colors.green },
   msg: { color: colors.secondary, fontSize: 12, lineHeight: 18 }, warn: { color: colors.amber, fontWeight: '700' }, note: { color: colors.muted, fontSize: 11 },
   bars: { flexDirection: 'row', gap: 8, height: 110, alignItems: 'flex-end' }, barCol: { flex: 1, alignItems: 'center', gap: 4, height: '100%' },
   barNum: { color: colors.text, fontSize: 11, fontWeight: '800' }, barTrack: { flex: 1, width: '70%', justifyContent: 'flex-end', backgroundColor: colors.surfaceRaised, borderRadius: 5, overflow: 'hidden' },
   barFill: { width: '100%', borderRadius: 5 }, barLabel: { color: colors.muted, fontSize: 9, fontWeight: '700' }, now: { color: colors.text },
   bench: { flexDirection: 'row', alignItems: 'center', gap: 10, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 9 }, flex: { flex: 1 },
   benchName: { color: colors.text, fontSize: 14, fontWeight: '800' }, benchValue: { color: colors.text, fontSize: 16, fontWeight: '800', minWidth: 64, textAlign: 'right' },
-  spark: { flexDirection: 'row', alignItems: 'flex-end', gap: 2, height: 26 }, sparkBar: { width: 5, borderRadius: 2, backgroundColor: HYBRID_COLOR },
+  spark: { flexDirection: 'row', alignItems: 'flex-end', gap: 2, height: 26 }, sparkBar: { width: 5, borderRadius: 2, backgroundColor: colors.amber },
 }));

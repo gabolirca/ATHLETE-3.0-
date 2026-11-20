@@ -10,7 +10,6 @@ import { Eyebrow, Title } from '@/components/Typography';
 import { Screen } from '@/components/Screen';
 import { useTrainingRepository } from '@/data/MobileTrainingContext';
 import { EMPTY_ANSWERS, GOALS, goalLabel, parseBody, recommendProgram, sportsFor, type Access, type OnboardingAnswers } from '@/onboarding/recommend';
-import { HYBRID_COLOR } from '@/program/HybridCard';
 import { setOnboardingDone } from '@/settings/devicePrefs';
 import { colors, themed } from '@/theme/colors';
 
@@ -20,9 +19,9 @@ const ACCESS: ReadonlyArray<{ value: Access; label: string; icon: string }> = [{
 
 function Option({ label, detail, icon, selected, onPress }: { label: string; detail?: string; icon?: string; selected: boolean; onPress: () => void }) {
   return <Pressable accessibilityRole="button" accessibilityState={{ selected }} accessibilityLabel={label} onPress={onPress} style={[s.option, selected && s.optionOn]}>
-    {icon ? <Ionicons name={icon as never} size={22} color={selected ? HYBRID_COLOR : colors.secondary}/> : null}
+    {icon ? <Ionicons name={icon as never} size={22} color={selected ? colors.amber : colors.secondary}/> : null}
     <View style={s.flex}><Text style={[s.optionLabel, selected && s.optionLabelOn]}>{label}</Text>{detail ? <Text style={s.optionDetail}>{detail}</Text> : null}</View>
-    {selected ? <Ionicons name="checkmark-circle" size={20} color={HYBRID_COLOR}/> : null}
+    {selected ? <Ionicons name="checkmark-circle" size={20} color={colors.amber}/> : null}
   </Pressable>;
 }
 
@@ -109,7 +108,7 @@ export default function OnboardingScreen() {
 
     {step === 4 ? <>
       <View><Eyebrow>PASO 5 DE 5</Eyebrow><Title>Tu recomendación</Title></View>
-      {template ? <Card accent={HYBRID_COLOR}>
+      {template ? <Card accent={colors.amber}>
         <Eyebrow>PROGRAMA SUGERIDO</Eyebrow>
         <Text style={s.program}>{template.name}</Text>
         <Text style={s.lead}>{template.summary}</Text>
@@ -139,16 +138,16 @@ export default function OnboardingScreen() {
 
 const s = themed(() => StyleSheet.create({
   top: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  dots: { flexDirection: 'row', gap: 6 }, dot: { width: 22, height: 6, borderRadius: 3, backgroundColor: colors.graphite }, dotOn: { backgroundColor: HYBRID_COLOR },
+  dots: { flexDirection: 'row', gap: 6 }, dot: { width: 22, height: 6, borderRadius: 3, backgroundColor: colors.graphite }, dotOn: { backgroundColor: colors.amber },
   skip: { color: colors.secondary, fontSize: 14, fontWeight: '700' },
   lead: { color: colors.secondary, fontSize: 14, lineHeight: 21 },
   label: { color: colors.secondary, fontSize: 11, fontWeight: '800', letterSpacing: 0.6, marginTop: 4 },
   option: { flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1, borderColor: colors.border, borderRadius: 16, padding: 14, backgroundColor: colors.surface },
-  optionOn: { borderColor: HYBRID_COLOR, backgroundColor: colors.amberSoft },
-  optionLabel: { color: colors.text, fontSize: 15, fontWeight: '800' }, optionLabelOn: { color: HYBRID_COLOR }, optionDetail: { color: colors.secondary, fontSize: 12 },
+  optionOn: { borderColor: colors.amber, backgroundColor: colors.amberSoft },
+  optionLabel: { color: colors.text, fontSize: 15, fontWeight: '800' }, optionLabelOn: { color: colors.amber }, optionDetail: { color: colors.secondary, fontSize: 12 },
   flex: { flex: 1 }, row: { flexDirection: 'row', gap: 9 },
   day: { flex: 1, height: 52, borderRadius: 14, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface },
-  dayOn: { borderColor: HYBRID_COLOR, backgroundColor: colors.amberSoft }, dayText: { color: colors.secondary, fontSize: 20, fontWeight: '800' }, dayTextOn: { color: HYBRID_COLOR },
+  dayOn: { borderColor: colors.amber, backgroundColor: colors.amberSoft }, dayText: { color: colors.secondary, fontSize: 20, fontWeight: '800' }, dayTextOn: { color: colors.amber },
   switchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }, switchText: { color: colors.text, fontSize: 14, flex: 1 },
   program: { color: colors.text, fontSize: 22, fontWeight: '800' }, reason: { color: colors.text, fontSize: 13, lineHeight: 19 },
   link: { color: colors.accentText, fontSize: 14, fontWeight: '700', textAlign: 'center', paddingVertical: 10 },

@@ -13,7 +13,6 @@ import { ProgramNotes } from '@/program/DayPlan';
 import { SessionSheet } from '@/program/edit/SessionSheet';
 import { ActionButton } from '@/components/ActionButton';
 import type { ProgramDay } from '@/data/trainingTypes';
-import { HYBRID_COLOR } from '@/program/HybridCard';
 import { daySummary, modalityInfo, todayWeekday, weekdayLabel } from '@/program/format';
 import { colors, themed } from '@/theme/colors';
 
@@ -49,7 +48,7 @@ export default function ProgramWeekScreen() {
 
   return <Screen>
     <View><Eyebrow>{program.coachName ? `DE TU COACH · ${program.coachName.toUpperCase()}` : 'MODO HÍBRIDO'}</Eyebrow><Title>{program.name}</Title></View>
-    <Card accent={HYBRID_COLOR}>
+    <Card accent={colors.amber}>
       <Text style={s.big}>{done} de {program.days.length}</Text>
       <Text style={s.muted}>sesiones hechas esta semana (lunes a domingo)</Text>
       <View style={s.track}><View style={[s.fill, { width: `${Math.round((done / Math.max(1, program.days.length)) * 100)}%` }]}/></View>
@@ -64,7 +63,7 @@ export default function ProgramWeekScreen() {
           const info = modalityInfo(d.modality);
           const st = status[d.id];
           return <Pressable key={d.id} accessibilityRole="button" accessibilityLabel={`${d.name}${st && !st.active ? ', hecho' : ''}`} onPress={() => router.push(`/program/day/${d.id}`)}>
-            <Card accent={w === today ? HYBRID_COLOR : undefined}>
+            <Card accent={w === today ? colors.amber : undefined}>
               <View style={s.row}>
                 <View style={[s.icon, { backgroundColor: `${info.color}22` }]}><Ionicons name={info.icon as never} size={18} color={info.color}/></View>
                 <View style={s.flex}><Text style={s.name}>{d.name}</Text><Text style={s.muted}>{info.label}{daySummary(d) ? ` · ${daySummary(d)}` : ''}</Text></View>
@@ -88,8 +87,8 @@ export default function ProgramWeekScreen() {
 
 const s = themed(() => StyleSheet.create({
   big: { color: colors.text, fontSize: 26, fontWeight: '800' }, muted: { color: colors.secondary, fontSize: 12, lineHeight: 17 },
-  track: { height: 8, borderRadius: 4, backgroundColor: colors.surfaceRaised, overflow: 'hidden' }, fill: { height: 8, borderRadius: 4, backgroundColor: HYBRID_COLOR },
-  dayGroup: { gap: 8 }, weekday: { color: colors.secondary, fontSize: 12, fontWeight: '800', letterSpacing: 0.5 }, today: { color: HYBRID_COLOR },
+  track: { height: 8, borderRadius: 4, backgroundColor: colors.surfaceRaised, overflow: 'hidden' }, fill: { height: 8, borderRadius: 4, backgroundColor: colors.amber },
+  dayGroup: { gap: 8 }, weekday: { color: colors.secondary, fontSize: 12, fontWeight: '800', letterSpacing: 0.5 }, today: { color: colors.amber },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12 }, flex: { flex: 1 },
   icon: { width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   name: { color: colors.text, fontSize: 15, fontWeight: '800' }, live: { color: colors.blue, fontSize: 10, fontWeight: '800' },

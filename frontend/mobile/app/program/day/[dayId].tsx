@@ -14,7 +14,6 @@ import { BlockSheet } from '@/program/edit/BlockSheet';
 import { ExerciseSheet } from '@/program/edit/ExerciseSheet';
 import { SessionSheet } from '@/program/edit/SessionSheet';
 import type { ProgramBlock, ProgramExercise } from '@/data/trainingTypes';
-import { HYBRID_COLOR } from '@/program/HybridCard';
 import { cardioActivityFor, daySummary, modalityInfo, weekdayLabel } from '@/program/format';
 import { useStartDay } from '@/program/useProgram';
 import { colors, themed } from '@/theme/colors';
@@ -58,7 +57,7 @@ export default function ProgramDayScreen() {
     {editing ? <Card>
       <Text style={s.muted}>Toca un bloque o ejercicio para cambiarlo. Los cambios aplican de hoy en adelante; tu historial no se toca.</Text>
       <ActionButton secondary onPress={() => setSheet({ kind: 'session' })}>Nombre, día y modalidad</ActionButton>
-    </Card> : <Card accent={HYBRID_COLOR}>
+    </Card> : <Card accent={colors.amber}>
       {daySummary(day) ? <Text style={s.summary}>{daySummary(day)}</Text> : null}
       {cardio ? <Text style={s.muted}>Palomea cada serie conforme la terminas: guardamos tus parciales y al final queda registrada con tus metros y tiempo, ligada a este día.</Text>
         : <Text style={s.muted}>La sesión se arma por bloques. En los AMRAP y "por tiempo" registras tu resultado; al final te preguntamos qué tan dura fue (RPE).</Text>}

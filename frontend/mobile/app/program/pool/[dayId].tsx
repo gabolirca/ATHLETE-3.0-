@@ -11,7 +11,6 @@ import { Eyebrow, Title } from '@/components/Typography';
 import { Screen } from '@/components/Screen';
 import { useTrainingRepository } from '@/data/MobileTrainingContext';
 import type { ProgramDay } from '@/data/trainingTypes';
-import { HYBRID_COLOR } from '@/program/HybridCard';
 import { daySummary, modalityInfo } from '@/program/format';
 import { poolDraft, poolItems, poolTotals, type PoolProgress } from '@/program/pool';
 import { clock } from '@/workout/blocks';
@@ -88,12 +87,12 @@ export default function PoolModeScreen() {
   let currentBlock = '';
   return <View style={s.root}><Screen>
     <View><Eyebrow>{`${isSwim ? 'MODO ALBERCA' : 'MODO CARRERA'} · ${info.label.toUpperCase()}`}</Eyebrow><Title>{day.name}</Title></View>
-    {!progress ? <Card accent={HYBRID_COLOR}>
+    {!progress ? <Card accent={colors.amber}>
       <Text style={s.summary}>{daySummary(day)}</Text>
       <Text style={s.muted}>Palomea cada serie al terminarla: guardamos tu parcial, arranca el descanso y al final se registra la sesión con tus metros y tiempo.</Text>
       <ActionButton onPress={() => persist({ startedAt: Date.now(), done: {} })}>Empezar</ActionButton>
       <Pressable accessibilityRole="button" onPress={() => router.replace({ pathname: '/cardio/new', params: { dayId: day.id } })}><Text style={s.link}>Prefiero registrar solo el total</Text></Pressable>
-    </Card> : <Card accent={HYBRID_COLOR}>
+    </Card> : <Card accent={colors.amber}>
       <View style={s.row}>
         <View><Eyebrow>TIEMPO</Eyebrow><Text style={s.clock} accessibilityLabel="Tiempo de la sesión">{clock((Date.now() - progress.startedAt) / 1000)}</Text></View>
         <View style={s.right}><Eyebrow>METROS</Eyebrow><Text style={s.meters}>{totals!.doneMeters.toLocaleString('es-MX')}<Text style={s.unit}> / {totals!.plannedMeters.toLocaleString('es-MX')}</Text></Text></View>
@@ -131,14 +130,14 @@ const s = themed(() => StyleSheet.create({
   row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' }, right: { alignItems: 'flex-end' },
   clock: { color: colors.text, fontSize: 40, fontWeight: '800', fontVariant: ['tabular-nums'] },
   meters: { color: colors.text, fontSize: 28, fontWeight: '800' }, unit: { color: colors.secondary, fontSize: 14, fontWeight: '600' },
-  track: { height: 10, borderRadius: 5, backgroundColor: colors.surfaceRaised, overflow: 'hidden' }, fill: { height: 10, borderRadius: 5, backgroundColor: HYBRID_COLOR },
-  block: { color: HYBRID_COLOR, fontSize: 12, fontWeight: '800', letterSpacing: 0.5, marginTop: 6 },
+  track: { height: 10, borderRadius: 5, backgroundColor: colors.surfaceRaised, overflow: 'hidden' }, fill: { height: 10, borderRadius: 5, backgroundColor: colors.amber },
+  block: { color: colors.amber, fontSize: 12, fontWeight: '800', letterSpacing: 0.5, marginTop: 6 },
   item: { minHeight: 64, flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1, borderColor: colors.border, borderRadius: 16, paddingHorizontal: 14, backgroundColor: colors.surface },
   itemDone: { borderColor: colors.green, backgroundColor: colors.greenSoft }, itemOff: { opacity: 0.6 },
   itemText: { flex: 1, color: colors.text, fontSize: 16, fontWeight: '700' }, itemTextDone: { color: colors.green },
   split: { color: colors.text, fontSize: 15, fontWeight: '800', fontVariant: ['tabular-nums'] },
   rpeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   rpe: { width: 40, height: 40, borderRadius: 11, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surfaceRaised },
-  rpeOn: { borderColor: HYBRID_COLOR, backgroundColor: colors.amberSoft }, rpeText: { color: colors.secondary, fontSize: 15, fontWeight: '800' }, rpeTextOn: { color: HYBRID_COLOR },
+  rpeOn: { borderColor: colors.amber, backgroundColor: colors.amberSoft }, rpeText: { color: colors.secondary, fontSize: 15, fontWeight: '800' }, rpeTextOn: { color: colors.amber },
   error: { color: colors.red, fontSize: 12 },
 }));

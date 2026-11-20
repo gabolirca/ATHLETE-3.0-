@@ -1,12 +1,17 @@
 import { StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, G } from 'react-native-svg';
-import { colors, themed } from '@/theme/colors';
+import { colors, themed, onThemeChange } from '@/theme/colors';
 
 export type DonutSegment = { key: string; value: number; color: string };
 
 /** Paleta para categorías en fondo oscuro; el último color se reserva para "Otros". */
-export const CATEGORY_COLORS = [colors.blue, colors.green, colors.amber, colors.purple, colors.cyan] as const;
-export const OTHERS_COLOR = colors.muted;
+/** Paleta de la dona; se lee al momento para seguir el tema (claro/oscuro). */
+export const categoryColors = () => [colors.blue, colors.green, colors.amber, colors.purple, colors.cyan] as const;
+export const CATEGORY_COLORS = new Proxy([] as unknown as ReturnType<typeof categoryColors>, { get: (_t, k) => (categoryColors() as unknown as Record<PropertyKey, unknown>)[k] });
+export const otherColor = () => colors.muted;
+export let OTHERS_COLOR = colors.muted;
+/** Actualiza OTHERS_COLOR al cambiar el tema. */
+onThemeChange(() => { OTHERS_COLOR = colors.muted; });
 
 /**
  * Arcos de la dona: longitud y desplazamiento de cada segmento sobre la circunferencia.

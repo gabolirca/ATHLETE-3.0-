@@ -10,14 +10,14 @@ export const weekdayShort = (n: number | null) => weekdayLabel(n).slice(0, 3);
 export const todayWeekday = (now = new Date()) => ((now.getDay() + 6) % 7) + 1;
 
 export const MODALITY: Record<SessionModality, { label: string; icon: string; color: string }> = {
-  strength: { label: 'Fuerza', icon: 'barbell-outline', color: colors.blue },
-  conditioning: { label: 'Funcional', icon: 'flash-outline', color: colors.amber },
-  swim: { label: 'Natación', icon: 'water-outline', color: colors.cyan },
-  run: { label: 'Carrera', icon: 'walk-outline', color: colors.green },
-  bike: { label: 'Bici', icon: 'bicycle-outline', color: colors.green },
-  row: { label: 'Remo', icon: 'boat-outline', color: colors.green },
-  mobility: { label: 'Movilidad', icon: 'leaf-outline', color: colors.purple },
-  rest: { label: 'Descanso', icon: 'moon-outline', color: colors.muted },
+  strength: { label: 'Fuerza', icon: 'barbell-outline', get color() { return colors.blue; } },
+  conditioning: { label: 'Funcional', icon: 'flash-outline', get color() { return colors.amber; } },
+  swim: { label: 'Natación', icon: 'water-outline', get color() { return colors.cyan; } },
+  run: { label: 'Carrera', icon: 'walk-outline', get color() { return colors.green; } },
+  bike: { label: 'Bici', icon: 'bicycle-outline', get color() { return colors.green; } },
+  row: { label: 'Remo', icon: 'boat-outline', get color() { return colors.green; } },
+  mobility: { label: 'Movilidad', icon: 'leaf-outline', get color() { return colors.purple; } },
+  rest: { label: 'Descanso', icon: 'moon-outline', get color() { return colors.muted; } },
 };
 export const modalityInfo = (m: SessionModality | null) => MODALITY[m ?? 'strength'];
 

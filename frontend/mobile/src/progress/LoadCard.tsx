@@ -4,7 +4,8 @@ import { Eyebrow } from '@/components/Typography';
 import type { WeeklyLoad } from '@/data/trainingTypes';
 import { colors, themed } from '@/theme/colors';
 
-export const LOAD_COLORS = { strength: colors.blue, conditioning: colors.amber, cardio: colors.green } as const;
+/** Colores por tipo de carga; se leen al momento para seguir el tema (claro/oscuro). */
+export const LOAD_COLORS = { get strength() { return colors.blue; }, get conditioning() { return colors.amber; }, get cardio() { return colors.green; } };
 const LABELS = { strength: 'Fuerza', conditioning: 'Funcional', cardio: 'Cardio' } as const;
 
 /** Mensaje de la tendencia de carga (semana actual contra el promedio de las anteriores). */
