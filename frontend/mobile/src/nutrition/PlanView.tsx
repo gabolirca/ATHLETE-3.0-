@@ -1,7 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native';
 import type { NutritionPlanMeal } from '@athlete/contracts';
 import { describeEquivalents, type Equivalents } from '@athlete/domain';
-import { colors } from '@/theme/colors';
+import { colors, themed } from '@/theme/colors';
 import { planTotals } from './planForm';
 
 type PlanLike = { name: string; meals: NutritionPlanMeal[]; notes: string | null; source: 'self' | 'assigned'; assignedByName: string | null };
@@ -24,7 +24,7 @@ export function PlanView({ plan, showName = true }: { plan: PlanLike; showName?:
   </View>;
 }
 
-const s = StyleSheet.create({
+const s = themed(() => StyleSheet.create({
   root: { gap: 10 },
   name: { color: colors.text, fontSize: 16, fontWeight: '800' },
   meal: { gap: 2, paddingTop: 8, borderTopWidth: 1, borderTopColor: colors.border },
@@ -32,4 +32,4 @@ const s = StyleSheet.create({
   body: { color: colors.text, fontSize: 13, lineHeight: 19 },
   notes: { color: colors.secondary, fontSize: 12, lineHeight: 18, fontStyle: 'italic' },
   hint: { color: colors.secondary, fontSize: 11, lineHeight: 16 },
-});
+}));

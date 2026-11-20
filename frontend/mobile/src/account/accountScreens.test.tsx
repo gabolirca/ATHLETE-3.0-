@@ -3,10 +3,10 @@ import { Alert } from 'react-native';
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import type { AccountContextValue } from './AccountProvider';
 
-const mockRouter = { push: jest.fn(), back: jest.fn() };
+const mockRouter = { push: jest.fn(), back: jest.fn(), replace: jest.fn() };
 let mockAccount: AccountContextValue;
 jest.mock('expo-router', () => ({ useRouter: () => mockRouter }));
-jest.mock('@expo/vector-icons', () => ({ Ionicons: () => null }));
+jest.mock('@expo/vector-icons', () => ({ Ionicons: () => null, MaterialCommunityIcons: () => null }));
 jest.mock('./AccountProvider', () => ({ useAccount: () => mockAccount }));
 
 import LoginScreen from '../../app/account/login';
@@ -16,7 +16,9 @@ function account(patch: Partial<AccountContextValue> = {}): AccountContextValue 
   return {
     available: true, unavailableReason: null, auth: { status: 'signed_out', reason: 'none' }, link: 'none',
     sync: { status: null, syncing: false, error: null },
-    requestCode: jest.fn().mockResolvedValue(null), verifyCode: jest.fn().mockResolvedValue(null),
+    requestCode: jest.fn().mockResolvedValue(null), verifyCode: jest.fn().mockResolvedValue({ ok: true, needsPassword: false }),
+    signInWithPassword: jest.fn().mockResolvedValue(null), setPassword: jest.fn().mockResolvedValue(null),
+    signInWithProvider: jest.fn().mockResolvedValue({ ok: true }),
     signOut: jest.fn().mockResolvedValue(undefined), syncNow: jest.fn().mockResolvedValue(undefined),
     ...patch,
   };
@@ -26,8 +28,51 @@ const signedIn = { status: 'signed_in' as const, user: { id: '0190f0f0-0000-7000
 beforeEach(() => { jest.clearAllMocks(); mockAccount = account(); });
 
 describe('Login', () => {
+  test('correo + contraseña → entra y vuelve atrás', async () => {
+    const view = await render(<LoginScreen />);
+    await fireEvent.changeText(view.getByLabelText('Correo electrónico'), 'gabo@test.mx');
+    await fireEvent.changeText(view.getByLabelText('Contraseña'), 'Mundo2026');
+    await fireEvent.press(view.getByText('Entrar'));
+    await waitFor(() => expect(mockRouter.back).toHaveBeenCalled());
+    expect(mockAccount.signInWithPassword).toHaveBeenCalledWith('gabo@test.mx', 'Mundo2026');
+  });
+
+  test('contraseña incorrecta: muestra el error y no sale', async () => {
+    mockAccount = account({ signInWithPassword: jest.fn().mockResolvedValue('Correo o contraseña incorrectos.') });
+    const view = await render(<LoginScreen />);
+    await fireEvent.changeText(view.getByLabelText('Correo electrónico'), 'gabo@test.mx');
+    await fireEvent.changeText(view.getByLabelText('Contraseña'), 'mal');
+    await fireEvent.press(view.getByText('Entrar'));
+    await waitFor(() => expect(view.getByText('Correo o contraseña incorrectos.')).toBeTruthy());
+    expect(mockRouter.back).not.toHaveBeenCalled();
+  });
+
+  test('primera vez: código → si no tiene contraseña la lleva a crearla', async () => {
+    mockAccount = account({ verifyCode: jest.fn().mockResolvedValue({ ok: true, needsPassword: true }) });
+    const view = await render(<LoginScreen />);
+    await fireEvent.press(view.getByText('¿Primera vez o aún no tienes contraseña?'));
+    await fireEvent.changeText(view.getByLabelText('Correo electrónico'), 'nuevo@test.mx');
+    await fireEvent.press(view.getByText('Enviarme un código'));
+    await waitFor(() => expect(view.getByLabelText('Código')).toBeTruthy());
+    await fireEvent.changeText(view.getByLabelText('Código'), '123456');
+    await fireEvent.press(view.getByText('Verificar e iniciar sesión'));
+    await waitFor(() => expect(mockRouter.replace).toHaveBeenCalledWith({ pathname: '/account/password', params: { mode: 'create' } }));
+  });
+
+  test('olvidé mi contraseña: tras el código siempre pide una nueva', async () => {
+    const view = await render(<LoginScreen />);
+    await fireEvent.press(view.getByText('Olvidé mi contraseña'));
+    await fireEvent.changeText(view.getByLabelText('Correo electrónico'), 'gabo@test.mx');
+    await fireEvent.press(view.getByText('Enviarme un código'));
+    await waitFor(() => expect(view.getByLabelText('Código')).toBeTruthy());
+    await fireEvent.changeText(view.getByLabelText('Código'), '123456');
+    await fireEvent.press(view.getByText('Verificar e iniciar sesión'));
+    await waitFor(() => expect(mockRouter.replace).toHaveBeenCalledWith({ pathname: '/account/password', params: { mode: 'reset' } }));
+  });
+
   test('correo → código → verificar → vuelve atrás', async () => {
     const view = await render(<LoginScreen />);
+    await fireEvent.press(view.getByText('¿Primera vez o aún no tienes contraseña?'));
     await fireEvent.changeText(view.getByLabelText('Correo electrónico'), 'Gabo@Test.mx');
     await fireEvent.press(view.getByText('Enviarme un código'));
     await waitFor(() => expect(view.getByLabelText('Código')).toBeTruthy());
@@ -48,8 +93,9 @@ describe('Login', () => {
   });
 
   test('si el código es incorrecto muestra el error y no sale', async () => {
-    mockAccount = account({ verifyCode: jest.fn().mockResolvedValue('El código es incorrecto o ya venció. Pide uno nuevo.') });
+    mockAccount = account({ verifyCode: jest.fn().mockResolvedValue({ ok: false, message: 'El código es incorrecto o ya venció. Pide uno nuevo.' }) });
     const view = await render(<LoginScreen />);
+    await fireEvent.press(view.getByText('¿Primera vez o aún no tienes contraseña?'));
     await fireEvent.changeText(view.getByLabelText('Correo electrónico'), 'gabo@test.mx');
     await fireEvent.press(view.getByText('Enviarme un código'));
     await waitFor(() => expect(view.getByLabelText('Código')).toBeTruthy());
@@ -62,6 +108,7 @@ describe('Login', () => {
   test('si no se pudo enviar el código se queda en el paso del correo con el error', async () => {
     mockAccount = account({ requestCode: jest.fn().mockResolvedValue('Ya te enviamos un código. Espera un minuto antes de pedir otro.') });
     const view = await render(<LoginScreen />);
+    await fireEvent.press(view.getByText('¿Primera vez o aún no tienes contraseña?'));
     await fireEvent.changeText(view.getByLabelText('Correo electrónico'), 'gabo@test.mx');
     await fireEvent.press(view.getByText('Enviarme un código'));
     await waitFor(() => expect(view.getByText(/Espera un minuto/)).toBeTruthy());
@@ -82,13 +129,15 @@ describe('Tarjeta de cuenta', () => {
     expect(mockRouter.push).toHaveBeenCalledWith('/account/login');
   });
 
-  test('con sesión vinculada: muestra pendientes y sincroniza', async () => {
+  test('con sesión vinculada: no muestra la sincronización (es automática); solo avisa si algo no se puede subir', async () => {
     mockAccount = account({ auth: signedIn, link: 'linked', sync: { status: { pendingCount: 3, conflictCount: 0, rejectedCount: 0, lastPushAt: null, lastPullAt: null, online: true }, syncing: false, error: null } });
     const view = await render(<AccountCard />);
     expect(view.getByText('gabo@test.mx')).toBeTruthy();
-    expect(view.getByText(/3 cambio\(s\) pendiente\(s\)/)).toBeTruthy();
-    await fireEvent.press(view.getByText('Sincronizar ahora'));
-    expect(mockAccount.syncNow).toHaveBeenCalled();
+    expect(view.queryByText('Sincronizar ahora')).toBeNull();
+    expect(view.getByText(/se respaldan solos/)).toBeTruthy();
+    mockAccount = account({ auth: signedIn, link: 'linked', sync: { status: { pendingCount: 3, conflictCount: 0, rejectedCount: 0, lastPushAt: null, lastPullAt: null, online: false }, syncing: false, error: 'Sin conexión' } });
+    const view2 = await render(<AccountCard />);
+    expect(view2.getByText(/aún no se suben/)).toBeTruthy();
   });
 
   test('dispositivo de otra cuenta: avisa y no ofrece sincronizar', async () => {

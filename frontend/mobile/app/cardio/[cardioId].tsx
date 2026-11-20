@@ -10,7 +10,7 @@ import { LocalSaveBadge } from '@/components/SyncBadge';
 import { STROKES, describeCardio, type UnitSystem } from '@/cardio/cardioForm';
 import { useTrainingRepository } from '@/data/MobileTrainingContext';
 import type { CardioEntry } from '@/data/trainingTypes';
-import { colors } from '@/theme/colors';
+import { colors, themed } from '@/theme/colors';
 
 function Metric({ label, value }: { label: string; value: string }) {
   return <View style={s.metric}><Eyebrow>{label}</Eyebrow><Text style={s.number}>{value}</Text></View>;
@@ -72,9 +72,9 @@ export default function CardioDetailScreen() {
   </Screen>;
 }
 
-const s = StyleSheet.create({
+const s = themed(() => StyleSheet.create({
   metric: { flex: 1 },
   number: { color: colors.text, fontSize: 21, fontWeight: '800', marginTop: 5 },
   note: { color: colors.secondary, fontSize: 12, lineHeight: 18, marginTop: 4 },
   delete: { color: colors.red, fontSize: 12, fontWeight: '700', textAlign: 'center', padding: 15 },
-});
+}));

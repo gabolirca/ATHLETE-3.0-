@@ -12,7 +12,7 @@ import { Eyebrow, Title } from '@/components/Typography';
 import { localDateOfDevice } from '@/lib/localDate';
 import { parseAmount } from '@/nutrition/mealForm';
 import { useNutrition } from '@/nutrition/mobileNutrition';
-import { colors } from '@/theme/colors';
+import { colors, themed } from '@/theme/colors';
 
 type Errors = Partial<Record<'kcal' | 'protein' | 'carbs' | 'fat' | 'form', string>>;
 
@@ -74,10 +74,10 @@ export default function NutritionTargetScreen() {
   </Screen>;
 }
 
-const s = StyleSheet.create({
+const s = themed(() => StyleSheet.create({
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   row: { flexDirection: 'row', gap: 10 },
   flex: { flex: 1 },
   hint: { color: colors.secondary, fontSize: 11, lineHeight: 16 },
   error: { color: colors.red, fontSize: 11 },
-});
+}));

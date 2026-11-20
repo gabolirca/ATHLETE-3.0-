@@ -4,7 +4,7 @@ import { Card } from '@/components/Card';
 import { Eyebrow, Label } from '@/components/Typography';
 import type { ExerciseRecord, SessionRecord } from '@/data/trainingTypes';
 import { dayLabel, localDateOfDevice } from '@/lib/localDate';
-import { colors } from '@/theme/colors';
+import { colors, themed } from '@/theme/colors';
 
 /** Kilos para mostrar: el 1RM estimado se redondea a 0.5 kg (el disco más chico habitual); los reales tal cual. */
 export function formatKg(kg: number, estimate = false): string {
@@ -55,7 +55,7 @@ export function NewRecordBadge({ records }: { records: SessionRecord[] }) {
   </View>;
 }
 
-const s = StyleSheet.create({
+const s = themed(() => StyleSheet.create({
   row: { flexDirection: 'row', gap: 10 },
   box: { flex: 1, backgroundColor: colors.surfaceRaised, borderRadius: 12, padding: 12, gap: 4 },
   value: { color: colors.text, fontSize: 22, fontWeight: '800' },
@@ -66,4 +66,4 @@ const s = StyleSheet.create({
   badgeTitle: { color: colors.amber, fontSize: 13, fontWeight: '800' },
   badgeText: { color: colors.text, fontSize: 12 },
   flex: { flex: 1 },
-});
+}));

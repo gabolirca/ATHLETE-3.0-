@@ -178,7 +178,7 @@ describe('recuperación de contraseña', () => {
     expect(r2.ok === false && r2.error.code).toBe('VALIDATION_FAILED');
     const auth = fakeAuth();
     expect((await new SupabaseAuthService(auth).updatePassword({ newPassword: 'NuevaSegura123' })).ok).toBe(true);
-    expect(auth.updateUser).toHaveBeenCalledWith({ password: 'NuevaSegura123' });
+    expect(auth.updateUser).toHaveBeenCalledWith({ password: 'NuevaSegura123', data: { has_password: true } });
   });
 });
 

@@ -17,7 +17,7 @@ jest.mock('expo-router', () => {
   const { useEffect } = jest.requireActual('react');
   return { useRouter: () => mockRouter, useFocusEffect: (cb: () => void) => useEffect(cb, [cb]) };
 });
-jest.mock('@expo/vector-icons', () => ({ Ionicons: () => null }));
+jest.mock('@expo/vector-icons', () => ({ Ionicons: () => null, MaterialCommunityIcons: () => null }));
 jest.mock('@/data/MobileTrainingContext', () => ({ useTrainingRepository: () => mockRepo }));
 
 import ProfileScreen from '../../app/profile';
@@ -27,18 +27,18 @@ test('perfil privado: números, destacados, cuadrícula y logros con datos reale
   await waitFor(() => expect(screen.getByText('Gabo Lirca')).toBeTruthy());
   expect(screen.getByText('Hyrox · Intermedio')).toBeTruthy();
   expect(screen.getByText('Privado')).toBeTruthy();
-  expect(screen.getByText('Sesiones')).toBeTruthy();
+  expect(screen.getByText('SESIONES')).toBeTruthy();
   expect(screen.getByText('Mejor racha')).toBeTruthy();
   expect(screen.getByText('Sentadilla')).toBeTruthy();
   expect(screen.getByLabelText(/Carrera del/)).toBeTruthy();
   await fireEvent.press(screen.getByLabelText('Logros'));
   expect(screen.getByLabelText('Racha de 7 días: logrado')).toBeTruthy();
-  expect(screen.getByLabelText('Atleta híbrido: logrado')).toBeTruthy();
+  expect(screen.getByLabelText('Fuerza y cardio: logrado')).toBeTruthy();
   expect(screen.getByLabelText('10 sesiones: pendiente')).toBeTruthy();
   await fireEvent.press(screen.getByLabelText('Ajustes'));
   expect(mockRouter.push).toHaveBeenCalledWith('/settings');
 });
 
 test('logros: nada se marca sin datos', () => {
-  expect(achievements({ workouts: 0, cardio: 0, bestStreak: 0, weeksCompleted: 0, records: 0, benchmarks: 0 }).every((a) => !a.done)).toBe(true);
+  expect(achievements({ workouts: 0, cardio: 0, bestStreak: 0, weeksCompleted: 0, records: 0 }).every((a) => !a.done)).toBe(true);
 });

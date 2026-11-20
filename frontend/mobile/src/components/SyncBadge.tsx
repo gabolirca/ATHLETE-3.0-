@@ -1,5 +1,5 @@
 import { StyleSheet, Text, View } from 'react-native';
-import { colors } from '@/theme/colors';
+import { colors, themed } from '@/theme/colors';
 
 export function LocalSaveBadge({ status, pendingCount }: { status?: 'pending' | 'synced' | 'conflict' | 'failed'; pendingCount?: number }) {
   const label = status === 'conflict'
@@ -16,4 +16,4 @@ export function LocalSaveBadge({ status, pendingCount }: { status?: 'pending' | 
     </View>
   );
 }
-const styles = StyleSheet.create({ pill: { alignSelf: 'flex-start', backgroundColor: colors.surfaceRaised, borderRadius: 100, paddingHorizontal: 11, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 7 }, conflict: { backgroundColor: colors.redSoft }, failed: { backgroundColor: colors.amberSoft }, dot: { width: 7, height: 7, borderRadius: 4, backgroundColor: colors.blue }, synced: { backgroundColor: colors.green }, conflictDot: { backgroundColor: colors.red }, label: { color: colors.secondary, fontSize: 10, fontWeight: '700' } });
+const styles = themed(() => StyleSheet.create({ pill: { alignSelf: 'flex-start', backgroundColor: colors.surfaceRaised, borderRadius: 100, paddingHorizontal: 11, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 7 }, conflict: { backgroundColor: colors.redSoft }, failed: { backgroundColor: colors.amberSoft }, dot: { width: 7, height: 7, borderRadius: 4, backgroundColor: colors.blue }, synced: { backgroundColor: colors.green }, conflictDot: { backgroundColor: colors.red }, label: { color: colors.secondary, fontSize: 10, fontWeight: '700' } }));

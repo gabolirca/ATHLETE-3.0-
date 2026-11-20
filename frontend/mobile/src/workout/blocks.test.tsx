@@ -5,7 +5,7 @@ import { BlockHeader, blockResultText, clock, isWholeBlock, parseMinSec, useBloc
 import { TimedSetEditor } from '@/components/TimedSetEditor';
 import type { WorkoutBlock } from '@/data/trainingTypes';
 
-jest.mock('@expo/vector-icons', () => ({ Ionicons: () => null }));
+jest.mock('@expo/vector-icons', () => ({ Ionicons: () => null, MaterialCommunityIcons: () => null }));
 
 const amrap: WorkoutBlock = { id: 'b', name: 'C · AMRAP 15 min', kind: 'wod', format: 'amrap', rounds: null, timeCapSeconds: 900, restSeconds: null, targetRpe: 7.5, notes: 'Ritmo sostenible', result: null };
 

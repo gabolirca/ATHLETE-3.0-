@@ -7,7 +7,7 @@ import { SetEditor } from '@/components/SetEditor';
 import { previousPerformance } from '@/data/OfficialTrainingRepository';
 import type { Exercise } from '@/data/trainingTypes';
 
-jest.mock('@expo/vector-icons', () => ({ Ionicons: () => null }));
+jest.mock('@expo/vector-icons', () => ({ Ionicons: () => null, MaterialCommunityIcons: () => null }));
 jest.mock('@/data/MobileTrainingContext', () => ({ useTrainingRepository: () => null }));
 
 describe('temporizador de descanso', () => {

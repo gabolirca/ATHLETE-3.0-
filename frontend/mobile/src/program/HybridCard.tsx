@@ -7,7 +7,7 @@ import { ActionButton } from '@/components/ActionButton';
 import { Card } from '@/components/Card';
 import { Eyebrow } from '@/components/Typography';
 import type { Program, ProgramWeekStatus } from '@/data/trainingTypes';
-import { colors } from '@/theme/colors';
+import { colors, themed } from '@/theme/colors';
 import { WEEKDAYS, daySummary, modalityInfo, todayWeekday, weekdayShort } from './format';
 import { useStartDay } from './useProgram';
 
@@ -71,7 +71,7 @@ export function HybridCard({ program, status, loaded }: { program: Program | nul
   </Card>;
 }
 
-const s = StyleSheet.create({
+const s = themed(() => StyleSheet.create({
   title: { color: colors.text, fontSize: 21, fontWeight: '800' }, muted: { color: colors.secondary, fontSize: 12, lineHeight: 18 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 4 },
   template: { flexDirection: 'row', alignItems: 'center', gap: 10, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 11 },
@@ -88,4 +88,4 @@ const s = StyleSheet.create({
   dot: { width: 12, height: 12, borderRadius: 6, backgroundColor: colors.graphite },
   dotDone: { backgroundColor: colors.green }, dotSome: { backgroundColor: HYBRID_COLOR }, dotToday: { borderWidth: 2, borderColor: colors.text },
   dotLabel: { color: colors.muted, fontSize: 9, fontWeight: '700' }, dotLabelToday: { color: colors.text },
-});
+}));

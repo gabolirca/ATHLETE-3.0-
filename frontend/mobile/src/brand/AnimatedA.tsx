@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { AccessibilityInfo, Animated, Easing, Image, StyleSheet, View } from 'react-native';
-import { colors } from '@/theme/colors';
-import { BRAND, BRAND_CYAN, MARK_RATIO } from './assets';
+import { colors, themed } from '@/theme/colors';
+import { BRAND, BRAND_COLOR, MARK_RATIO } from './assets';
 
 type Props = { lit: boolean; size?: number };
 
 /**
- * La "A" de ATHLETE como ícono de la racha.
+ * La "A" de ATHLETE como ícono de la racha (con su degradado azul original).
  * - Apagada (sin racha): gris y quieta.
  * - Encendida: entra con un impulso (crece y se endereza, como el trazo del logo) y luego "respira".
  * Respeta "Reducir movimiento" del teléfono: ahí solo cambia de color.
@@ -59,9 +59,9 @@ export function AnimatedA({ lit, size = 56 }: Props) {
   </View>;
 }
 
-const s = StyleSheet.create({
+const s = themed(() => StyleSheet.create({
   box: { alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   on: { backgroundColor: colors.accentDeep }, off: { backgroundColor: colors.surfaceRaised },
-  glow: { position: 'absolute', backgroundColor: BRAND_CYAN, transform: [{ scale: 1.1 }], shadowColor: BRAND_CYAN, shadowOpacity: 0.9, shadowRadius: 18 },
+  glow: { position: 'absolute', backgroundColor: BRAND_COLOR, transform: [{ scale: 1.1 }], shadowColor: BRAND_COLOR, shadowOpacity: 0.9, shadowRadius: 18 },
   dim: { tintColor: colors.muted, opacity: 0.6 },
-});
+}));

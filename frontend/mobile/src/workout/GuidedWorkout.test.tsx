@@ -17,7 +17,7 @@ jest.mock('expo-router', () => {
   const { useEffect } = jest.requireActual('react');
   return { useRouter: () => mockRouter, useLocalSearchParams: () => ({ sessionId: 's1' }), useFocusEffect: (cb: () => void) => useEffect(cb, [cb]) };
 });
-jest.mock('@expo/vector-icons', () => ({ Ionicons: () => null }));
+jest.mock('@expo/vector-icons', () => ({ Ionicons: () => null, MaterialCommunityIcons: () => null }));
 jest.mock('@/data/MobileTrainingContext', () => ({ useTrainingRepository: () => mockRepository }));
 jest.mock('expo-secure-store', () => ({
   getItemAsync: jest.fn(async (k: string) => mockStore.get(k) ?? null),

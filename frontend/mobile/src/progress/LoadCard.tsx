@@ -2,7 +2,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { Card } from '@/components/Card';
 import { Eyebrow } from '@/components/Typography';
 import type { WeeklyLoad } from '@/data/trainingTypes';
-import { colors } from '@/theme/colors';
+import { colors, themed } from '@/theme/colors';
 
 export const LOAD_COLORS = { strength: colors.blue, conditioning: colors.amber, cardio: colors.green } as const;
 const LABELS = { strength: 'Fuerza', conditioning: 'Funcional', cardio: 'Cardio' } as const;
@@ -42,7 +42,7 @@ export function LoadCard({ load }: { load: WeeklyLoad }) {
   </Card>;
 }
 
-const s = StyleSheet.create({
+const s = themed(() => StyleSheet.create({
   top: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   big: { color: colors.text, fontSize: 26, fontWeight: '800', marginTop: 4 }, unit: { color: colors.secondary, fontSize: 12, fontWeight: '600' },
   legend: { gap: 3 }, legendRow: { flexDirection: 'row', alignItems: 'center', gap: 6 }, dot: { width: 8, height: 8, borderRadius: 4 },
@@ -52,4 +52,4 @@ const s = StyleSheet.create({
   week: { color: colors.muted, fontSize: 9, fontWeight: '700' }, weekNow: { color: colors.text },
   msg: { color: colors.text, fontSize: 12, lineHeight: 18 }, spike: { color: colors.amber, fontWeight: '800' },
   note: { color: colors.muted, fontSize: 10, lineHeight: 15 },
-});
+}));

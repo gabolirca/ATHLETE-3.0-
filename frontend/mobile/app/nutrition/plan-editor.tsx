@@ -9,7 +9,7 @@ import { localDateOfDevice } from '@/lib/localDate';
 import { useNutrition } from '@/nutrition/mobileNutrition';
 import { PlanEditor, type PlanSubmit } from '@/nutrition/PlanEditor';
 import { draftFromPlan, newPlanDraft, type PlanDraft } from '@/nutrition/planForm';
-import { colors } from '@/theme/colors';
+import { colors, themed } from '@/theme/colors';
 
 /** "Cargar mi plan": el usuario captura el plan de su nutriólogo por tiempos y raciones del SMAE. */
 export default function PlanEditorScreen() {
@@ -52,7 +52,7 @@ export default function PlanEditorScreen() {
   </Screen>;
 }
 
-const s = StyleSheet.create({
+const s = themed(() => StyleSheet.create({
   detail: { color: colors.secondary, fontSize: 12, lineHeight: 18 },
   warn: { color: colors.text, fontSize: 12, lineHeight: 18 },
-});
+}));

@@ -1,73 +1,106 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useState, type ReactNode } from 'react';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { ActionButton } from '@/components/ActionButton';
-import { Card } from '@/components/Card';
+import { BrandHeader } from '@/brand/BrandHeader';
 import { EmptyState } from '@/components/EmptyState';
 import { ExercisePicker } from '@/components/ExercisePicker';
-import { Eyebrow, Label, Title } from '@/components/Typography';
-import { Screen, Row } from '@/components/Screen';
-import { SectionHeading } from '@/components/SectionHeading';
+import { Title } from '@/components/Typography';
+import { Screen } from '@/components/Screen';
 import { useTrainingRepository } from '@/data/MobileTrainingContext';
 import type { Exercise, Routine, TrainingOverview } from '@/data/trainingTypes';
-import { routineFocus } from '@/routines/diagnosis';
 import { HybridCard } from '@/program/HybridCard';
-import { TrainProfessionalRows } from '@/coach/ProfessionalLinks';
 import { useProgram } from '@/program/useProgram';
-import { colors } from '@/theme/colors';
+import { routineFocus } from '@/routines/diagnosis';
+import { useAppRefresh } from '@/brand/useAppRefresh';
+import { colors, themed } from '@/theme/colors';
+import { displayBold } from '@/theme/fonts';
 
+function RowCard({ title, detail, tag, onPress, label, icon, children }: { title: string; detail: string; tag?: string; onPress: () => void; label?: string; icon?: string; children?: ReactNode }) {
+  return <Pressable accessibilityRole="button" accessibilityLabel={label ?? title} onPress={onPress} style={({ pressed }) => [s.row, pressed && s.pressed]}>
+    {icon ? <View style={s.iconBubble}><MaterialCommunityIcons name={icon as never} size={22} color={colors.blue}/></View> : null}
+    <View style={s.flex}><Text style={s.rowTitle}>{title}</Text><Text style={s.rowDetail}>{detail}</Text>{children}</View>
+    {tag ? <Text style={s.tag}>{tag}</Text> : null}
+    <Ionicons name="chevron-forward" size={18} color={colors.secondary}/>
+  </Pressable>;
+}
+
+/**
+ * Entrenar: arriba tu programa (lo de hoy, la semana y las plantillas híbridas). Debajo tus rutinas propias, la sesión
+ * libre, el cardio y el catálogo. Todo en uno o dos toques.
+ */
 export default function TrainScreen() {
   const router = useRouter();
   const repository = useTrainingRepository();
+  const hybrid = useProgram();
   const [routines, setRoutines] = useState<Routine[]>([]);
   const [overview, setOverview] = useState<TrainingOverview | null>(null);
-  const [loadError, setLoadError] = useState(false);
   const [catalog, setCatalog] = useState<Map<string, Exercise>>(new Map());
-  const hybrid = useProgram();
+  const [loadError, setLoadError] = useState(false);
+  const [showCatalog, setShowCatalog] = useState(false);
+  const load = useCallback((isActive: () => boolean = () => true) => {
+    if (!repository) return Promise.resolve();
+    return Promise.all([repository.listRoutines(), repository.getOverview(), repository.searchExercises('').catch(() => [])]).then(([items, summary, exercises]) => {
+      if (isActive()) { setRoutines(items); setOverview(summary); setCatalog(new Map(exercises.map((e) => [e.id, e]))); setLoadError(false); }
+    }).catch(() => { if (isActive()) setLoadError(true); });
+  }, [repository]);
   useFocusEffect(useCallback(() => {
     let active = true;
-    if (repository) Promise.all([repository.listRoutines(), repository.getOverview(), repository.searchExercises('').catch(() => [])]).then(([items, summary, exercises]) => {
-      if (active) { setRoutines(items); setOverview(summary); setCatalog(new Map(exercises.map((e) => [e.id, e]))); setLoadError(false); }
-    }).catch(() => { if (active) setLoadError(true); });
+    void load(() => active);
     return () => { active = false; };
-  }, [repository]));
+  }, [load]));
+  const refresh = useAppRefresh(useCallback(() => Promise.all([load(), hybrid.refresh()]), [load, hybrid]));
+  const activeId = overview?.latestWorkout?.state === 'active' ? overview.latestWorkout.id : null;
 
-  return <Screen>
-    <View><Eyebrow>PLANIFICA Y REGISTRA</Eyebrow><Title>Entrenar</Title></View>
-    <TrainProfessionalRows/>
-    <HybridCard program={hybrid.program} status={hybrid.status} loaded={hybrid.loaded}/>
-    <Card accent={colors.blue}>
-      <Eyebrow>SESIÓN LOCAL</Eyebrow>
-      <Text style={s.hero}>{overview?.latestWorkout?.state === 'active' ? 'Tienes una sesión en curso' : 'Empieza cuando quieras'}</Text>
-      <Text style={s.detail}>Todo se guarda en tu teléfono al momento y se respalda en tu cuenta cuando hay internet.</Text>
-      <ActionButton onPress={() => router.push(overview?.latestWorkout?.state === 'active' ? `/workout/${overview.latestWorkout.id}` : '/workout/new')}>
-        {overview?.latestWorkout?.state === 'active' ? 'Continuar sesión' : 'Iniciar sesión libre'}
-      </ActionButton>
-    </Card>
-    <Card accent={colors.green}>
-      <Eyebrow>CARDIO Y RESISTENCIA</Eyebrow>
-      <Text style={s.hero}>Corre, nada, pedalea o rema</Text>
-      <Text style={s.detail}>Registra duración, distancia, esfuerzo y frecuencia cardiaca. Se suma a tu semana junto con el gimnasio.</Text>
-      <ActionButton secondary onPress={() => router.push('/cardio/new')}>＋ Registrar actividad</ActionButton>
-    </Card>
-    <Row><SectionHeading title="Mis rutinas" action="Historial" onAction={() => router.push('/history')} /></Row>
-    <ActionButton secondary onPress={() => router.push('/routines/new')}>＋ Crear rutina</ActionButton>
-    {loadError ? <EmptyState icon="alert-circle-outline" title="No pudimos cargar tus rutinas" detail="Los registros locales no se eliminaron. Vuelve a cargar esta sección." action="Reintentar" onAction={() => repository?.listRoutines().then(setRoutines).catch(() => setLoadError(true))}/> : null}
-    {routines.length === 0 && !loadError ? <EmptyState icon="clipboard-outline" title="Todavía no hay rutinas" detail="Elige ejercicios y define tus objetivos por serie. Puedes hacerlo sin conexión." action="Crear primera rutina" onAction={() => router.push('/routines/new')}/> : null}
-    {routines.map((routine) => <Card key={routine.id}>
-      <Row><View style={s.routineHeading}><View style={s.icon}><Ionicons name="barbell-outline" size={19} color={colors.blue}/></View><View style={{ flex: 1 }}><Label>{routine.name}</Label><Text style={s.detail}>{routine.coachName ? `De tu coach ${routine.coachName} · ` : ''}{routine.exercises.length} ejercicios · editada {new Date(routine.updatedAt).toLocaleDateString('es-MX')}</Text></View></View></Row>
-      <Text style={s.exerciseNames} numberOfLines={2}>{routine.exercises.map((exercise) => exercise.exerciseName).join(' · ')}</Text>
-      {(() => {
-        const focus = routineFocus(routine.exercises.flatMap((e) => { const ex = catalog.get(e.exerciseId); return ex ? [{ exercise: ex, sets: e.sets }] : []; }));
-        return focus ? <Text style={s.focus}>Series por sesión: {focus}</Text> : null;
-      })()}
-      <ActionButton onPress={async () => { const id = await repository?.startWorkout(routine.id); if (id) router.push(`/workout/${id}`); }}>Iniciar rutina</ActionButton>
-    </Card>)}
-    <SectionHeading title="Catálogo de ejercicios" />
-    <ExercisePicker onSelect={(exercise) => router.push(`/exercises/${exercise.id}`)} />
-    <Pressable accessibilityRole="button" onPress={() => router.push('/history')} style={s.history}><Ionicons name="time-outline" size={18} color={colors.blue}/><Text style={s.historyText}>Consultar historial de sesiones</Text><Ionicons name="chevron-forward" size={16} color={colors.muted}/></Pressable>
+  async function openRoutine(routine: Routine) {
+    const id = await repository?.startWorkout(routine.id);
+    if (id) router.push(`/workout/${id}`);
+  }
+
+  return <Screen refreshing={refresh.refreshing} onRefresh={refresh.onRefresh}>
+    <BrandHeader/>
+    <Title>Entrenar</Title>
+    {activeId ? <RowCard icon="play-circle" title="Sesión en curso" detail="Toca para continuar donde ibas" tag="AHORA" onPress={() => router.push(`/workout/${activeId}`)}/> : null}
+
+    <View style={s.section}>
+      <Text style={s.heading}>MI PROGRAMA</Text>
+      <HybridCard program={hybrid.program} status={hybrid.status} loaded={hybrid.loaded}/>
+    </View>
+
+    <View style={s.section}>
+      <Text style={s.heading}>MIS RUTINAS</Text>
+      {loadError ? <EmptyState icon="alert-circle-outline" title="No pudimos cargar tus rutinas" detail="Tus registros siguen guardados. Vuelve a intentar." action="Reintentar" onAction={() => void load()}/> : null}
+      {routines.map((r) => {
+        const focus = routineFocus(r.exercises.flatMap((e) => { const ex = catalog.get(e.exerciseId); return ex ? [{ exercise: ex, sets: e.sets }] : []; }));
+        return <RowCard key={r.id} icon="clipboard-text-outline" title={r.name} detail={`${r.exercises.length} ejercicios${focus ? ` · ${focus}` : ''}`} label={`Empezar ${r.name}`} onPress={() => void openRoutine(r)}/>;
+      })}
+      <RowCard icon="plus-circle-outline" title="Crear rutina" detail="Elige ejercicios, series y descansos" onPress={() => router.push('/routines/new')}/>
+      <RowCard icon="lightning-bolt" title="Sesión libre" detail="Sin rutina: agrega ejercicios sobre la marcha" onPress={() => router.push('/workout/new')}/>
+    </View>
+
+    <View style={s.links}>
+      <Pressable accessibilityRole="button" onPress={() => router.push('/cardio/new')} style={s.link}><Ionicons name="pulse-outline" size={18} color={colors.accentText}/><Text style={s.linkText}>Registrar cardio</Text></Pressable>
+      <Pressable accessibilityRole="button" onPress={() => router.push('/history')} style={s.link}><Ionicons name="time-outline" size={18} color={colors.accentText}/><Text style={s.linkText}>Historial</Text></Pressable>
+    </View>
+
+    <Pressable accessibilityRole="button" accessibilityState={{ expanded: showCatalog }} onPress={() => setShowCatalog((v) => !v)} style={s.catalogToggle}>
+      <MaterialCommunityIcons name="book-open-variant" size={18} color={colors.accentText}/>
+      <Text style={s.linkText}>Catálogo de ejercicios</Text>
+      <Ionicons name={showCatalog ? 'chevron-up' : 'chevron-down'} size={16} color={colors.secondary}/>
+    </Pressable>
+    {showCatalog ? <ExercisePicker onSelect={(exercise) => router.push(`/exercises/${exercise.id}`)}/> : null}
   </Screen>;
 }
 
-const s=StyleSheet.create({ hero:{color:colors.text,fontSize:21,fontWeight:'800'},detail:{color:colors.secondary,fontSize:12,lineHeight:18,marginTop:4},routineHeading:{flexDirection:'row',alignItems:'center',gap:12,flex:1},icon:{width:42,height:42,borderRadius:14,backgroundColor:colors.accentSoft,alignItems:'center',justifyContent:'center'},exerciseNames:{color:colors.secondary,fontSize:11,lineHeight:17},focus:{color:colors.accentText,fontSize:11,fontWeight:'700'},history:{flexDirection:'row',alignItems:'center',gap:10,paddingVertical:14},historyText:{color:colors.text,fontSize:13,fontWeight:'700',flex:1}});
+const s = themed(() => StyleSheet.create({
+  flex: { flex: 1 }, section: { gap: 10 }, pressed: { opacity: 0.8 },
+  iconBubble: { width: 44, height: 44, borderRadius: 13, backgroundColor: colors.surfaceRaised, alignItems: 'center', justifyContent: 'center' },
+  heading: { color: colors.secondary, fontSize: 13, fontWeight: '700', letterSpacing: 1 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 68, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 16, paddingHorizontal: 16, paddingVertical: 10 },
+  rowTitle: { color: colors.text, fontSize: 23, lineHeight: 26, ...displayBold }, rowDetail: { color: colors.secondary, fontSize: 13 },
+  tag: { color: colors.green, fontSize: 11, fontWeight: '700', letterSpacing: 0.5 },
+  links: { flexDirection: 'row', gap: 10 },
+  link: { flex: 1, minHeight: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderWidth: 1, borderColor: colors.border, borderRadius: 14, backgroundColor: colors.surface },
+  linkText: { color: colors.text, fontSize: 14, fontWeight: '700' },
+  catalogToggle: { minHeight: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 14, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface },
+}));

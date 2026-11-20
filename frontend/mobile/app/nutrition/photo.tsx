@@ -13,7 +13,7 @@ import { MEAL_TYPES, formatAmount, suggestMealType } from '@/nutrition/mealForm'
 import { useNutrition } from '@/nutrition/mobileNutrition';
 import { PhotoAnalysisError, acceptPhotoConsent, analyzeFoodPhoto, dishesFrom, hasPhotoConsent, totals, wasEdited, type Dish, type FoodPhotoResult } from '@/nutrition/photoAnalysis';
 import { pickFoodPhoto } from '@/nutrition/pickPhoto';
-import { colors } from '@/theme/colors';
+import { colors, themed } from '@/theme/colors';
 
 type Step = 'consent' | 'choose' | 'analyzing' | 'review';
 
@@ -140,7 +140,7 @@ export default function FoodPhotoScreen() {
   </Screen>;
 }
 
-const s = StyleSheet.create({
+const s = themed(() => StyleSheet.create({
   body: { color: colors.text, fontSize: 14, lineHeight: 20 }, bold: { fontWeight: '800' },
   hint: { color: colors.secondary, fontSize: 12, lineHeight: 17 }, center: { color: colors.secondary, textAlign: 'center', marginTop: 8 },
   conf: { color: colors.text, fontSize: 15, fontWeight: '800', textTransform: 'capitalize' },
@@ -154,4 +154,4 @@ const s = StyleSheet.create({
   links: { flexDirection: 'row', justifyContent: 'space-between' }, link: { color: colors.accentText, fontSize: 12, fontWeight: '800' }, remove: { color: colors.red, fontSize: 12, fontWeight: '700' },
   total: { color: colors.text, fontSize: 28, fontWeight: '800' },
   error: { color: colors.red, fontSize: 12, lineHeight: 18 },
-});
+}));

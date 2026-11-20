@@ -12,7 +12,7 @@ import { useTrainingRepository } from '@/data/MobileTrainingContext';
 import { EMPTY_ANSWERS, GOALS, goalLabel, parseBody, recommendProgram, sportsFor, type Access, type OnboardingAnswers } from '@/onboarding/recommend';
 import { HYBRID_COLOR } from '@/program/HybridCard';
 import { setOnboardingDone } from '@/settings/devicePrefs';
-import { colors } from '@/theme/colors';
+import { colors, themed } from '@/theme/colors';
 
 const STEPS = 5;
 const LEVELS = [{ value: 'beginner', label: 'Principiante', detail: 'Menos de 1 año entrenando' }, { value: 'intermediate', label: 'Intermedio', detail: '1 a 3 años' }, { value: 'advanced', label: 'Avanzado', detail: 'Más de 3 años' }] as const;
@@ -137,7 +137,7 @@ export default function OnboardingScreen() {
   </Screen>;
 }
 
-const s = StyleSheet.create({
+const s = themed(() => StyleSheet.create({
   top: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   dots: { flexDirection: 'row', gap: 6 }, dot: { width: 22, height: 6, borderRadius: 3, backgroundColor: colors.graphite }, dotOn: { backgroundColor: HYBRID_COLOR },
   skip: { color: colors.secondary, fontSize: 14, fontWeight: '700' },
@@ -153,4 +153,4 @@ const s = StyleSheet.create({
   program: { color: colors.text, fontSize: 22, fontWeight: '800' }, reason: { color: colors.text, fontSize: 13, lineHeight: 19 },
   link: { color: colors.accentText, fontSize: 14, fontWeight: '700', textAlign: 'center', paddingVertical: 10 },
   error: { color: colors.red, fontSize: 12 }, nav: { flexDirection: 'row', gap: 10 },
-});
+}));

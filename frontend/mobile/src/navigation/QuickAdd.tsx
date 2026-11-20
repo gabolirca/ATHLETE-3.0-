@@ -2,12 +2,12 @@ import { useState } from 'react';
 import { useRouter, type Href } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
-import { colors } from '@/theme/colors';
+import { colors, themed } from '@/theme/colors';
 
 /** Lo que se puede registrar desde el "+" de la barra (como Instagram/Strava): a un toque desde cualquier pantalla. */
 export const QUICK_ACTIONS: ReadonlyArray<{ key: string; label: string; detail: string; icon: string; href: Href }> = [
   { key: 'strength', label: 'Entrenamiento de fuerza', detail: 'Rutina o sesión libre', icon: 'barbell-outline', href: '/workout/new' },
-  { key: 'cardio', label: 'Cardio', detail: 'Correr, nadar, bici, remo, funcional', icon: 'pulse-outline', href: '/cardio/new' },
+  { key: 'cardio', label: 'Cardio', detail: 'Caminadora, bici, remo, circuito', icon: 'pulse-outline', href: '/cardio/new' },
   { key: 'meal', label: 'Comida', detail: 'Registro de nutrición', icon: 'restaurant-outline', href: '/nutrition/new' },
   { key: 'body', label: 'Peso o medida', detail: 'En Progreso', icon: 'scale-outline', href: '/progress' },
 ];
@@ -37,7 +37,7 @@ export function QuickAddButton() {
   </>;
 }
 
-const s = StyleSheet.create({
+const s = themed(() => StyleSheet.create({
   slot: { flex: 1, alignItems: 'center', justifyContent: 'flex-start' },
   fab: { width: 54, height: 54, borderRadius: 27, marginTop: -14, backgroundColor: colors.blue, alignItems: 'center', justifyContent: 'center', shadowColor: colors.blue, shadowOpacity: 0.5, shadowRadius: 10, elevation: 6 },
   pressed: { opacity: 0.8 },
@@ -49,4 +49,4 @@ const s = StyleSheet.create({
   flex: { flex: 1 },
   label: { color: colors.text, fontSize: 15, fontWeight: '800' },
   detail: { color: colors.secondary, fontSize: 12 },
-});
+}));

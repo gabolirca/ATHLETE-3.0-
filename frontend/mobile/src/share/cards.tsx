@@ -1,8 +1,8 @@
 import { forwardRef, type ComponentRef, type PropsWithChildren } from 'react';
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, Text, View, type ImageSourcePropType } from 'react-native';
 import { BRAND, LOCKUP_RATIO } from '@/brand/assets';
-import Svg, { Circle } from 'react-native-svg';
-import type { CardioCardData, SessionCardData, WeekCardData, WodCardData } from './shareData';
+import Svg, { Circle, Polyline } from 'react-native-svg';
+import { zigzagPoints, type CardioCardData, type OverlayData, type SessionCardData, type WeekCardData, type WodCardData } from './shareData';
 
 /** Tamaño en pantalla; se exporta a 1080 × 1920 (historia de Instagram). */
 export const CARD_W = 300;
@@ -100,6 +100,65 @@ export const WeekCard = forwardRef<CardRef, { data: WeekCardData }>(({ data }, r
     <Text style={s.small}>{data.programName}</Text>
   </Frame>);
 WeekCard.displayName = 'WeekCard';
+
+/** La "ruta" de la sesión: el volumen de cada serie en una línea roja en zigzag (como el mapa de Strava). */
+function SessionLine({ values, width, height }: { values: number[]; width: number; height: number }) {
+  const points = zigzagPoints(values, width, height, 6);
+  if (!points) return null;
+  return <Svg width={width} height={height} accessibilityLabel="Línea de tu sesión">
+    <Polyline points={points} fill="none" stroke="rgba(0,0,0,0.35)" strokeWidth={7} strokeLinejoin="round" strokeLinecap="round"/>
+    <Polyline points={points} fill="none" stroke="#1FB8FF" strokeWidth={4} strokeLinejoin="round" strokeLinecap="round"/>
+  </Svg>;
+}
+
+function OverlayStats({ data }: { data: OverlayData }) {
+  return <View style={o.column}>
+    <Image source={BRAND.lockup} accessibilityLabel="ATHLETE" resizeMode="contain" style={o.logo}/>
+    {data.stats.map(([label, value]) => <View key={label} style={o.stat}><Text style={o.label}>{label}</Text><Text style={o.value}>{value}</Text></View>)}
+    {data.record ? <View style={o.stat}><Text style={o.label}>🏆 Récord</Text><Text style={o.recordValue} numberOfLines={2}>{data.record}</Text></View> : null}
+  </View>;
+}
+
+/** "Con tu foto": tu foto (o la portada de ATHLETE) a pantalla completa con los datos encima, en blanco. */
+export const PhotoCard = forwardRef<CardRef, { data: OverlayData; photo: ImageSourcePropType | null; place?: string | null }>(({ data, photo, place }, ref) =>
+  <View ref={ref} collapsable={false} style={[s.card, o.photoCard]}>
+    {photo ? <Image source={photo} resizeMode="cover" style={o.fill} accessibilityIgnoresInvertColors/> : null}
+    <View style={[o.fill, o.veil]}/>
+    <View style={o.photoBody}>
+      <OverlayStats data={data}/>
+      <View style={s.flex}/>
+      <SessionLine values={data.curve} width={CARD_W - 36} height={84}/>
+      <View><Text style={o.title}>{data.title}</Text><Text style={o.sub}>{[data.date, place].filter(Boolean).join(' · ')}</Text></View>
+    </View>
+  </View>);
+PhotoCard.displayName = 'PhotoCard';
+
+/** "Sticker": los mismos datos con fondo transparente, para pegarlos sobre cualquier foto en Instagram. */
+export const StickerCard = forwardRef<CardRef, { data: OverlayData; place?: string | null }>(({ data, place }, ref) =>
+  <View ref={ref} collapsable={false} style={o.sticker}>
+    <OverlayStats data={data}/>
+    <SessionLine values={data.curve} width={200} height={70}/>
+    <Text style={o.title}>{data.title}</Text>
+    <Text style={o.sub}>{[data.date, place].filter(Boolean).join(' · ')}</Text>
+  </View>);
+StickerCard.displayName = 'StickerCard';
+
+const shadow = { textShadowColor: 'rgba(0,0,0,0.55)', textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 4 } as const;
+const o = StyleSheet.create({
+  photoCard: { padding: 0, overflow: 'hidden', backgroundColor: '#111' },
+  fill: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, width: '100%', height: '100%' },
+  veil: { backgroundColor: 'rgba(0,0,0,0.28)' },
+  photoBody: { flex: 1, padding: 18, gap: 10 },
+  column: { alignSelf: 'flex-end', alignItems: 'center', gap: 10, maxWidth: 150 },
+  logo: { height: 16, width: 16 * LOCKUP_RATIO, marginBottom: 2 },
+  stat: { alignItems: 'center' },
+  label: { color: 'white', fontSize: 11, fontWeight: '600', ...shadow },
+  value: { color: 'white', fontSize: 24, fontWeight: '800', ...shadow },
+  recordValue: { color: 'white', fontSize: 13, fontWeight: '800', textAlign: 'center', ...shadow },
+  title: { color: 'white', fontSize: 20, fontWeight: '800', ...shadow },
+  sub: { color: 'white', fontSize: 12, opacity: 0.9, ...shadow },
+  sticker: { width: CARD_W, alignItems: 'center', gap: 8, paddingVertical: 18, backgroundColor: 'transparent' },
+});
 
 const s = StyleSheet.create({
   card: { width: CARD_W, height: CARD_H, backgroundColor: C.bg, borderRadius: 18, padding: 18, gap: 12 },

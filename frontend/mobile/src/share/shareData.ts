@@ -18,6 +18,8 @@ const setLike = (s: { isWarmup: boolean; reps: number | null; weightKg: number |
 export type SessionCardData = {
   title: string; date: string; score: SessionScore | null; durationMin: number | null; load: number | null; sets: number;
   volumeKg: number; record: string | null; muscles: Array<{ name: string; sets: number; color: string }>;
+  /** Volumen de cada serie efectiva, en orden: la "ruta" en zigzag de la sesión. */
+  curve: number[];
 };
 
 export function sessionCard(detail: WorkoutDetail, catalog: ReadonlyMap<string, Exercise>): SessionCardData {
@@ -35,6 +37,7 @@ export function sessionCard(detail: WorkoutDetail, catalog: ReadonlyMap<string, 
     title: detail.dayName ?? 'Entrenamiento', date: date(detail.workout.startedAt), score: workoutScore(detail), durationMin: minutes,
     load: detail.sessionRpe && minutes ? Math.round(detail.sessionRpe * minutes) : null, sets: effective.length, volumeKg: Math.round(volumeKg),
     record: rec ? `${rec.e.exerciseName} ${rec.r.weightKg ?? ''} kg × ${rec.r.reps ?? ''}`.replace(/\s+/g, ' ').trim() : null, muscles,
+    curve: effective.map((x) => (x.weightKg ?? 0) * (x.reps ?? 0) || (x.reps ?? 0)),
   };
 }
 
@@ -118,4 +121,30 @@ export function weekCard(program: Program, status: ProgramWeekStatus, extra: { s
   if (extra.strengthSets) stats.push(['fuerza', `${extra.strengthSets} series`]);
   if (extra.load) stats.push(['carga', extra.load.toLocaleString('es-MX')]);
   return { programName: program.name, days, done, planned: program.days.length, stats: stats.slice(0, 4) };
+}
+
+/** Datos de las tarjetas "Con tu foto" y "Sticker" (estilo Strava): columna de datos + la línea de la sesión. */
+export type OverlayData = { title: string; date: string; stats: Array<[string, string]>; curve: number[]; record: string | null };
+
+const volume = (kg: number) => (kg >= 1000 ? `${(kg / 1000).toFixed(1)} t` : `${kg} kg`);
+
+export function sessionOverlay(d: SessionCardData): OverlayData {
+  const stats: Array<[string, string]> = [];
+  if (d.durationMin) stats.push(['Duración', `${d.durationMin} min`]);
+  stats.push(['Series', String(d.sets)]);
+  if (d.volumeKg) stats.push(['Volumen', volume(d.volumeKg)]);
+  return { title: d.title, date: d.date, stats, curve: d.curve, record: d.record };
+}
+
+export function cardioOverlay(d: CardioCardData): OverlayData {
+  const stats: Array<[string, string]> = [[d.unit === 'min' ? 'Tiempo' : 'Distancia', `${d.big} ${d.unit}`]];
+  for (const [l, v] of d.stats) if (l !== 'carga' && stats.length < 4) stats.push([l[0]!.toUpperCase() + l.slice(1), v]);
+  return { title: d.title, date: d.date, stats, curve: [], record: null };
+}
+
+/** Puntos de la línea en zigzag (SVG polyline) dentro de w × h. Menos de 2 valores: sin línea. */
+export function zigzagPoints(values: number[], w: number, h: number, pad = 4): string {
+  if (values.length < 2) return '';
+  const min = Math.min(...values); const span = Math.max(...values) - min || 1;
+  return values.map((v, i) => `${((i / (values.length - 1)) * (w - pad * 2) + pad).toFixed(1)},${(h - pad - ((v - min) / span) * (h - pad * 2)).toFixed(1)}`).join(' ');
 }

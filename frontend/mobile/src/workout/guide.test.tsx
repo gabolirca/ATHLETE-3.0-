@@ -6,7 +6,7 @@ import { exerciseProgress, nextStepLabel, workoutGuide } from './guide';
 const set = (reps: number | null, isWarmup = false) => ({ id: Math.random().toString(), setIndex: 0, weightKg: 80, reps, rir: null, isWarmup });
 const ex = (name: string, setsTarget: number | null, sets: ReturnType<typeof set>[]) => ({ exerciseName: name, setsTarget, sets });
 
-jest.mock('@expo/vector-icons', () => ({ Ionicons: () => null }));
+jest.mock('@expo/vector-icons', () => ({ Ionicons: () => null, MaterialCommunityIcons: () => null }));
 
 describe('guía del entrenamiento', () => {
   test('cuenta solo series de trabajo con reps; el borrador vacío y el calentamiento no cuentan', () => {

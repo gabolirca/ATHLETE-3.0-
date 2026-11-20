@@ -26,7 +26,7 @@ export type AuthSessionLike = {
   expires_at?: number; // segundos epoch
   user: AuthUserLike;
 };
-export type AuthUserLike = { id: string; email?: string | null; email_confirmed_at?: string | null };
+export type AuthUserLike = { id: string; email?: string | null; email_confirmed_at?: string | null; user_metadata?: Record<string, unknown> | null };
 export type AuthErrorLike = { message: string; status?: number; code?: string; name?: string };
 type R<T> = Promise<{ data: T; error: AuthErrorLike | null }>;
 
@@ -35,7 +35,7 @@ export interface AuthClientLike {
   signInWithPassword(credentials: { email: string; password: string }): R<{ user: AuthUserLike | null; session: AuthSessionLike | null }>;
   signOut(options?: { scope?: 'global' | 'local' | 'others' }): Promise<{ error: AuthErrorLike | null }>;
   resetPasswordForEmail(email: string, options?: { redirectTo?: string }): R<unknown>;
-  updateUser(attributes: { password?: string }): R<{ user: AuthUserLike | null }>;
+  updateUser(attributes: { password?: string; data?: Record<string, unknown> }): R<{ user: AuthUserLike | null }>;
   getSession(): R<{ session: AuthSessionLike | null }>;
   refreshSession(): R<{ session: AuthSessionLike | null; user: AuthUserLike | null }>;
   signInWithOtp(credentials: { email: string; options?: { shouldCreateUser?: boolean; emailRedirectTo?: string } }): R<unknown>;
@@ -63,7 +63,7 @@ const GENERIC_SIGNIN = 'Correo o contraseña incorrectos.';
 const TERMINAL_SESSION_CODES = new Set(['refresh_token_not_found', 'refresh_token_already_used', 'session_not_found', 'session_expired', 'user_not_found', 'user_banned']);
 
 function toUser(u: AuthUserLike): AuthUser {
-  return { id: u.id, email: u.email ?? null, emailConfirmed: Boolean(u.email_confirmed_at) };
+  return { id: u.id, email: u.email ?? null, emailConfirmed: Boolean(u.email_confirmed_at), hasPassword: u.user_metadata?.has_password === true };
 }
 
 /**
@@ -194,8 +194,11 @@ export class SupabaseAuthService implements AuthService {
     if (!parsed.ok) return parsed as Result<never>;
     const { data } = await this.auth.getSession();
     if (!data.session) return err(appError('UNAUTHENTICATED', 'Debes iniciar sesión.'));
-    const { error } = await this.auth.updateUser({ password: parsed.value.newPassword });
+    // `has_password` permite saber (sin exponer nada más) si ya creó su contraseña después de entrar con código.
+    const { error } = await this.auth.updateUser({ password: parsed.value.newPassword, data: { has_password: true } });
     if (error) return err(this.mapError(error));
+    // Refresca la sesión para que el estado (hasPassword) quede al día en la app.
+    await this.auth.refreshSession().catch(() => undefined);
     this.log.info('auth.password_updated');
     return ok(undefined);
   }

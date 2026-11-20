@@ -24,10 +24,10 @@ jest.mock('expo-router', () => {
     useFocusEffect: (cb: () => void) => useEffect(cb, [cb]),
   };
 });
-jest.mock('@expo/vector-icons', () => ({ Ionicons: () => null }));
+jest.mock('@expo/vector-icons', () => ({ Ionicons: () => null, MaterialCommunityIcons: () => null }));
 jest.mock('@/nutrition/mobileNutrition', () => ({ useNutrition: () => mockNutrition }));
 
-import NutritionScreen from '../../app/(tabs)/nutrition';
+import NutritionScreen from '../../app/nutrition/index';
 import NewMealScreen from '../../app/nutrition/new';
 
 const meal = (over: Record<string, unknown>) => ({

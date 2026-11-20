@@ -5,7 +5,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { manipulateAsync, SaveFormat } from 'expo-image-manipulator';
 
 /**
- * Foto de perfil: se guarda SOLO en este teléfono (el perfil es privado; no se sube a la nube).
+ * Foto de perfil: se guarda solo en este teléfono (el perfil es privado).
  * Se guarda el nombre del archivo, no la ruta: en iOS la carpeta de la app cambia de ruta entre actualizaciones.
  */
 export const AVATAR_KEY = 'athlete3.avatar.v1';

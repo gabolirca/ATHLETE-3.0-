@@ -8,7 +8,7 @@ import { Eyebrow, Label, Title } from '@/components/Typography';
 import { Screen } from '@/components/Screen';
 import { useTrainingRepository } from '@/data/MobileTrainingContext';
 import type { Exercise } from '@/data/trainingTypes';
-import { colors } from '@/theme/colors';
+import { colors, themed } from '@/theme/colors';
 
 export default function ExerciseDetailScreen() {
   const { exerciseId } = useLocalSearchParams<{ exerciseId: string }>();
@@ -22,4 +22,4 @@ export default function ExerciseDetailScreen() {
   if (!exercise) return <Screen><Title>Ejercicio</Title><EmptyState title="Ejercicio no disponible" detail="Puede que haya cambiado el catálogo local."/></Screen>;
   return <Screen><View><Eyebrow>CATÁLOGO LOCAL DE MUESTRA</Eyebrow><Title>{exercise.name}</Title></View><Card><View style={s.row}><Label>Grupo muscular</Label><Text style={s.value}>{exercise.muscleGroup}</Text></View><View style={s.row}><Label>Equipo</Label><Text style={s.value}>{exercise.equipment ?? 'Sin equipo'}</Text></View><Text style={s.note}>Este ejercicio viene de un catálogo inicial local. Se reemplazará o complementará al integrar el catálogo oficial del backend.</Text></Card><ActionButton onPress={start}>Iniciar sesión con este ejercicio</ActionButton></Screen>;
 }
-const s=StyleSheet.create({row:{flexDirection:'row',justifyContent:'space-between',gap:10},value:{color:colors.text,fontSize:13,fontWeight:'700'},note:{color:colors.secondary,fontSize:11,lineHeight:17}});
+const s=themed(() => StyleSheet.create({row:{flexDirection:'row',justifyContent:'space-between',gap:10},value:{color:colors.text,fontSize:13,fontWeight:'700'},note:{color:colors.secondary,fontSize:11,lineHeight:17}}));

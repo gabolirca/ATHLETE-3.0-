@@ -12,7 +12,7 @@ import { Screen } from '@/components/Screen';
 import { useLocalDataReady, useTrainingRepository } from '@/data/MobileTrainingContext';
 import { RoutineInputSchema } from '@/data/trainingSchemas';
 import type { Exercise } from '@/data/trainingTypes';
-import { colors } from '@/theme/colors';
+import { colors, themed } from '@/theme/colors';
 import { RoutineDiagnosisCard } from '@/routines/diagnosis';
 
 type PlannedExercise = Exercise & { sets: string; reps: string; restSeconds: string; version: number };
@@ -109,7 +109,7 @@ export default function NewRoutineScreen() {
   </Screen>;
 }
 
-const s = StyleSheet.create({
+const s = themed(() => StyleSheet.create({
   selected: { gap: 10 },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   order: { color: colors.blue, fontSize: 15, fontWeight: '800', width: 18 },
@@ -119,4 +119,4 @@ const s = StyleSheet.create({
   configRow: { flexDirection: 'row', gap: 9 },
   pickerHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 4 },
   error: { color: colors.red, fontSize: 12, lineHeight: 18 },
-});
+}));

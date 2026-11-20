@@ -11,7 +11,7 @@ import { Eyebrow, Label, Title } from '@/components/Typography';
 import { Screen, Row } from '@/components/Screen';
 import { useTrainingRepository } from '@/data/MobileTrainingContext';
 import type { Routine } from '@/data/trainingTypes';
-import { colors } from '@/theme/colors';
+import { colors, themed } from '@/theme/colors';
 
 export default function StartWorkoutScreen() {
   const router = useRouter();
@@ -62,4 +62,4 @@ export default function StartWorkoutScreen() {
     {routines.length ? routines.map((routine) => <Card key={routine.id}><Row><View><Label>{routine.name}</Label><Text style={s.detail}>{routine.exercises.length} ejercicios</Text></View><Text style={s.count}>{routine.exercises.length}</Text></Row><ActionButton secondary loading={starting} onPress={() => start(routine.id)}>Iniciar esta rutina</ActionButton></Card>) : <EmptyState icon="clipboard-outline" title="Sin rutinas guardadas" detail="Puedes empezar una sesión libre o crear una rutina en Entrenar." />}
   </Screen>;
 }
-const s=StyleSheet.create({detail:{color:colors.secondary,fontSize:12,lineHeight:18},count:{color:colors.blue,fontWeight:'800',fontSize:20},error:{color:colors.red,fontSize:12}});
+const s=themed(() => StyleSheet.create({detail:{color:colors.secondary,fontSize:12,lineHeight:18},count:{color:colors.blue,fontWeight:'800',fontSize:20},error:{color:colors.red,fontSize:12}}));

@@ -10,7 +10,7 @@ import type { Result } from './errors';
 export const Email = z.string().trim().toLowerCase().pipe(z.email().max(254));
 export type Email = z.infer<typeof Email>;
 
-export const PASSWORD_MIN_LENGTH = 10;
+export const PASSWORD_MIN_LENGTH = 8;
 /** Supabase Auth (bcrypt) solo usa los primeros 72 bytes: se rechaza lo que exceda. */
 export const PASSWORD_MAX_BYTES = 72;
 
@@ -64,6 +64,8 @@ export const AuthUser = z.object({
   id: Uuid,
   email: z.string().nullable(),
   emailConfirmed: z.boolean(),
+  /** Ya creó su contraseña (se marca al guardarla). Si no, después del código por correo se le pide crearla. */
+  hasPassword: z.boolean().optional(),
 });
 export type AuthUser = z.infer<typeof AuthUser>;
 

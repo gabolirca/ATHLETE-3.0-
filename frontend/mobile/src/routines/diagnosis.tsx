@@ -5,7 +5,7 @@ import { Chip } from '@/components/Chip';
 import { Eyebrow } from '@/components/Typography';
 import type { Exercise, MuscleVolumeItem } from '@/data/trainingTypes';
 import { MuscleVolumeRow, formatSets } from '@/progress/muscleVolume';
-import { colors } from '@/theme/colors';
+import { colors, themed } from '@/theme/colors';
 
 export type PlannedItem = { exercise: Exercise; sets: number | null };
 export type RoutineDiagnosis = { trained: MuscleVolumeItem[]; missing: MuscleVolumeItem[] };
@@ -53,9 +53,9 @@ export function RoutineDiagnosisCard({ items, timesPerWeek, onTimesChange }: { i
   </Card>;
 }
 
-const s = StyleSheet.create({
+const s = themed(() => StyleSheet.create({
   q: { color: colors.text, fontSize: 13, fontWeight: '700' },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
   verdict: { fontSize: 13, fontWeight: '800' },
   note: { color: colors.secondary, fontSize: 11, lineHeight: 16 },
-});
+}));

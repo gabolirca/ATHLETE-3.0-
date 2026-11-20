@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Pressable, StyleSheet, Switch, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { ActionButton } from '@/components/ActionButton';
 import { AppInput } from '@/components/AppInput';
 import { Card } from '@/components/Card';
@@ -9,12 +9,9 @@ import { DateField } from '@/components/DatePicker';
 import { localDateOfDevice } from '@/lib/localDate';
 import { Eyebrow, Title } from '@/components/Typography';
 import { Screen } from '@/components/Screen';
-import { ACTIVITIES, EMPTY_FORM, STROKES, describeCardio, fieldsFor, formFromEntry, parseCardioForm, type CardioFormErrors, type CardioFormValues, type UnitSystem } from '@/cardio/cardioForm';
+import { ACTIVITIES, EMPTY_FORM, describeCardio, fieldsFor, formFromEntry, parseCardioForm, type CardioFormErrors, type CardioFormValues, type UnitSystem } from '@/cardio/cardioForm';
 import { useTrainingRepository } from '@/data/MobileTrainingContext';
-import { colors } from '@/theme/colors';
-import type { ProgramDay } from '@/data/trainingTypes';
-import { cardioActivityFor, cardioPlanText, plannedMeters } from '@/program/format';
-import { HYBRID_COLOR } from '@/program/HybridCard';
+import { colors, themed } from '@/theme/colors';
 
 function Chip({ label, selected, onPress, icon }: { label: string; selected: boolean; onPress: () => void; icon?: string }) {
   return <Pressable accessibilityRole="button" accessibilityState={{ selected }} accessibilityLabel={label} onPress={onPress} style={[s.chip, selected && s.chipOn]}>
@@ -25,13 +22,12 @@ function Chip({ label, selected, onPress, icon }: { label: string; selected: boo
 
 export default function NewCardioScreen() {
   const router = useRouter();
-  const { edit, dayId } = useLocalSearchParams<{ edit?: string; dayId?: string }>();
+  const { edit } = useLocalSearchParams<{ edit?: string }>();
   const repository = useTrainingRepository();
   const [values, setValues] = useState<CardioFormValues>(EMPTY_FORM);
   const [errors, setErrors] = useState<CardioFormErrors>({});
   const [unitSystem, setUnitSystem] = useState<UnitSystem>('metric');
   const [saving, setSaving] = useState(false);
-  const [planDay, setPlanDay] = useState<ProgramDay | null>(null);
 
   useEffect(() => {
     if (!repository) return;
@@ -42,16 +38,7 @@ export default function NewCardioScreen() {
         setUnitSystem(units);
         if (entry) setValues(formFromEntry(entry, units));
       });
-    // Sesión de un programa híbrido: actividad y distancia planeadas, y el plan a la vista.
-    if (dayId && !edit) repository.listPrograms().then((programs) => {
-      const day = programs.flatMap((p) => p.days).find((d) => d.id === dayId);
-      if (!day) return;
-      setPlanDay(day);
-      const activity = cardioActivityFor(day.modality) ?? 'run';
-      const m = plannedMeters(day);
-      setValues((v) => ({ ...v, activity, distance: m ? String(activity === 'swim' ? m : Number((m / 1000).toFixed(2))) : v.distance }));
-    }).catch(() => undefined);
-  }, [repository, edit, dayId]);
+  }, [repository, edit]);
 
   const set = <K extends keyof CardioFormValues>(key: K, value: CardioFormValues[K]) => setValues((v) => ({ ...v, [key]: value }));
   const fields = fieldsFor(values.activity);
@@ -72,7 +59,7 @@ export default function NewCardioScreen() {
     setSaving(true);
     try {
       if (edit) { await repository.updateCardio(edit, parsed.draft); router.replace(`/cardio/${edit}`); }
-      else { const id = await repository.logCardio({ ...parsed.draft, trainingDayId: dayId ?? null }); router.replace(`/cardio/${id}`); }
+      else { const id = await repository.logCardio({ ...parsed.draft, trainingDayId: null }); router.replace(`/cardio/${id}`); }
     } catch (cause) {
       setErrors({ form: cause instanceof Error ? cause.message : 'No se pudo guardar la actividad.' });
     } finally {
@@ -80,16 +67,10 @@ export default function NewCardioScreen() {
     }
   }
 
-  const distanceLabel = values.activity === 'swim' ? 'Distancia (m, opcional)' : `Distancia (${unitSystem === 'imperial' ? 'mi' : 'km'}, opcional)`;
+  const distanceLabel = `Distancia (${unitSystem === 'imperial' ? 'mi' : 'km'}, opcional)`;
 
   return <Screen>
     <View><Eyebrow>CARDIO Y RESISTENCIA</Eyebrow><Title>{edit ? 'Editar actividad' : 'Registrar actividad'}</Title></View>
-
-    {planDay ? <Card accent={HYBRID_COLOR}>
-      <Eyebrow>TU PLAN DE HOY · {planDay.name.toUpperCase()}</Eyebrow>
-      {cardioPlanText(planDay).map((line) => <Text key={line} style={s.planLine}>• {line}</Text>)}
-      <Text style={s.hint}>Ya llenamos la distancia planeada: corrígela si hiciste otra.</Text>
-    </Card> : null}
 
     <Card>
       <Eyebrow>ACTIVIDAD</Eyebrow>
@@ -110,19 +91,9 @@ export default function NewCardioScreen() {
         <View style={s.flex}><AppInput label="Segundos" value={values.seconds} onChangeText={(t) => set('seconds', t)} keyboardType="number-pad" placeholder="0"/></View>
       </View>
       {errors.minutes ? <Text accessibilityRole="alert" style={s.error}>{errors.minutes}</Text> : null}
-      {fields.distance ? <AppInput label={distanceLabel} value={values.distance} onChangeText={(t) => set('distance', t)} keyboardType="decimal-pad" placeholder={values.activity === 'swim' ? '1500' : '5.0'} error={errors.distance}/> : null}
+      {fields.distance ? <AppInput label={distanceLabel} value={values.distance} onChangeText={(t) => set('distance', t)} keyboardType="decimal-pad" placeholder="5.0" error={errors.distance}/> : null}
       {fields.rounds ? <AppInput label="Rondas (opcional)" value={values.rounds} onChangeText={(t) => set('rounds', t)} keyboardType="number-pad" error={errors.rounds}/> : null}
     </Card>
-
-    {fields.swim ? <Card>
-      <Eyebrow>NATACIÓN</Eyebrow>
-      <View style={s.switchRow}><Text style={s.text}>Aguas abiertas</Text><Switch value={values.openWater} onValueChange={(v) => set('openWater', v)}/></View>
-      {!values.openWater ? <View style={s.row3}>
-        <View style={s.flex}><AppInput label="Largo de alberca (m)" value={values.poolLength} onChangeText={(t) => set('poolLength', t)} keyboardType="decimal-pad" error={errors.poolLength}/></View>
-        <View style={s.flex}><AppInput label="Largos" value={values.laps} onChangeText={(t) => set('laps', t)} keyboardType="number-pad" error={errors.laps}/></View>
-      </View> : null}
-      <View style={s.chips}>{STROKES.map((st) => <Chip key={st.key} label={st.label} selected={values.stroke === st.key} onPress={() => set('stroke', values.stroke === st.key ? null : st.key)}/>)}</View>
-    </Card> : null}
 
     <Card>
       <Eyebrow>ESFUERZO PERCIBIDO (RPE, OPCIONAL)</Eyebrow>
@@ -146,7 +117,7 @@ export default function NewCardioScreen() {
   </Screen>;
 }
 
-const s = StyleSheet.create({
+const s = themed(() => StyleSheet.create({
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 4 },
   chip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 9, borderRadius: 11, backgroundColor: colors.surfaceRaised, borderWidth: 1, borderColor: colors.border },
   chipOn: { backgroundColor: colors.blue, borderColor: colors.blue },
@@ -160,4 +131,4 @@ const s = StyleSheet.create({
   preview: { color: colors.text, fontSize: 17, fontWeight: '800', marginTop: 4 },
   planLine: { color: colors.text, fontSize: 13, lineHeight: 20 },
   error: { color: colors.red, fontSize: 11 },
-});
+}));

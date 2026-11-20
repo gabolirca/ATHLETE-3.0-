@@ -6,7 +6,7 @@ import type { SessionExercise, WorkoutDetail } from '@/data/trainingTypes';
 import { exerciseSuggestion, formatSuggestion, previousBestE1rm, workoutScore } from './coach';
 import { ScoreCard } from './ScoreCard';
 
-jest.mock('@expo/vector-icons', () => ({ Ionicons: () => null }));
+jest.mock('@expo/vector-icons', () => ({ Ionicons: () => null, MaterialCommunityIcons: () => null }));
 jest.mock('@/data/MobileTrainingContext', () => ({ useTrainingRepository: () => null }));
 
 const set = (i: number, weightKg: number | null, reps: number | null, rir: number | null = null, isWarmup = false) => ({ id: `s${i}`, setIndex: i, weightKg, reps, rir, isWarmup });

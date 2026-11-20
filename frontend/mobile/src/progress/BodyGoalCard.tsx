@@ -6,7 +6,7 @@ import { Card } from '@/components/Card';
 import { Eyebrow } from '@/components/Typography';
 import type { BodyMeasurement } from '@/data/trainingTypes';
 import { localDateOfDevice } from '@/lib/localDate';
-import { colors } from '@/theme/colors';
+import { colors, themed } from '@/theme/colors';
 
 export type BodyKind = { id: BodyMeasurement['type']; title: string; unit: string };
 const fmt = (n: number) => String(Math.round(n * 10) / 10);
@@ -60,7 +60,7 @@ export function BodyGoalCard({ kind, measurements, goal, onSaveGoal }: {
   </Card>;
 }
 
-const s = StyleSheet.create({
+const s = themed(() => StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: 10 }, flex: { flex: 1 },
   big: { color: colors.text, fontSize: 28, fontWeight: '800' }, unit: { fontSize: 14, color: colors.secondary, fontWeight: '700' },
   muted: { color: colors.secondary, fontSize: 11, lineHeight: 16 },
@@ -71,4 +71,4 @@ const s = StyleSheet.create({
   btnOn: { borderRadius: 10, backgroundColor: colors.blue, paddingHorizontal: 12, paddingVertical: 8 }, btnOnText: { color: 'white', fontSize: 12, fontWeight: '800' },
   btn: { borderRadius: 10, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 12, paddingVertical: 8 }, btnText: { color: colors.text, fontSize: 12, fontWeight: '700' },
   error: { color: colors.red, fontSize: 11 },
-});
+}));

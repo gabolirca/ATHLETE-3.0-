@@ -1,13 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 import { Animated, Image, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { BRAND_BG } from './assets';
 
 const SPLASH = require('../../assets/brand/splash-icon.png') as number;
 const BY_LIRCA = require('../../assets/brand/by-lirca.png') as number;
 const BY_RATIO = 502 / 81;
 
 /**
- * Entrada tipo Instagram ("from Meta"): justo después del splash nativo, la misma "A" en el centro y
+ * Entrada tipo Instagram ("from Meta"): justo después del splash nativo, el logo de ATHLETE en el centro y
  * "by LIRCA" abajo; luego se desvanece. El splash nativo solo admite una imagen centrada, por eso va aquí.
  */
 export function BrandIntro({ holdMs = 1100 }: { holdMs?: number }) {
@@ -34,7 +35,7 @@ export function BrandIntro({ holdMs = 1100 }: { holdMs?: number }) {
 }
 
 const s = StyleSheet.create({
-  root: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, backgroundColor: '#0B0E14', alignItems: 'center', justifyContent: 'center', zIndex: 100 },
+  root: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, backgroundColor: BRAND_BG, alignItems: 'center', justifyContent: 'center', zIndex: 100 },
   mark: { width: 200, height: 200 },
   by: { position: 'absolute', alignSelf: 'center' },
 });

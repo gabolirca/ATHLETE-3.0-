@@ -5,7 +5,7 @@ import { ActionButton } from '@/components/ActionButton';
 import { AppInput } from '@/components/AppInput';
 import { Card } from '@/components/Card';
 import { Eyebrow } from '@/components/Typography';
-import { colors } from '@/theme/colors';
+import { colors, themed } from '@/theme/colors';
 import { MEAL_TYPES, kcalFromMacros, type MealFormErrors, type MealFormValues } from './mealForm';
 
 function Chip({ label, selected, onPress, icon }: { label: string; selected: boolean; onPress: () => void; icon?: string }) {
@@ -62,7 +62,7 @@ export function MealFormView({ initial, errors, timeHint, saving, submitLabel, o
   </>;
 }
 
-const s = StyleSheet.create({
+const s = themed(() => StyleSheet.create({
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 4 },
   chip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 9, borderRadius: 11, backgroundColor: colors.surfaceRaised, borderWidth: 1, borderColor: colors.border },
   chipOn: { backgroundColor: colors.blue, borderColor: colors.blue },
@@ -74,4 +74,4 @@ const s = StyleSheet.create({
   suggest: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 10, paddingHorizontal: 12, borderRadius: 11, borderWidth: 1, borderColor: colors.blue, backgroundColor: colors.accentDeep },
   suggestText: { color: colors.text, fontSize: 12, fontWeight: '700' },
   error: { color: colors.red, fontSize: 11 },
-});
+}));

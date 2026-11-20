@@ -1,6 +1,5 @@
 import { useCallback, useState } from 'react';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
-import { CoachComments } from '@/coach/CoachComments';
 import { Ionicons } from '@expo/vector-icons';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { PROGRAM_TEMPLATES } from '@athlete/domain';
@@ -16,7 +15,7 @@ import { ActionButton } from '@/components/ActionButton';
 import type { ProgramDay } from '@/data/trainingTypes';
 import { HYBRID_COLOR } from '@/program/HybridCard';
 import { daySummary, modalityInfo, todayWeekday, weekdayLabel } from '@/program/format';
-import { colors } from '@/theme/colors';
+import { colors, themed } from '@/theme/colors';
 
 /** Semana del programa: cada día con sus sesiones, lo hecho esta semana y el día de hoy resaltado. */
 export default function ProgramWeekScreen() {
@@ -50,7 +49,6 @@ export default function ProgramWeekScreen() {
 
   return <Screen>
     <View><Eyebrow>{program.coachName ? `DE TU COACH · ${program.coachName.toUpperCase()}` : 'MODO HÍBRIDO'}</Eyebrow><Title>{program.name}</Title></View>
-    <CoachComments targetType="plan" targetId={program.id}/>
     <Card accent={HYBRID_COLOR}>
       <Text style={s.big}>{done} de {program.days.length}</Text>
       <Text style={s.muted}>sesiones hechas esta semana (lunes a domingo)</Text>
@@ -88,7 +86,7 @@ export default function ProgramWeekScreen() {
   </Screen>;
 }
 
-const s = StyleSheet.create({
+const s = themed(() => StyleSheet.create({
   big: { color: colors.text, fontSize: 26, fontWeight: '800' }, muted: { color: colors.secondary, fontSize: 12, lineHeight: 17 },
   track: { height: 8, borderRadius: 4, backgroundColor: colors.surfaceRaised, overflow: 'hidden' }, fill: { height: 8, borderRadius: 4, backgroundColor: HYBRID_COLOR },
   dayGroup: { gap: 8 }, weekday: { color: colors.secondary, fontSize: 12, fontWeight: '800', letterSpacing: 0.5 }, today: { color: HYBRID_COLOR },
@@ -96,4 +94,4 @@ const s = StyleSheet.create({
   icon: { width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   name: { color: colors.text, fontSize: 15, fontWeight: '800' }, live: { color: colors.blue, fontSize: 10, fontWeight: '800' },
   delete: { color: colors.red, fontSize: 12, fontWeight: '700', textAlign: 'center', padding: 15 },
-});
+}));

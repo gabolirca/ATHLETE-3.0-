@@ -3,7 +3,7 @@ import { fireEvent, render } from '@testing-library/react-native';
 
 const mockRouter = { push: jest.fn() };
 jest.mock('expo-router', () => ({ useRouter: () => mockRouter }));
-jest.mock('@expo/vector-icons', () => ({ Ionicons: () => null }));
+jest.mock('@expo/vector-icons', () => ({ Ionicons: () => null, MaterialCommunityIcons: () => null }));
 
 import { QuickAddButton } from './QuickAdd';
 import { greeting, initials } from '../../app/(tabs)/index';

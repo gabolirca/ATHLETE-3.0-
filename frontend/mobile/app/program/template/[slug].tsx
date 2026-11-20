@@ -14,7 +14,7 @@ import type { ProgramBlock } from '@/data/trainingTypes';
 import { DayPlan, ProgramNotes } from '@/program/DayPlan';
 import { HYBRID_COLOR } from '@/program/HybridCard';
 import { modalityInfo, weekdayLabel } from '@/program/format';
-import { colors } from '@/theme/colors';
+import { colors, themed } from '@/theme/colors';
 
 const nameOf = new Map<string, string>(BUNDLED_CATALOG.exercises.map((e) => [String(e.id), String(e.name)]));
 
@@ -82,10 +82,10 @@ export default function ProgramTemplateScreen() {
   </Screen>;
 }
 
-const s = StyleSheet.create({
+const s = themed(() => StyleSheet.create({
   summary: { color: colors.text, fontSize: 15, fontWeight: '700', lineHeight: 21 }, muted: { color: colors.secondary, fontSize: 12, lineHeight: 18 },
   error: { color: colors.red, fontSize: 12 }, gap: { gap: 8 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12 }, flex: { flex: 1 },
   icon: { width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   day: { color: colors.secondary, fontSize: 11, fontWeight: '700' }, name: { color: colors.text, fontSize: 15, fontWeight: '800' },
-});
+}));

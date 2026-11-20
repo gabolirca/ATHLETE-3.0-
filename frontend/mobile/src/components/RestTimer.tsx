@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, Vibration, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '@/theme/colors';
+import { colors, themed } from '@/theme/colors';
+import { display } from '@/theme/fonts';
 import { cancelRestEnd, scheduleRestEnd } from '@/notifications/restNotification';
 
 /** "1:28". Redondea hacia arriba: 0.3 s restantes se muestran como 0:01, no 0:00. */
@@ -79,7 +80,7 @@ export function RestTimerBar({ timer }: { timer: ReturnType<typeof useRestTimer>
     <View style={s.row}>
       <Ionicons name={timer.done ? 'flash' : 'timer-outline'} size={20} color={timer.done ? colors.amber : colors.text}/>
       <View style={s.flex}>
-        <Text style={s.title}>{timer.done ? '¡A darle! Siguiente serie' : `Descanso · ${formatClock(timer.remaining)}`}</Text>
+        {timer.done ? <Text style={s.title}>¡A darle! Siguiente serie</Text> : <><Text style={s.kicker}>DESCANSO</Text><Text style={s.clock}>{formatClock(timer.remaining)}</Text></>}
         {timer.label ? <Text style={s.label} numberOfLines={1}>{timer.label}</Text> : null}
       </View>
       {!timer.done ? <>
@@ -91,16 +92,18 @@ export function RestTimerBar({ timer }: { timer: ReturnType<typeof useRestTimer>
   </View>;
 }
 
-const s = StyleSheet.create({
-  bar: { position: 'absolute', left: 12, right: 12, bottom: 16, borderRadius: 16, backgroundColor: colors.surfaceRaised, borderWidth: 1, borderColor: colors.blue, overflow: 'hidden', shadowColor: '#000', shadowOpacity: 0.4, shadowRadius: 12, elevation: 8 },
+const s = themed(() => StyleSheet.create({
+  bar: { position: 'absolute', left: 12, right: 12, bottom: 16, borderRadius: 16, backgroundColor: colors.surfaceRaised, borderWidth: 1, borderColor: colors.border, overflow: 'hidden', shadowColor: '#000', shadowOpacity: 0.4, shadowRadius: 12, elevation: 8 },
   fill: { position: 'absolute', left: 0, top: 0, bottom: 0, backgroundColor: colors.accentDeep },
   row: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 12 },
   flex: { flex: 1 },
-  title: { color: colors.text, fontSize: 15, fontWeight: '800' },
+  title: { color: colors.text, fontSize: 22, ...display },
+  kicker: { color: colors.secondary, fontSize: 11, fontWeight: '700', letterSpacing: 1 },
+  clock: { color: colors.text, fontSize: 36, lineHeight: 38, ...display },
   label: { color: colors.secondary, fontSize: 11 },
-  btn: { paddingHorizontal: 10, paddingVertical: 8, borderRadius: 10, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
-  btnText: { color: colors.text, fontSize: 12, fontWeight: '800' },
-});
+  btn: { minHeight: 44, minWidth: 48, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 10, borderRadius: 10, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
+  btnText: { color: colors.text, fontSize: 14, fontWeight: '800' },
+}));
 
 export const HOLD_TO_EXIT_MS = 3000;
 
@@ -157,7 +160,7 @@ export function RestTimerFullScreen({ timer }: { timer: ReturnType<typeof useRes
   </Modal>;
 }
 
-const f = StyleSheet.create({
+const f = themed(() => StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.black, alignItems: 'center', justifyContent: 'center', padding: 28, gap: 22 },
   eyebrow: { color: colors.secondary, fontSize: 13, fontWeight: '800', letterSpacing: 2 },
   clock: { color: colors.text, fontSize: 96, fontWeight: '800', letterSpacing: -2, fontVariant: ['tabular-nums'] },
@@ -172,4 +175,4 @@ const f = StyleSheet.create({
   emergency: { position: 'absolute', bottom: 48, left: 28, right: 28, alignItems: 'center', paddingVertical: 16, borderRadius: 14, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' },
   emergencyFill: { position: 'absolute', left: 0, top: 0, bottom: 0, backgroundColor: colors.redSoft },
   emergencyText: { color: colors.secondary, fontSize: 13, fontWeight: '700' },
-});
+}));

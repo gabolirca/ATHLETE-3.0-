@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, Text } from 'react-native';
 import { AppInput } from '@/components/AppInput';
 import { useTrainingRepository } from '@/data/MobileTrainingContext';
 import type { Exercise, ProgramBlock } from '@/data/trainingTypes';
-import { colors } from '@/theme/colors';
+import { colors, themed } from '@/theme/colors';
 import { Sheet } from './Sheet';
 
 const fold = (t: string) => t.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
@@ -29,7 +29,7 @@ export function AddExerciseSheet({ visible, block, onClose, onPick }: { visible:
   </Sheet>;
 }
 
-const s = StyleSheet.create({
+const s = themed(() => StyleSheet.create({
   item: { borderWidth: 1, borderColor: colors.border, borderRadius: 12, padding: 10, backgroundColor: colors.surfaceRaised },
   name: { color: colors.text, fontSize: 14, fontWeight: '700' }, sub: { color: colors.secondary, fontSize: 11 },
-});
+}));

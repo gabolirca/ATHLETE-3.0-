@@ -4,7 +4,8 @@ import { AppInput } from './AppInput';
 import { Card } from './Card';
 import { LoggedSetSchema, type LoggedSetInput } from '@/data/trainingSchemas';
 import type { TrainingSet } from '@/data/trainingTypes';
-import { colors } from '@/theme/colors';
+import { colors, themed } from '@/theme/colors';
+import { display } from '@/theme/fonts';
 import { rirLabel, rirOptions } from './rirOptions';
 import { toDisplay, toKg, type WeightUnit } from '@/settings/weightUnits';
 
@@ -76,6 +77,30 @@ export function SetEditor({ set, onSave, targetRir = null, previous = null, sugg
   }
   const hint = suggestion ?? previous;
 
+  /** − / +: parte de lo escrito o, si está vacío, de la sugerencia / la vez pasada. Solo cambia la pantalla; se guarda con "Serie hecha". */
+  function step(field: 'weight' | 'reps', delta: number) {
+    if (field === 'weight') {
+      const base = weight.trim() === '' ? toDisplay(hint?.weightKg ?? null, unit) ?? 0 : Number(weight.replace(',', '.')) || 0;
+      const inc = unit === 'kg' ? 2.5 : 5;
+      setWeight(String(Math.max(0, Math.round((base + delta * inc) * 10) / 10)));
+    } else {
+      const base = reps.trim() === '' ? hint?.reps ?? 0 : Number(reps) || 0;
+      setReps(String(Math.max(0, base + delta)));
+    }
+    setInputKey((k) => k + 1);
+  }
+
+  /** Un toque: guarda lo que hay en pantalla; si no escribiste nada, lo sugerido (o lo de la vez pasada). */
+  async function done() {
+    const next = {
+      weight: weight.trim() === '' && hint ? shown(hint.weightKg) : weight,
+      reps: reps.trim() === '' && hint?.reps != null ? String(hint.reps) : reps,
+    };
+    if (next.reps.trim() === '') { setError('Escribe cuántas repeticiones hiciste.'); return; }
+    setWeight(next.weight); setReps(next.reps); setInputKey((k) => k + 1);
+    await persist(rir, warmup, next);
+  }
+
   function selectRir(value: number | null) {
     setRir(value);
     setError('');
@@ -91,9 +116,14 @@ export function SetEditor({ set, onSave, targetRir = null, previous = null, sugg
       <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: warmup }} onPress={() => { const next = !warmup; setWarmup(next); void persist(rir, next); }} style={[styles.warmup, warmup && styles.warmupActive]}><Text style={[styles.warmupText, warmup && styles.warmupTextActive]}>Calentamiento</Text></Pressable>
     </View>
     <View style={styles.fields}>
-      <AppInput key={`w-${inputKey}`} label={bodyweight ? `Lastre (${unit}, opcional)` : `Peso (${unit})`} defaultValue={weight} onChangeText={setWeight} onBlur={() => { void persist(); }} keyboardType="decimal-pad" placeholder={hint ? fmt(toDisplay(hint.weightKg, unit)) : bodyweight ? '0' : '—'} returnKeyType="done" autoCorrect={false} spellCheck={false} />
-      <AppInput key={`r-${inputKey}`} label="Repeticiones" defaultValue={reps} onChangeText={setReps} onBlur={() => { void persist(); }} keyboardType="number-pad" placeholder={hint ? fmt(hint.reps) : '—'} returnKeyType="done" autoCorrect={false} spellCheck={false} />
+      <Stepper label={bodyweight ? `Lastre (${unit}, opcional)` : `Peso (${unit})`} short={bodyweight ? 'LASTRE' : unit === 'kg' ? 'KILOS' : 'LIBRAS'} inputKey={`w-${inputKey}`} value={weight} placeholder={hint ? fmt(toDisplay(hint.weightKg, unit)) : bodyweight ? '0' : '—'}
+        keyboardType="decimal-pad" onChange={setWeight} onBlur={() => { void persist(); }} onStep={(d) => step('weight', d)} less={`Menos peso`} more={`Más peso`}/>
+      <Stepper label="Repeticiones" short="REPS" inputKey={`r-${inputKey}`} value={reps} placeholder={hint ? fmt(hint.reps) : '—'}
+        keyboardType="number-pad" onChange={setReps} onBlur={() => { void persist(); }} onStep={(d) => step('reps', d)} less="Menos repeticiones" more="Más repeticiones"/>
     </View>
+    {lastSaved.current.reps === null && !warmup ? <Pressable accessibilityRole="button" accessibilityLabel="Serie hecha" disabled={saving} onPress={() => { void done(); }} style={({ pressed }) => [styles.done, pressed && { opacity: 0.85 }]}>
+      <Text style={styles.doneText}>Serie hecha</Text>
+    </Pressable> : null}
     {(previous || suggestion) && weight === '' && reps === '' ? <View style={styles.quick}>
       {suggestion && !warmup ? <Pressable accessibilityRole="button" accessibilityLabel={`Usar sugerencia: ${suggestion.weightKg === null ? '' : `${toDisplay(suggestion.weightKg, unit)} ${unit === 'kg' ? 'kilos' : 'libras'} por `}${suggestion.reps}`} onPress={() => fill(suggestion)} style={[styles.repeat, styles.suggest]}>
         <Text style={styles.suggestText}>→ Sugerido · {suggestion.weightKg === null ? `${suggestion.reps} reps` : `${toDisplay(suggestion.weightKg, unit)} ${unit} × ${suggestion.reps}`}</Text>
@@ -128,7 +158,7 @@ export function SetEditor({ set, onSave, targetRir = null, previous = null, sugg
   </Card>;
 }
 
-const styles=StyleSheet.create({
+const styles=themed(() => StyleSheet.create({
   quick:{flexDirection:'row',flexWrap:'wrap',gap:7},
   suggest:{borderColor:colors.green,backgroundColor:colors.greenSoft},
   suggestText:{color:colors.green,fontSize:12,fontWeight:'800'},
@@ -145,7 +175,9 @@ const styles=StyleSheet.create({
   warmupActive:{borderColor:colors.blue,backgroundColor:colors.accentSoft},
   warmupText:{fontSize:11,color:colors.secondary,fontWeight:'700'},
   warmupTextActive:{color:colors.accentText},
-  fields:{flexDirection:'row',gap:8},
+  fields:{flexDirection:'row',gap:10},
+  done:{minHeight:62,borderRadius:16,backgroundColor:colors.blue,alignItems:'center',justifyContent:'center'},
+  doneText:{color:'white',fontSize:26,letterSpacing:0.5,...display},
   effortSection:{gap:8},
   effortQuestion:{color:colors.text,fontSize:14,fontWeight:'800',lineHeight:20},
   effortHint:{color:colors.secondary,fontSize:11,lineHeight:16},
@@ -162,4 +194,29 @@ const styles=StyleSheet.create({
   warning:{color:colors.amber,fontSize:11,lineHeight:16},
   error:{color:colors.red,fontSize:11},
   saving:{color:colors.muted,fontSize:10},
-});
+}));
+
+/** Número grande con − / + (se lee a un metro y se usa con una mano sudada). Sigue siendo un campo: se puede escribir. */
+function Stepper({ label, short, value, placeholder, inputKey, keyboardType, onChange, onBlur, onStep, less, more }: {
+  label: string; short: string; value: string; placeholder: string; inputKey: string; keyboardType: 'decimal-pad' | 'number-pad';
+  onChange: (v: string) => void; onBlur: () => void; onStep: (delta: number) => void; less: string; more: string;
+}) {
+  return <View style={st.box}>
+    <Text style={st.label}>{short}</Text>
+    <AppInput key={inputKey} label="" accessibilityLabel={label} defaultValue={value} onChangeText={onChange} onBlur={onBlur} keyboardType={keyboardType}
+      placeholder={placeholder} returnKeyType="done" autoCorrect={false} spellCheck={false} style={st.input}/>
+    <View style={st.row}>
+      <Pressable accessibilityRole="button" accessibilityLabel={less} onPress={() => onStep(-1)} style={({ pressed }) => [st.btn, pressed && st.pressed]}><Text style={st.btnText}>−</Text></Pressable>
+      <Pressable accessibilityRole="button" accessibilityLabel={more} onPress={() => onStep(1)} style={({ pressed }) => [st.btn, pressed && st.pressed]}><Text style={st.btnText}>+</Text></Pressable>
+    </View>
+  </View>;
+}
+const st = themed(() => StyleSheet.create({
+  box: { flex: 1, backgroundColor: colors.surfaceRaised, borderRadius: 16, borderWidth: 1, borderColor: colors.border, padding: 10, gap: 6, alignItems: 'stretch' },
+  label: { color: colors.secondary, fontSize: 12, fontWeight: '700', letterSpacing: 1, textAlign: 'center' },
+  input: { minHeight: 64, borderWidth: 0, backgroundColor: 'transparent', textAlign: 'center', fontSize: 52, paddingHorizontal: 0, ...display },
+  row: { flexDirection: 'row', gap: 8 },
+  btn: { flex: 1, minHeight: 48, borderRadius: 12, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center' },
+  pressed: { backgroundColor: colors.accentSoft, borderColor: colors.blue },
+  btnText: { color: colors.text, fontSize: 26, fontWeight: '700' },
+}));

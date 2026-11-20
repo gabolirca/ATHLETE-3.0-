@@ -15,7 +15,7 @@ import { HYBRID_COLOR } from '@/program/HybridCard';
 import { daySummary, modalityInfo } from '@/program/format';
 import { poolDraft, poolItems, poolTotals, type PoolProgress } from '@/program/pool';
 import { clock } from '@/workout/blocks';
-import { colors } from '@/theme/colors';
+import { colors, themed } from '@/theme/colors';
 
 const storeKey = (dayId: string) => `athlete3.pool.${dayId.replace(/[^A-Za-z0-9._-]/g, '')}`;
 /** Una sesión guardada a medias sirve hasta 8 h después (si cierras la app en la alberca, no se pierde). */
@@ -124,7 +124,7 @@ export default function PoolModeScreen() {
   </Screen><RestTimerBar timer={timer}/></View>;
 }
 
-const s = StyleSheet.create({
+const s = themed(() => StyleSheet.create({
   root: { flex: 1 }, gap: { gap: 6 },
   summary: { color: colors.text, fontSize: 16, fontWeight: '800' }, muted: { color: colors.secondary, fontSize: 12, lineHeight: 18 },
   link: { color: colors.accentText, fontSize: 13, fontWeight: '700', textAlign: 'center', paddingVertical: 8 },
@@ -141,4 +141,4 @@ const s = StyleSheet.create({
   rpe: { width: 40, height: 40, borderRadius: 11, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surfaceRaised },
   rpeOn: { borderColor: HYBRID_COLOR, backgroundColor: colors.amberSoft }, rpeText: { color: colors.secondary, fontSize: 15, fontWeight: '800' }, rpeTextOn: { color: HYBRID_COLOR },
   error: { color: colors.red, fontSize: 12 },
-});
+}));

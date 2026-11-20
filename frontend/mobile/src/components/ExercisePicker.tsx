@@ -5,7 +5,7 @@ import { AppInput } from '@/components/AppInput';
 import { Label } from '@/components/Typography';
 import { useTrainingRepository } from '@/data/MobileTrainingContext';
 import type { Exercise } from '@/data/trainingTypes';
-import { colors } from '@/theme/colors';
+import { colors, themed } from '@/theme/colors';
 
 /** Orden en que se muestran los filtros (los que no estén aquí van al final, en orden alfabético). */
 const MUSCLE_ORDER = ['Pecho', 'Espalda', 'Hombros', 'Bíceps', 'Tríceps', 'Cuádriceps', 'Isquiotibiales', 'Glúteos', 'Pantorrillas', 'Core'];
@@ -87,7 +87,7 @@ export function ExercisePicker({ selectedIds = [], onSelect, multi = false }: {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   wrap: { gap: 10 },
   filters: { flexDirection: 'row', gap: 7, paddingRight: 8 },
   filter: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20, backgroundColor: colors.surfaceRaised, borderWidth: 1, borderColor: colors.border },
@@ -104,4 +104,4 @@ const styles = StyleSheet.create({
   select: { color: colors.blue, fontSize: 13, fontWeight: '800' },
   empty: { color: colors.secondary, fontSize: 12, textAlign: 'center', padding: 18 },
   note: { color: colors.muted, fontSize: 10, lineHeight: 15 },
-});
+}));

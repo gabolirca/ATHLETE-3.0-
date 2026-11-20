@@ -4,8 +4,7 @@ import { AppInput } from '@/components/AppInput';
 import { Card } from '@/components/Card';
 import type { WorkoutBlock } from '@/data/trainingTypes';
 import { formatBlock } from '@/program/format';
-import { HYBRID_COLOR } from '@/program/HybridCard';
-import { colors } from '@/theme/colors';
+import { colors, themed } from '@/theme/colors';
 
 /** "12:34" → 754 s; "45" → 45 s. Null si está vacío; NaN si no es válido. */
 export function parseMinSec(raw: string): number | null {
@@ -120,7 +119,7 @@ export function BlockHeader({ block, editable, onSaveResult, onRest }: {
     finally { setSaving(false); }
   }
 
-  return <Card accent={whole ? HYBRID_COLOR : colors.graphite}>
+  return <Card accent={whole ? colors.amber : colors.graphite}>
     <Text style={s.name}>{block.name}</Text>
     <Text style={s.format}>{formatBlock(block)}</Text>
     {block.notes ? <Text style={s.note}>{block.notes}</Text> : null}
@@ -162,18 +161,18 @@ export function BlockHeader({ block, editable, onSaveResult, onRest }: {
   </Card>;
 }
 
-const s = StyleSheet.create({
-  name: { color: colors.text, fontSize: 17, fontWeight: '800' }, format: { color: HYBRID_COLOR, fontSize: 12, fontWeight: '800' },
+const s = themed(() => StyleSheet.create({
+  name: { color: colors.text, fontSize: 17, fontWeight: '800' }, format: { color: colors.amber, fontSize: 12, fontWeight: '800' },
   note: { color: colors.secondary, fontSize: 11, lineHeight: 16 },
   clockRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   clock: { color: colors.text, fontSize: 40, fontWeight: '800', fontVariant: ['tabular-nums'] }, clockDone: { color: colors.green },
-  clockBtn: { backgroundColor: HYBRID_COLOR, borderRadius: 12, paddingHorizontal: 18, paddingVertical: 11 }, clockBtnText: { color: colors.amberSoft, fontSize: 14, fontWeight: '800' },
+  clockBtn: { backgroundColor: colors.amber, borderRadius: 12, paddingHorizontal: 18, paddingVertical: 11 }, clockBtnText: { color: colors.amberSoft, fontSize: 14, fontWeight: '800' },
   finished: { color: colors.green, fontSize: 13, fontWeight: '800' },
   saved: { color: colors.green, fontSize: 14, fontWeight: '800' },
   roundsBox: { gap: 8 }, roundsCount: { color: colors.text, fontSize: 20, fontWeight: '800' },
-  roundBtn: { backgroundColor: HYBRID_COLOR, borderRadius: 12, paddingVertical: 13, alignItems: 'center' }, roundBtnText: { color: colors.amberSoft, fontSize: 15, fontWeight: '800' },
+  roundBtn: { backgroundColor: colors.amber, borderRadius: 12, paddingVertical: 13, alignItems: 'center' }, roundBtnText: { color: colors.amberSoft, fontSize: 15, fontWeight: '800' },
   fields: { flexDirection: 'row', gap: 9 }, flex: { flex: 1 },
   error: { color: colors.red, fontSize: 11 },
-  save: { alignSelf: 'flex-start', borderWidth: 1, borderColor: HYBRID_COLOR, borderRadius: 11, paddingHorizontal: 14, paddingVertical: 9 },
-  saveText: { color: HYBRID_COLOR, fontSize: 13, fontWeight: '800' },
-});
+  save: { alignSelf: 'flex-start', borderWidth: 1, borderColor: colors.amber, borderRadius: 11, paddingHorizontal: 14, paddingVertical: 9 },
+  saveText: { color: colors.amber, fontSize: 13, fontWeight: '800' },
+}));

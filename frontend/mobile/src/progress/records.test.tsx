@@ -2,7 +2,7 @@ import React from 'react';
 import { render } from '@testing-library/react-native';
 import { NewRecordBadge, RecordCard, formatKg } from './records';
 
-jest.mock('@expo/vector-icons', () => ({ Ionicons: () => null }));
+jest.mock('@expo/vector-icons', () => ({ Ionicons: () => null, MaterialCommunityIcons: () => null }));
 
 test('el 1RM estimado se redondea a 0.5 kg; el PR real se muestra tal cual', () => {
   expect(formatKg(93.333, true)).toBe('93.5');

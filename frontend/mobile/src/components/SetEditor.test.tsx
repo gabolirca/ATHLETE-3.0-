@@ -2,7 +2,7 @@ import React from 'react';
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
 import { SetEditor } from './SetEditor';
 
-jest.mock('@expo/vector-icons', () => ({ Ionicons: () => null }));
+jest.mock('@expo/vector-icons', () => ({ Ionicons: () => null, MaterialCommunityIcons: () => null }));
 
 const blank = (id: string, extra: Record<string, unknown> = {}) => ({ id, setIndex: 0, weightKg: null, reps: null, rir: null, isWarmup: false, ...extra });
 
@@ -69,4 +69,17 @@ test('un valor guardado fuera de rango avisa y despliega todo para corregirlo', 
   expect(view.getByText('El valor guardado (12) está fuera del rango permitido (0–10). Selecciona un valor para corregirlo.')).toBeTruthy();
   await fireEvent.press(view.getByLabelText('10 repeticiones más'));
   await waitFor(() => expect(onSave).toHaveBeenCalledWith({ weightKg: 20, reps: 10, rir: 10, isWarmup: false }));
+});
+
+test('un toque: «Serie hecha» guarda lo sugerido; − / + parten de la sugerencia', async () => {
+  const onSave = jest.fn().mockResolvedValue(undefined);
+  const view = await render(<SetEditor set={blank('set-9')} onSave={onSave} suggestion={{ weightKg: 60, reps: 8 }} />);
+  await fireEvent.press(view.getByLabelText('Serie hecha'));
+  await waitFor(() => expect(onSave).toHaveBeenCalledWith({ weightKg: 60, reps: 8, rir: null, isWarmup: false }));
+
+  const other = await render(<SetEditor set={blank('set-10')} onSave={onSave} suggestion={{ weightKg: 60, reps: 8 }} />);
+  await fireEvent.press(other.getByLabelText('Más peso'));
+  await fireEvent.press(other.getByLabelText('Menos repeticiones'));
+  await fireEvent.press(other.getByLabelText('Serie hecha'));
+  await waitFor(() => expect(onSave).toHaveBeenLastCalledWith({ weightKg: 62.5, reps: 7, rir: null, isWarmup: false }));
 });

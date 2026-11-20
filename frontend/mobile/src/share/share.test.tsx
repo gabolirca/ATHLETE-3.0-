@@ -1,13 +1,13 @@
 import React from 'react';
 import { fireEvent, render, waitFor } from '@testing-library/react-native';
-import { cardioCard, featuredBlock, sessionCard, weekCard, wodCard } from './shareData';
+import { cardioCard, cardioOverlay, featuredBlock, sessionCard, sessionOverlay, weekCard, wodCard, zigzagPoints } from './shareData';
 import type { Exercise, WorkoutDetail } from '@/data/trainingTypes';
 
 const mockCapture = jest.fn().mockResolvedValue('file:///tmp/card.png');
 const mockShare = jest.fn().mockResolvedValue(undefined);
 jest.mock('react-native-view-shot', () => ({ captureRef: (...a: unknown[]) => mockCapture(...a) }));
 jest.mock('expo-sharing', () => ({ isAvailableAsync: jest.fn().mockResolvedValue(true), shareAsync: (...a: unknown[]) => mockShare(...a) }));
-jest.mock('@expo/vector-icons', () => ({ Ionicons: () => null }));
+jest.mock('@expo/vector-icons', () => ({ Ionicons: () => null, MaterialCommunityIcons: () => null }));
 
 const set = (id: string, w: number | null, reps: number | null, warm = false) => ({ id, setIndex: 0, weightKg: w, reps, rir: null, isWarmup: warm, durationSeconds: null, distanceMeters: null });
 const workout = { id: 's1', state: 'completed' as const, startedAt: '2026-11-07T15:00:00.000Z', completedAt: '2026-11-07T16:12:00.000Z', localVersion: null, serverVersion: 1, syncStatus: 'synced' as const, exerciseCount: 3, setCount: 6, durationMinutes: 72 };
@@ -33,8 +33,16 @@ test('tarjeta de WOD: "6+4", receta y +1 ronda vs la vez pasada', () => {
   expect(wodCard(detail, block, null).delta).toBeNull();
 });
 
+test('línea en zigzag: puntos dentro del recuadro; sin línea con menos de 2 series', () => {
+  expect(zigzagPoints([10, 30, 20], 100, 50, 0)).toBe('0.0,50.0 50.0,0.0 100.0,25.0');
+  expect(zigzagPoints([5], 100, 50)).toBe('');
+  expect(zigzagPoints([7, 7], 100, 50, 0)).toBe('0.0,50.0 100.0,50.0');
+});
+
 test('tarjeta de sesión: series efectivas, volumen, músculos y récord', () => {
   const data = sessionCard(detail, catalog);
+  expect(data.curve).toEqual([288, 288]);
+  expect(sessionOverlay(data).stats).toEqual([['Duración', '72 min'], ['Series', '2'], ['Volumen', '576 kg']]);
   expect(data).toMatchObject({ title: 'Hybrid Conditioning', sets: 2, volumeKg: 576, load: 576, record: 'Sentadilla goblet 24 kg × 12' });
   expect(data.muscles.map((m) => [m.name, m.sets])).toEqual([['Cuádriceps', 2], ['Glúteos', 2], ['Core', 1]]);
 });
@@ -43,6 +51,7 @@ test('tarjeta de cardio y de semana', () => {
   const c = cardioCard({ id: 'x', activity: 'swim', startedAt: '2026-11-09T13:00:00Z', localDate: '2026-11-09', durationSeconds: 2400, distanceMeters: 1500, rounds: null, rpe: 5, avgHeartRateBpm: null, maxHeartRateBpm: null, swim: null, notes: 'Natación · Aeróbica — Continuo: 1/1 ✓', syncStatus: 'synced' }, 'metric');
   expect(c).toMatchObject({ title: 'Natación · Aeróbica', big: '1500', unit: 'm' });
   expect(c.stats).toEqual([['tiempo', '40:00'], ['ritmo', '2:40 /100 m'], ['RPE', '5'], ['carga', '200']]);
+  expect(cardioOverlay(c).stats).toEqual([['Distancia', '1500 m'], ['Tiempo', '40:00'], ['Ritmo', '2:40 /100 m'], ['RPE', '5']]);
   const day = (id: string, weekday: number, modality: 'strength' | 'swim') => ({ id, name: id, weekday, modality, targetRpe: null, targetDurationMinutes: 60, notes: null, blocks: [] });
   const w = weekCard({ id: 'p', name: 'Hybrid Athlete 1.0', templateSlug: null, days: [day('a', 1, 'strength'), day('b', 1, 'swim'), day('c', 2, 'strength')] }, { a: { workoutId: '1' }, b: { cardioId: '2' } }, { swimMeters: 1400, runMeters: 0, strengthSets: 18, load: 900 });
   expect(w.done).toBe(2);
@@ -59,14 +68,16 @@ jest.mock('expo-router', () => {
   return { useRouter: () => ({ back: jest.fn(), push: jest.fn() }), useLocalSearchParams: () => ({ kind: 'session', id: 's1' }), useFocusEffect: (cb: () => void) => useEffect(cb, [cb]) };
 });
 jest.mock('@/data/MobileTrainingContext', () => ({ useTrainingRepository: () => mockRepository }));
+jest.mock('expo-image-picker', () => ({}));
 import ShareScreen from '../../app/share/[kind]/[id]';
 
-test('pantalla de compartir: elige la tarjeta del WOD, cambia a resumen y comparte una imagen 1080 × 1920', async () => {
+test('pantalla de compartir: "Con tu foto" primero (datos y portada ATHLETE) y comparte una imagen 1080 × 1920', async () => {
   const screen = await render(<ShareScreen/>);
-  await waitFor(() => expect(screen.getByText('6+4')).toBeTruthy());
-  expect(screen.getByText('↗ +1 ronda vs la vez pasada')).toBeTruthy();
-  await fireEvent.press(screen.getByLabelText('Resumen de la sesión'));
-  expect(screen.getByText(/Récord: Sentadilla goblet 24 kg × 12/)).toBeTruthy();
+  await waitFor(() => expect(screen.getByText('Sentadilla goblet 24 kg × 12')).toBeTruthy());
+  expect(screen.getByText('576 kg')).toBeTruthy();
+  expect(screen.getAllByText(/ATHLETE/).length).toBeGreaterThan(0);
+  expect(screen.getByText('Sticker')).toBeTruthy();
+  expect(screen.getByText('Resumen')).toBeTruthy();
   await fireEvent.press(screen.getByText('Compartir imagen'));
   await waitFor(() => expect(mockShare).toHaveBeenCalledWith('file:///tmp/card.png', expect.objectContaining({ mimeType: 'image/png' })));
   expect(mockCapture.mock.calls[0][1]).toMatchObject({ format: 'png', width: 1080, height: 1920 });

@@ -1,5 +1,13 @@
 import type { Exercise } from '@/data/trainingTypes';
-import { similarExercises } from '@/program/edit/ExerciseSheet';
+
+/** Ejercicios del catálogo parecidos a uno: primero el mismo patrón de movimiento, luego el mismo músculo principal. */
+export function similarExercises(current: Exercise | undefined, all: readonly Exercise[], limit = 8): Exercise[] {
+  if (!current) return [];
+  const others = all.filter((e) => e.id !== current.id && (e.modality ?? 'strength') === (current.modality ?? 'strength'));
+  const primary = new Set(current.muscleRoles?.primary.map((m) => m.slug) ?? []);
+  const score = (e: Exercise) => (e.movementPattern && e.movementPattern === current.movementPattern ? 2 : 0) + ((e.muscleRoles?.primary ?? []).some((m) => primary.has(m.slug)) ? 1 : 0);
+  return others.map((e) => [e, score(e)] as const).filter(([, n]) => n > 0).sort((a, b) => b[1] - a[1] || a[0].name.localeCompare(b[0].name, 'es')).slice(0, limit).map(([e]) => e);
+}
 
 /**
  * "Máquina ocupada": variantes del ejercicio que se pueden hacer en otro equipo.

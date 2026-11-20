@@ -4,7 +4,7 @@ import { fireEvent, render, waitFor } from '@testing-library/react-native';
 const mockRouter = { back: jest.fn(), push: jest.fn(), replace: jest.fn() };
 const mockNutrition = { logMeal: jest.fn().mockResolvedValue({}) };
 jest.mock('expo-router', () => ({ useRouter: () => mockRouter, useLocalSearchParams: () => ({}) }));
-jest.mock('@expo/vector-icons', () => ({ Ionicons: () => null }));
+jest.mock('@expo/vector-icons', () => ({ Ionicons: () => null, MaterialCommunityIcons: () => null }));
 jest.mock('@/nutrition/mobileNutrition', () => ({ useNutrition: () => mockNutrition }));
 jest.mock('@/nutrition/pickPhoto', () => ({ pickFoodPhoto: jest.fn(async () => ({ base64: 'abc' })) }));
 jest.mock('@/nutrition/photoAnalysis', () => {

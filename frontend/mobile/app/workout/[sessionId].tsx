@@ -2,14 +2,15 @@ import { useCallback, useRef, useState } from 'react';
 import { DEFAULT_REST_SECONDS, RestTimerBar, RestTimerFullScreen, useRestTimer } from '@/components/RestTimer';
 import { useStrictRest } from '@/settings/devicePrefs';
 import { formatWeight, useWeightUnits, type WeightUnit } from '@/settings/weightUnits';
-import { clock } from '@/workout/blocks';
+import { BlockHeader, clock, isWholeBlock } from '@/workout/blocks';
+import { formatPrescription } from '@/program/format';
 import { exerciseProgress, isLoggedWorkingSet, nextStepLabel, workoutGuide, type ExerciseProgress, type ExerciseStatus } from '@/workout/guide';
 import { NewRecordBadge } from '@/progress/records';
 import { exerciseSuggestion, formatSuggestion } from '@/workout/coach';
-import { BlockHeader, isWholeBlock } from '@/workout/blocks';
 import { TimedSetEditor } from '@/components/TimedSetEditor';
 import { BusyMachineSheet } from '@/workout/BusyMachineSheet';
-import { formatPrescription } from '@/program/format';
+import { SetStrip } from '@/workout/SetStrip';
+import { display } from '@/theme/fonts';
 import type { SessionExercise, TrainingSet, WorkoutBlock } from '@/data/trainingTypes';
 import { AppInput } from '@/components/AppInput';
 import { isPastWorkout } from '@/data/OfficialTrainingRepository';
@@ -27,7 +28,7 @@ import { Screen, Row } from '@/components/Screen';
 import { LocalSaveBadge } from '@/components/SyncBadge';
 import { useTrainingRepository } from '@/data/MobileTrainingContext';
 import type { WorkoutDetail } from '@/data/trainingTypes';
-import { colors } from '@/theme/colors';
+import { colors, themed } from '@/theme/colors';
 
 export default function WorkoutScreen() {
   const { sessionId } = useLocalSearchParams<{ sessionId: string }>();
@@ -79,9 +80,10 @@ export default function WorkoutScreen() {
 
   const past = isPastWorkout(detail.workout.startedAt);
   const guide = workoutGuide(detail.exercises);
+  const active = detail.workout.state === 'active';
+  // Programa híbrido: la sesión viene por bloques (calentamiento, fuerza, WOD, cardio…).
   const blocks: WorkoutBlock[] = detail.blocks ?? [];
   const hasBlocks = blocks.length > 0;
-  const active = detail.workout.state === 'active';
   const prescription = (e: SessionExercise) => formatPrescription({ sets: e.setsTarget, repsMin: e.repsTarget, repsMax: e.repsMax ?? e.repsTarget, durationSeconds: e.targetDurationSeconds ?? null, distanceMeters: e.targetDistanceMeters ?? null, perSide: e.perSide ?? false });
   const confirmRemove = (exercise: SessionExercise) => Alert.alert(`¿Quitar ${exercise.exerciseName}?`, exercise.sets.some((x) => x.reps !== null || x.durationSeconds || x.distanceMeters) ? 'Se borran también sus series de hoy.' : undefined, [
     { text: 'Cancelar', style: 'cancel' },
@@ -116,6 +118,7 @@ export default function WorkoutScreen() {
         : <Ionicons name="chevron-down" size={18} color={colors.secondary}/>}
       </Row></Card></Pressable>
       {open ? <>
+      {status === 'current' ? <SetStrip sets={exercise.sets} target={exercise.setsTarget} unit={units[exercise.exerciseId] ?? 'kg'}/> : null}
       {exercise.previous ? <Text style={s.previous}>
         La vez pasada · {dayLabel(exercise.previous.localDate, localDateOfDevice(new Date()))}: {exercise.previous.sets.map((p) => p.weightKg === null ? `${p.reps ?? '—'} reps` : `${formatWeight(p.weightKg, units[exercise.exerciseId] ?? 'kg')} × ${p.reps ?? '—'}`).join(' · ')}
       </Text> : null}
@@ -229,4 +232,4 @@ function statusLabel(status: ExerciseStatus, p: ExerciseProgress): string {
   return `${p.done} series`;
 }
 
-const s=StyleSheet.create({root:{flex:1},busy:{flexDirection:'row',alignItems:'center',gap:6,alignSelf:'flex-start',paddingVertical:8,paddingHorizontal:12,borderRadius:10,borderWidth:1,borderColor:colors.amber,backgroundColor:colors.amberSoft},busyText:{color:colors.amber,fontSize:12,fontWeight:'800'},doneSet:{flexDirection:'row',justifyContent:'space-between',alignItems:'center',gap:8,borderWidth:1,borderColor:colors.border,borderRadius:12,paddingHorizontal:12,paddingVertical:10,backgroundColor:colors.surface},doneSetText:{color:colors.green,fontSize:11,fontWeight:'800',letterSpacing:0.5},doneSetValue:{color:colors.text,fontSize:13,fontWeight:'700'},remove:{flexDirection:'row',alignItems:'center',gap:5,alignSelf:'flex-start',paddingVertical:6,paddingHorizontal:4},removeText:{color:colors.red,fontSize:12,fontWeight:'700'},block:{gap:9},wodRow:{flexDirection:'row',justifyContent:'space-between',gap:10},wodName:{flex:1,color:colors.text,fontSize:13},wodPresc:{color:colors.text,fontSize:13,fontWeight:'800'},rpeRow:{flexDirection:'row',flexWrap:'wrap',gap:6},rpe:{width:40,height:40,borderRadius:11,borderWidth:1,borderColor:colors.border,alignItems:'center',justifyContent:'center',backgroundColor:colors.surfaceRaised},rpeOn:{borderColor:colors.amber,backgroundColor:colors.amberSoft},rpeText:{color:colors.secondary,fontSize:15,fontWeight:'800'},rpeTextOn:{color:colors.amber},suggestBox:{borderWidth:1,borderColor:colors.green,backgroundColor:colors.greenSoft,borderRadius:12,padding:10,gap:3},suggestTitle:{color:colors.green,fontSize:13,fontWeight:'800'},suggestReason:{color:colors.secondary,fontSize:11,lineHeight:16},guideTitle:{color:colors.text,fontSize:16,fontWeight:'800'},track:{height:8,borderRadius:4,backgroundColor:colors.surfaceRaised,overflow:'hidden'},fill:{height:8,borderRadius:4,backgroundColor:colors.blue},fillDone:{backgroundColor:colors.green},statusRow:{flexDirection:'row',alignItems:'center',gap:8,flexWrap:'wrap'},now:{color:'white',backgroundColor:colors.blue,fontSize:10,fontWeight:'800',paddingHorizontal:6,paddingVertical:2,borderRadius:6,overflow:'hidden'},doneTag:{color:colors.green,fontSize:10,fontWeight:'800'},upcoming:{color:colors.muted,fontSize:10,fontWeight:'800'},summary:{color:colors.secondary,fontSize:12,marginTop:4},previous:{color:colors.accentText,fontSize:12,lineHeight:17,paddingHorizontal:4},exerciseBlock:{gap:9},exerciseName:{color:colors.text,fontSize:18,fontWeight:'800',marginTop:5},detail:{color:colors.secondary,fontSize:11,lineHeight:16},addSet:{flexDirection:'row',alignItems:'center',gap:3,padding:7},addSetText:{color:colors.blue,fontSize:11,fontWeight:'800'},error:{color:colors.red,fontSize:12,lineHeight:18}});
+const s=themed(() => StyleSheet.create({root:{flex:1},busy:{flexDirection:'row',alignItems:'center',gap:6,alignSelf:'flex-start',paddingVertical:8,paddingHorizontal:12,borderRadius:10,borderWidth:1,borderColor:colors.amber,backgroundColor:colors.amberSoft},busyText:{color:colors.amber,fontSize:12,fontWeight:'800'},doneSet:{flexDirection:'row',justifyContent:'space-between',alignItems:'center',gap:8,borderWidth:1,borderColor:colors.border,borderRadius:12,paddingHorizontal:12,paddingVertical:10,backgroundColor:colors.surface},doneSetText:{color:colors.green,fontSize:11,fontWeight:'800',letterSpacing:0.5},doneSetValue:{color:colors.text,fontSize:13,fontWeight:'700'},remove:{flexDirection:'row',alignItems:'center',gap:5,alignSelf:'flex-start',paddingVertical:6,paddingHorizontal:4},removeText:{color:colors.red,fontSize:12,fontWeight:'700'},block:{gap:9},wodRow:{flexDirection:'row',justifyContent:'space-between',gap:10},wodName:{flex:1,color:colors.text,fontSize:13},wodPresc:{color:colors.text,fontSize:13,fontWeight:'800'},rpeRow:{flexDirection:'row',flexWrap:'wrap',gap:6},rpe:{width:40,height:40,borderRadius:11,borderWidth:1,borderColor:colors.border,alignItems:'center',justifyContent:'center',backgroundColor:colors.surfaceRaised},rpeOn:{borderColor:colors.amber,backgroundColor:colors.amberSoft},rpeText:{color:colors.secondary,fontSize:15,fontWeight:'800'},rpeTextOn:{color:colors.amber},suggestBox:{borderWidth:1,borderColor:colors.green,backgroundColor:colors.greenSoft,borderRadius:12,padding:10,gap:3},suggestTitle:{color:colors.green,fontSize:13,fontWeight:'800'},suggestReason:{color:colors.secondary,fontSize:11,lineHeight:16},guideTitle:{color:colors.text,fontSize:16,fontWeight:'800'},track:{height:8,borderRadius:4,backgroundColor:colors.surfaceRaised,overflow:'hidden'},fill:{height:8,borderRadius:4,backgroundColor:colors.blue},fillDone:{backgroundColor:colors.green},statusRow:{flexDirection:'row',alignItems:'center',gap:8,flexWrap:'wrap'},now:{color:'white',backgroundColor:colors.blue,fontSize:10,fontWeight:'800',paddingHorizontal:6,paddingVertical:2,borderRadius:6,overflow:'hidden'},doneTag:{color:colors.green,fontSize:10,fontWeight:'800'},upcoming:{color:colors.muted,fontSize:10,fontWeight:'800'},summary:{color:colors.secondary,fontSize:12,marginTop:4},previous:{color:colors.accentText,fontSize:12,lineHeight:17,paddingHorizontal:4},exerciseBlock:{gap:9},exerciseName:{color:colors.text,fontSize:30,lineHeight:32,marginTop:5,...display},detail:{color:colors.secondary,fontSize:11,lineHeight:16},addSet:{flexDirection:'row',alignItems:'center',gap:3,padding:7},addSetText:{color:colors.blue,fontSize:11,fontWeight:'800'},error:{color:colors.red,fontSize:12,lineHeight:18}}));

@@ -7,7 +7,9 @@ const mockRepository = {
   searchExercises: jest.fn().mockResolvedValue([]),
   listRoutines: jest.fn().mockResolvedValue([]),
   getOverview: jest.fn().mockResolvedValue({ sessionsThisWeek: 0, activityMinutesThisWeek: 0, pendingSyncCount: 0, latestWorkout: null }),
+  createRoutine: jest.fn().mockResolvedValue('p1'), startWorkout: jest.fn().mockResolvedValue('s1'),
   getWeeklyMuscleVolume: jest.fn().mockResolvedValue({ items: [], totalSets: 0, sessions: 0 }),
+  listPrograms: jest.fn().mockResolvedValue([]), programWeekStatus: jest.fn().mockResolvedValue({}),
 };
 
 jest.mock('expo-router', () => {
@@ -18,23 +20,25 @@ jest.mock('expo-router', () => {
   Tabs.Screen = Screen;
   return { Tabs, useRouter: () => mockNavigation, useFocusEffect: (callback: () => void | (() => void)) => ReactModule.useEffect(callback, [callback]) };
 });
-jest.mock('@expo/vector-icons', () => ({ Ionicons: () => null }));
+jest.mock('@expo/vector-icons', () => ({ Ionicons: () => null, MaterialCommunityIcons: () => null }));
 jest.mock('./data/MobileTrainingContext', () => ({ useTrainingRepository: () => mockRepository, useLocalDataReady: () => ({ ready: true, error: false }) }));
 
 import TabLayout from '../app/(tabs)/_layout';
 import TrainScreen from '../app/(tabs)/train';
 
-test('barra: Inicio · Entrenar · ＋ · Progreso · Nutrición; Perfil sale de la barra (se abre desde el avatar)', async () => {
+test('barra de 4 pestañas: Inicio · Entrenar · Nutrición · Progreso (sin pestañas ocultas)', async () => {
   const screen = await render(<TabLayout />);
   const titles = screen.getAllByText(/.+/).map((t) => t.props.children);
-  expect(titles).toEqual(['Inicio', 'Entrenar', 'Registrar', 'Progreso', 'Nutrición']);
-  expect(mockScreens.find((o) => o.title === 'Perfil')).toBeUndefined(); // Perfil es una pantalla aparte (app/profile.tsx), no una pestaña oculta
-  expect(typeof mockScreens.find((o) => o.title === 'Registrar')?.tabBarButton).toBe('function');
+  expect(titles).toEqual(['Inicio', 'Entrenar', 'Nutrición', 'Progreso']);
 });
 
-test('the free workout action navigates to the real session start route', async () => {
+test('Entrenar: mi programa (plantillas híbridas), mis rutinas, crear rutina y sesión libre', async () => {
+  mockRepository.listRoutines.mockResolvedValue([{ id: 'r1', name: 'Pierna A', exercises: [], updatedAt: new Date().toISOString() }]);
   const screen = await render(<TrainScreen />);
-  await waitFor(() => expect(screen.getByText('Empieza cuando quieras')).toBeTruthy());
-  await fireEvent.press(screen.getByText('Iniciar sesión libre'));
-  expect(mockNavigation.push).toHaveBeenCalledWith('/workout/new');
+  await waitFor(() => expect(screen.getByText('MI PROGRAMA')).toBeTruthy());
+  await waitFor(() => expect(screen.getByText('Elige tu programa')).toBeTruthy());
+  await fireEvent.press(screen.getByLabelText('Crear rutina'));
+  expect(mockNavigation.push).toHaveBeenCalledWith('/routines/new');
+  await fireEvent.press(screen.getByLabelText('Empezar Pierna A'));
+  await waitFor(() => expect(mockNavigation.push).toHaveBeenCalledWith('/workout/s1'));
 });

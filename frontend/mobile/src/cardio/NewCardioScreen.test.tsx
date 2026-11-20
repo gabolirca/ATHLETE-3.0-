@@ -11,7 +11,7 @@ const mockRepository = {
 
 const mockParams: { edit?: string } = {};
 jest.mock('expo-router', () => ({ useRouter: () => mockRouter, useLocalSearchParams: () => mockParams }));
-jest.mock('@expo/vector-icons', () => ({ Ionicons: () => null }));
+jest.mock('@expo/vector-icons', () => ({ Ionicons: () => null, MaterialCommunityIcons: () => null }));
 jest.mock('@/data/MobileTrainingContext', () => ({ useTrainingRepository: () => mockRepository }));
 
 import NewCardioScreen from '../../app/cardio/new';
@@ -38,12 +38,10 @@ test('sin duración no guarda y muestra el error', async () => {
   expect(mockRepository.logCardio).not.toHaveBeenCalled();
 });
 
-test('natación muestra los campos de alberca; otras actividades no', async () => {
+test('Mundo Fit: natación no aparece entre las actividades', async () => {
   const screen = await render(<NewCardioScreen />);
-  expect(screen.queryByLabelText('Largos')).toBeNull();
-  await fireEvent.press(screen.getByLabelText('Nadar'));
-  expect(screen.getByLabelText('Largos')).toBeTruthy();
-  expect(screen.getByLabelText('Distancia (m, opcional)')).toBeTruthy();
+  expect(screen.queryByLabelText('Nadar')).toBeNull();
+  expect(screen.getByLabelText('Correr')).toBeTruthy();
 });
 
 test('si el guardado falla, muestra el error y no navega', async () => {

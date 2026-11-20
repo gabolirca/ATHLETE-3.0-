@@ -1,6 +1,6 @@
 import type { PropsWithChildren } from 'react';
 import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { colors } from '@/theme/colors';
+import { colors, themed } from '@/theme/colors';
 
 /** Hoja inferior para editar sin salir de la pantalla. */
 export function Sheet({ visible, title, onClose, children }: PropsWithChildren<{ visible: boolean; title: string; onClose: () => void }>) {
@@ -24,15 +24,15 @@ export function Choices<T extends string | number>({ label, options, value, onCh
   </View>;
 }
 
-export const sheetStyles = StyleSheet.create({
+export const sheetStyles = themed(() => StyleSheet.create({
   label: { color: colors.secondary, fontSize: 11, fontWeight: '800', letterSpacing: 0.6 },
   row: { flexDirection: 'row', gap: 9 }, flex: { flex: 1 },
   danger: { color: colors.red, fontSize: 13, fontWeight: '800', textAlign: 'center', paddingVertical: 12 },
   error: { color: colors.red, fontSize: 12 },
   hint: { color: colors.muted, fontSize: 11, lineHeight: 16 },
-});
+}));
 
-const s = StyleSheet.create({
+const s = themed(() => StyleSheet.create({
   flex: { flex: 1 },
   backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)' },
   sheet: { maxHeight: '86%', backgroundColor: colors.surface, borderTopLeftRadius: 22, borderTopRightRadius: 22, borderWidth: 1, borderColor: colors.border },
@@ -43,4 +43,4 @@ const s = StyleSheet.create({
   choice: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surfaceRaised },
   choiceOn: { borderColor: colors.amber, backgroundColor: colors.amberSoft },
   choiceText: { color: colors.secondary, fontSize: 12, fontWeight: '700' }, choiceTextOn: { color: colors.amber },
-});
+}));

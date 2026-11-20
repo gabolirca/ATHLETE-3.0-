@@ -1,7 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native';
 import type { MuscleVolumeItem, WeeklyMuscleVolume } from '@/data/trainingTypes';
 import { CATEGORY_COLORS, OTHERS_COLOR, type DonutSegment } from '@/charts/Donut';
-import { colors } from '@/theme/colors';
+import { colors, themed } from '@/theme/colors';
 
 /** Músculos con series para la dona: los 5 con más series y el resto agrupado en "Otros". */
 export function muscleSegments(volume: WeeklyMuscleVolume | null, top = 5): Array<DonutSegment & { name: string; sets: number }> {
@@ -49,7 +49,7 @@ export function VolumeExplainer() {
   return <Text style={s.note}>Series efectivas de los últimos 7 días (sin calentamiento). El músculo principal del ejercicio suma 1 serie y el secundario 0.5. La franja es una referencia general para ganar músculo (no es una prescripción): por debajo el estímulo suele quedarse corto y por encima cuesta recuperarse.</Text>;
 }
 
-const s = StyleSheet.create({
+const s = themed(() => StyleSheet.create({
   row: { gap: 6 },
   head: { flexDirection: 'row', alignItems: 'baseline', gap: 8 },
   name: { flex: 1, color: colors.text, fontSize: 13, fontWeight: '700' },
@@ -60,4 +60,4 @@ const s = StyleSheet.create({
   band: { position: 'absolute', top: 0, bottom: 0, backgroundColor: colors.border },
   bar: { height: 8, borderRadius: 4, opacity: 0.95 },
   note: { color: colors.secondary, fontSize: 10, lineHeight: 15 },
-});
+}));

@@ -1,7 +1,8 @@
 import { PropsWithChildren, useCallback, useEffect, useRef, useState } from 'react';
-import { Keyboard, Platform, ScrollView, StyleSheet, TextInput, View, type KeyboardEvent, type ScrollViewInstance } from 'react-native';
+import { Keyboard, Platform, RefreshControl, ScrollView, StyleSheet, TextInput, View, type KeyboardEvent, type ScrollViewInstance } from 'react-native';
+import { MFSpinner } from '@/brand/BrandRefresh';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { colors } from '@/theme/colors';
+import { colors, themed } from '@/theme/colors';
 import { onInputFocus, revealScrollY } from './keyboardReveal';
 
 /**
@@ -9,7 +10,11 @@ import { onInputFocus, revealScrollY } from './keyboardReveal';
  *  - al abrir el teclado (y al cambiar de campo con el teclado abierto) mide el campo y recorre el scroll;
  *  - agrega espacio abajo del alto del teclado para que el último campo también pueda subir.
  */
-export function Screen({ children }: PropsWithChildren) {
+/**
+ * `onRefresh`: deslizar hacia abajo para actualizar. El círculo del sistema va transparente y en su lugar se ve la
+ * "MF" del logo animada arriba del contenido mientras `refreshing` es verdadero.
+ */
+export function Screen({ children, refreshing, onRefresh }: PropsWithChildren<{ refreshing?: boolean; onRefresh?: () => void }>) {
   const scroll = useRef<ScrollViewInstance>(null);
   const scrollY = useRef(0);
   const keyboardTop = useRef<number | null>(null);
@@ -43,10 +48,12 @@ export function Screen({ children }: PropsWithChildren) {
   return <SafeAreaView style={styles.safe} edges={['top']}>
     <ScrollView ref={scroll} contentContainerStyle={[styles.content, keyboardHeight ? { paddingBottom: 30 + keyboardHeight } : null]}
       showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive"
-      scrollEventThrottle={16} onScroll={(e) => { scrollY.current = e.nativeEvent.contentOffset.y; }}>
+      scrollEventThrottle={16} onScroll={(e) => { scrollY.current = e.nativeEvent.contentOffset.y; }}
+      refreshControl={onRefresh ? <RefreshControl refreshing={Boolean(refreshing)} onRefresh={onRefresh} tintColor="transparent" colors={['transparent']} progressBackgroundColor="transparent" style={styles.refresh}/> : undefined}>
+      {refreshing ? <MFSpinner/> : null}
       {children}
     </ScrollView>
   </SafeAreaView>;
 }
 export function Row({ children, style }: PropsWithChildren<{ style?: object }>) { return <View style={[styles.row, style]}>{children}</View>; }
-const styles = StyleSheet.create({ safe: { flex: 1, backgroundColor: colors.black }, content: { paddingHorizontal: 20, paddingTop: 10, paddingBottom: 30, gap: 22 }, row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' } });
+const styles = themed(() => StyleSheet.create({ safe: { flex: 1, backgroundColor: colors.black }, content: { paddingHorizontal: 20, paddingTop: 10, paddingBottom: 30, gap: 22 }, row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }, refresh: { backgroundColor: 'transparent' } }));

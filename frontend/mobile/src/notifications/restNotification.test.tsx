@@ -10,7 +10,7 @@ jest.mock('expo-notifications', () => ({
   SchedulableTriggerInputTypes: { TIME_INTERVAL: 'timeInterval' },
 }));
 const mockN = jest.requireMock('expo-notifications') as Record<string, jest.Mock>;
-jest.mock('@expo/vector-icons', () => ({ Ionicons: () => null }));
+jest.mock('@expo/vector-icons', () => ({ Ionicons: () => null, MaterialCommunityIcons: () => null }));
 
 import { useRestTimer } from '@/components/RestTimer';
 

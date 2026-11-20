@@ -41,7 +41,7 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "ATHLETE usa tus fotos solo para reconocer el platillo que eliges; la foto no se guarda.",
+          "photosPermission": "ATHLETE usa tus fotos solo para tu foto de perfil o para reconocer el platillo que eliges; la foto de comida no se guarda.",
           "cameraPermission": "ATHLETE usa la cámara para tomar foto de tu comida y estimar porciones; la foto no se guarda.",
           "microphonePermission": false
         }

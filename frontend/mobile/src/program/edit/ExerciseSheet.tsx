@@ -4,7 +4,7 @@ import { ActionButton } from '@/components/ActionButton';
 import { AppInput } from '@/components/AppInput';
 import { useTrainingRepository } from '@/data/MobileTrainingContext';
 import type { Exercise, ProgramBlock, ProgramExercise, ProgramExercisePatch } from '@/data/trainingTypes';
-import { colors } from '@/theme/colors';
+import { colors, themed } from '@/theme/colors';
 import { clock, parseMinSec } from '@/workout/blocks';
 import { Choices, Sheet, sheetStyles as st } from './Sheet';
 
@@ -116,11 +116,11 @@ export function ExerciseSheet({ visible, exercise, block, onClose, onSave, onRem
   </Sheet>;
 }
 
-const s = StyleSheet.create({
+const s = themed(() => StyleSheet.create({
   swapped: { color: colors.green, fontSize: 13, fontWeight: '800' },
   switchRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }, switchText: { color: colors.text, fontSize: 13 },
   list: { gap: 6 },
   item: { borderWidth: 1, borderColor: colors.border, borderRadius: 12, padding: 10, backgroundColor: colors.surfaceRaised },
   itemOn: { borderColor: colors.green, backgroundColor: colors.greenSoft },
   itemName: { color: colors.text, fontSize: 14, fontWeight: '700' }, itemSub: { color: colors.secondary, fontSize: 11 },
-});
+}));

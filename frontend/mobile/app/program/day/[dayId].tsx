@@ -17,7 +17,7 @@ import type { ProgramBlock, ProgramExercise } from '@/data/trainingTypes';
 import { HYBRID_COLOR } from '@/program/HybridCard';
 import { cardioActivityFor, daySummary, modalityInfo, weekdayLabel } from '@/program/format';
 import { useStartDay } from '@/program/useProgram';
-import { colors } from '@/theme/colors';
+import { colors, themed } from '@/theme/colors';
 
 /** Detalle de una sesión del programa: bloques y prescripciones, y botón para empezarla. */
 export default function ProgramDayScreen() {
@@ -86,10 +86,10 @@ export default function ProgramDayScreen() {
   </Screen>;
 }
 
-const s = StyleSheet.create({
+const s = themed(() => StyleSheet.create({
   titleRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 }, flex: { flex: 1 },
   editBtn: { borderWidth: 1, borderColor: colors.amber, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 7, marginTop: 4 }, editOn: { backgroundColor: colors.amber },
   editText: { color: colors.amber, fontSize: 13, fontWeight: '800' }, editTextOn: { color: colors.amberSoft },
   summary: { color: colors.text, fontSize: 16, fontWeight: '800' }, muted: { color: colors.secondary, fontSize: 12, lineHeight: 18 },
   done: { color: colors.green, fontSize: 13, fontWeight: '800' },
-});
+}));

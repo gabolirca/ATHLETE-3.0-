@@ -1,5 +1,4 @@
 import { draftFromPlan, newPlanDraft, normalizeTime, stepPortion, validatePlan } from './planForm';
-import { proErrorMessage } from '@/pro/proApi';
 
 test('la hora acepta 8:00, 0800 y 08:00; vacío es sin hora', () => {
   expect(normalizeTime('8:00')).toBe('08:00');
@@ -36,10 +35,4 @@ test('valida nombre, horas y mínimo de kcal; convierte al contrato', () => {
 test('un plan guardado vuelve al editor sin perder datos', () => {
   const d = draftFromPlan({ name: 'P', notes: null, meals: [{ label: 'Cena', time: null, equivalents: { verduras: 2 }, note: 'Ligera' }] }, '2026-11-10');
   expect(d.meals[0]).toMatchObject({ label: 'Cena', time: '', equivalents: { verduras: 2 }, note: 'Ligera' });
-});
-
-test('los errores del servidor se traducen a mensajes claros', () => {
-  expect(proErrorMessage({ message: 'ATHLETE:FORBIDDEN' })).toBe('Tu cuenta no tiene activado el modo nutriólogo.');
-  expect(proErrorMessage({ message: 'ATHLETE:NOT_FOUND' }, 'Código vencido')).toBe('Código vencido');
-  expect(proErrorMessage({ message: 'TypeError: Failed to fetch' })).toMatch(/Sin conexión/);
 });

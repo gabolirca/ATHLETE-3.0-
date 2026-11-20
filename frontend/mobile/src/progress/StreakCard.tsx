@@ -1,11 +1,11 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { AnimatedA } from '@/brand/AnimatedA';
-import { BRAND_CYAN } from '@/brand/assets';
+import { BRAND_COLOR } from '@/brand/assets';
 import { Card } from '@/components/Card';
 import type { StreakSummary } from '@/data/trainingTypes';
-import { colors } from '@/theme/colors';
+import { colors, themed } from '@/theme/colors';
 
-export const STREAK_COLOR = BRAND_CYAN;
+export const STREAK_COLOR = BRAND_COLOR;
 
 /** Mensaje de la racha: lo que toca hoy. */
 export function streakMessage(s: StreakSummary): string {
@@ -37,10 +37,10 @@ export function StreakCard({ streak }: { streak: StreakSummary }) {
   </Card>;
 }
 
-const s = StyleSheet.create({
+const s = themed(() => StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: 14 }, flex: { flex: 1 },
   big: { color: colors.text, fontSize: 30, fontWeight: '800' }, unit: { fontSize: 15, color: colors.secondary, fontWeight: '700' },
   label: { color: colors.secondary, fontSize: 12 },
   weeks: { alignItems: 'center' }, weeksNum: { color: colors.green, fontSize: 22, fontWeight: '800' }, weeksLabel: { color: colors.secondary, fontSize: 10, textAlign: 'center' },
   msg: { color: colors.text, fontSize: 13, lineHeight: 19 }, risk: { color: STREAK_COLOR, fontWeight: '800' },
-});
+}));

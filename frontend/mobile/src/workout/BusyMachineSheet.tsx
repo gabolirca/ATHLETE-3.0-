@@ -3,8 +3,8 @@ import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-nati
 import { AppInput } from '@/components/AppInput';
 import { useTrainingRepository } from '@/data/MobileTrainingContext';
 import type { Exercise, SessionExercise } from '@/data/trainingTypes';
-import { Sheet, sheetStyles as st } from '@/program/edit/Sheet';
-import { colors } from '@/theme/colors';
+import { Sheet, sheetStyles as st } from '@/components/Sheet';
+import { colors, themed } from '@/theme/colors';
 import { machineAlternatives } from './busyMachine';
 
 const fold = (x: string) => x.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
@@ -47,9 +47,9 @@ export function BusyMachineSheet({ exercise, onClose, onPick }: { exercise: Sess
   </Sheet>;
 }
 
-const s = StyleSheet.create({
+const s = themed(() => StyleSheet.create({
   list: { gap: 6 },
   item: { flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderColor: colors.border, borderRadius: 12, padding: 11, backgroundColor: colors.surfaceRaised },
   name: { color: colors.text, fontSize: 14, fontWeight: '700' }, sub: { color: colors.secondary, fontSize: 11, marginTop: 2 },
   go: { color: colors.blue, fontSize: 12, fontWeight: '800' },
-});
+}));

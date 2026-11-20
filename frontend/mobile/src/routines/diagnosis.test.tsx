@@ -3,7 +3,7 @@ import { fireEvent, render } from '@testing-library/react-native';
 import type { Exercise } from '@/data/trainingTypes';
 import { RoutineDiagnosisCard, diagnoseRoutine, routineFocus } from './diagnosis';
 
-jest.mock('@expo/vector-icons', () => ({ Ionicons: () => null }));
+jest.mock('@expo/vector-icons', () => ({ Ionicons: () => null, MaterialCommunityIcons: () => null }));
 
 const ex = (id: string, primary: Array<[string, string]>, secondary: Array<[string, string]> = []): Exercise => ({
   id, name: id, muscleGroup: '', equipment: null, origin: 'sample',

@@ -4,7 +4,7 @@ import { AppInput } from './AppInput';
 import type { LoggedSetInput } from '@/data/trainingSchemas';
 import type { TrainingSet } from '@/data/trainingTypes';
 import { clock, parseMinSec } from '@/workout/blocks';
-import { colors } from '@/theme/colors';
+import { colors, themed } from '@/theme/colors';
 
 /**
  * Serie por tiempo y/o distancia (remo 400 m, plancha 40 s, zona 2 12 min). Se guarda al salir del campo o con
@@ -87,7 +87,7 @@ export function TimedSetEditor({ set, label, targetSeconds, targetMeters, onSave
   </View>;
 }
 
-const s = StyleSheet.create({
+const s = themed(() => StyleSheet.create({
   box: { gap: 8, borderWidth: 1, borderColor: colors.border, borderRadius: 14, padding: 12, backgroundColor: colors.surface },
   head: { flexDirection: 'row', justifyContent: 'space-between' }, label: { color: colors.secondary, fontSize: 10, fontWeight: '800', letterSpacing: 1 },
   done: { color: colors.green, fontSize: 14, fontWeight: '800' },
@@ -102,4 +102,4 @@ const s = StyleSheet.create({
   timerHint: { color: colors.secondary, fontSize: 12 },
   stop: { marginTop: 4, borderRadius: 10, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 14, paddingVertical: 8 },
   stopText: { color: colors.text, fontSize: 13, fontWeight: '800' },
-});
+}));

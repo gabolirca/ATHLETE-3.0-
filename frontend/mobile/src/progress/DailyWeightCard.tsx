@@ -8,7 +8,7 @@ import { Eyebrow } from '@/components/Typography';
 import type { TrainingRepository } from '@/data/TrainingRepository';
 import type { BodyMeasurement } from '@/data/trainingTypes';
 import { localDateOfDevice } from '@/lib/localDate';
-import { colors } from '@/theme/colors';
+import { colors, themed } from '@/theme/colors';
 
 const fmt = (n: number) => String(Math.round(n * 10) / 10);
 
@@ -65,7 +65,7 @@ export function DailyWeightCard({ repository }: { repository: TrainingRepository
   </Card>;
 }
 
-const s = StyleSheet.create({
+const s = themed(() => StyleSheet.create({
   head: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   link: { color: colors.secondary, fontSize: 12, fontWeight: '700' },
   row: { flexDirection: 'row', alignItems: 'flex-end', gap: 10 }, flex: { flex: 1 },
@@ -75,4 +75,4 @@ const s = StyleSheet.create({
   saveText: { color: 'white', fontSize: 14, fontWeight: '800' },
   muted: { color: colors.secondary, fontSize: 12, lineHeight: 17 },
   error: { color: colors.red, fontSize: 11 },
-});
+}));

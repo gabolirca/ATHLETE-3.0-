@@ -19,7 +19,7 @@ jest.mock('expo-router', () => {
     useFocusEffect: (cb: () => void) => useEffect(cb, [cb]),
   };
 });
-jest.mock('@expo/vector-icons', () => ({ Ionicons: () => null }));
+jest.mock('@expo/vector-icons', () => ({ Ionicons: () => null, MaterialCommunityIcons: () => null }));
 jest.mock('@/data/MobileTrainingContext', () => ({ useTrainingRepository: () => mockRepository }));
 
 import StartWorkoutScreen from '../../app/workout/new';

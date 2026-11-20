@@ -10,7 +10,7 @@ import { ACTIVITIES, activityLabel, formatDistance, formatPace, type UnitSystem 
 import { useTrainingRepository } from '@/data/MobileTrainingContext';
 import type { CardioEntry } from '@/data/trainingTypes';
 import { localDateOfDevice } from '@/lib/localDate';
-import { colors } from '@/theme/colors';
+import { colors, themed } from '@/theme/colors';
 
 const shortDate = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' });
 
@@ -66,7 +66,7 @@ export function CardioProgress() {
   </>;
 }
 
-const s = StyleSheet.create({
+const s = themed(() => StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: 11 }, flex: { flex: 1 },
   icon: { width: 34, height: 34, borderRadius: 11, backgroundColor: colors.greenSoft, alignItems: 'center', justifyContent: 'center' },
   name: { color: colors.text, fontSize: 14, fontWeight: '800' }, sub: { color: colors.secondary, fontSize: 12, lineHeight: 18 },
@@ -76,4 +76,4 @@ const s = StyleSheet.create({
   swimBars: { flexDirection: 'row', gap: 6, alignItems: 'flex-end', height: 104 }, swimCol: { flex: 1, alignItems: 'center', gap: 4 },
   swimNum: { color: colors.text, fontSize: 9, fontWeight: '800' }, swimBar: { width: '70%', borderRadius: 4, backgroundColor: colors.cyan },
   swimLabel: { color: colors.muted, fontSize: 9, fontWeight: '700' }, swimNow: { color: colors.text },
-});
+}));

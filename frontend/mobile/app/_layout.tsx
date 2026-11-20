@@ -1,8 +1,8 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Alert, StyleSheet, Text, View } from 'react-native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { colors, themeMode } from '@/theme/colors';
+import { colors, onThemeChange, themeMode, themed, themeVersion } from '@/theme/colors';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Screen } from '@/components/Screen';
 import { Eyebrow, Title } from '@/components/Typography';
@@ -14,8 +14,19 @@ import { OfficialTrainingProvider } from '@/data/OfficialTrainingProvider';
 import { AccountProvider } from '@/account/AccountProvider';
 import type { OpenErrorSelection } from '@athlete/data';
 import { BrandIntro } from '@/brand/BrandIntro';
+import { useFonts } from 'expo-font';
+import { FONT_FILES } from '@/theme/fonts';
+
+/** Vuelve a dibujar al cambiar de tema (claro/oscuro) sin cerrar la app. */
+function useThemeVersion(): number {
+  const [v, setV] = useState(themeVersion());
+  useEffect(() => onThemeChange(() => setV(themeVersion())), []);
+  return v;
+}
 
 export default function RootLayout() {
+  useFonts(FONT_FILES); // mientras carga se ve la fuente del sistema: no bloquea el arranque
+  useThemeVersion();
   return (
     <SafeAreaProvider>
       <StatusBar style={themeMode === 'light' ? 'dark' : 'light'} />
@@ -27,7 +38,17 @@ export default function RootLayout() {
   );
 }
 
+/**
+ * Las pantallas se vuelven a montar con el tema nuevo (los datos, la cuenta y la sesión de entrenamiento siguen
+ * arriba, en los proveedores). El historial de navegación lo guarda Expo Router fuera de este componente, así que
+ * sigues en Ajustes sin abrir otra copia (antes se apilaba una pantalla de Ajustes por cada cambio de tema).
+ */
 function AppStack() {
+  const version = useThemeVersion();
+  return <ThemedStack key={version}/>;
+}
+
+function ThemedStack() {
   return (
     <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.black } }}>
       <Stack.Screen name="(tabs)" />
@@ -161,7 +182,7 @@ function StorageRecoveryView({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   recoveryTitle: { color: colors.text, fontSize: 18, fontWeight: '800', marginTop: 4 },
   recoveryDetail: { color: colors.secondary, fontSize: 13, lineHeight: 19, marginTop: 6 },
   recoveryCode: { color: colors.muted, fontSize: 11, marginTop: 8 },
@@ -170,4 +191,4 @@ const styles = StyleSheet.create({
   recoveryActionError: { color: colors.red, fontSize: 12, lineHeight: 17, fontWeight: '700', marginTop: 10 },
   recoveryActions: { gap: 10, marginTop: 16 },
   recoveryNote: { color: colors.secondary, fontSize: 11, lineHeight: 16, marginTop: 12, textAlign: 'center' },
-});
+}));

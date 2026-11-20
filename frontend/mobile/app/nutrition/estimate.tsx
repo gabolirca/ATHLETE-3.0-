@@ -13,7 +13,7 @@ import { NUTRITION_DISCLAIMER, acceptNutritionDisclaimer, hasAcceptedNutritionDi
 import { localDateOfDevice } from '@/lib/localDate';
 import { formatAmount, parseAmount } from '@/nutrition/mealForm';
 import { useNutrition } from '@/nutrition/mobileNutrition';
-import { colors } from '@/theme/colors';
+import { colors, themed } from '@/theme/colors';
 
 const ACTIVITIES: ReadonlyArray<{ key: ActivityLevel; label: string; detail: string }> = [
   { key: 'sedentary', label: 'Sedentaria', detail: 'Trabajo sentado, casi sin ejercicio' },
@@ -135,7 +135,7 @@ function Macro({ label, value }: { label: string; value: number }) {
   return <View style={s.macro}><Text style={s.macroValue}>{value} g</Text><Text style={s.hint}>{label}</Text></View>;
 }
 
-const s = StyleSheet.create({
+const s = themed(() => StyleSheet.create({
   point: { flexDirection: 'row', gap: 8 },
   bullet: { color: colors.text, fontSize: 14 },
   pointText: { flex: 1, color: colors.text, fontSize: 13, lineHeight: 19 },
@@ -155,4 +155,4 @@ const s = StyleSheet.create({
   unit: { color: colors.secondary, fontSize: 14, fontWeight: '700' },
   macro: { flex: 1, backgroundColor: colors.surfaceRaised, borderRadius: 12, padding: 10, gap: 2 },
   macroValue: { color: colors.text, fontSize: 15, fontWeight: '800' },
-});
+}));

@@ -20,19 +20,29 @@ const volume: WeeklyMuscleVolume = {
 };
 const mockRepository = {
   getPreferences: jest.fn().mockResolvedValue({ displayName: 'Gabo' }),
+  getAthleteProfile: jest.fn().mockResolvedValue({ goals: ['4 días por semana'] }),
   getOverview: jest.fn().mockResolvedValue({ sessionsThisWeek: 3, strengthSessionsThisWeek: 2, cardioSessionsThisWeek: 1, activityMinutesThisWeek: 140, pendingSyncCount: 0, latestWorkout: null }),
   getWeeklyMuscleVolume: jest.fn().mockResolvedValue(volume),
   getStreak: jest.fn().mockResolvedValue({ days: { current: 5, best: 9, todayDone: true, atRisk: false, daysSinceLast: 0 }, weeks: null, programName: null }),
-  listPrograms: jest.fn().mockResolvedValue([]),
+  listHistory: jest.fn().mockResolvedValue([]), listRoutines: jest.fn().mockResolvedValue([]),
+  createRoutine: jest.fn().mockResolvedValue('plan-pierna'), startWorkout: jest.fn().mockResolvedValue('s-nueva'),
+  listPrograms: jest.fn().mockResolvedValue([]), programWeekStatus: jest.fn().mockResolvedValue({}),
+  startProgramDay: jest.fn().mockResolvedValue('s-programa'),
+  listBodyMeasurements: jest.fn().mockResolvedValue([]), getBodyGoals: jest.fn().mockResolvedValue({ weight_kg: null }),
 };
+const todayWd = ((new Date().getDay() + 6) % 7) + 1;
+const program = { id: 'p1', name: 'Híbrido 3 días', templateSlug: 'hibrido-3-dias', startedOn: null,
+  days: [{ id: 'd1', name: 'Fuerza A', weekday: todayWd, modality: 'strength', targetRpe: 7, targetDurationMinutes: 60, blocks: [], exercises: [] }] };
 jest.mock('expo-router', () => {
   const ReactModule = require('react');
   return { useRouter: () => mockRouter, useFocusEffect: (cb: () => void) => ReactModule.useEffect(cb, [cb]) };
 });
-jest.mock('@expo/vector-icons', () => ({ Ionicons: () => null }));
+jest.mock('@expo/vector-icons', () => ({ Ionicons: () => null, MaterialCommunityIcons: () => null }));
 jest.mock('@/data/MobileTrainingContext', () => ({ useTrainingRepository: () => mockRepository, useLocalDataReady: () => ({ ready: true, error: false }) }));
 
 import HomeScreen from '../../app/(tabs)/index';
+
+beforeEach(() => { mockRouter.push.mockClear(); mockRepository.createRoutine.mockClear(); mockRepository.startWorkout.mockClear(); });
 
 test('arcos de la dona: proporcionales, con separación y sin segmentos vacíos', () => {
   const arcs = donutArcs([{ key: 'a', value: 3, color: 'x' }, { key: 'b', value: 1, color: 'y' }, { key: 'c', value: 0, color: 'z' }], 400, 4);
@@ -50,14 +60,33 @@ test('segmentos: los 5 músculos con más series y el resto en "Otros"; avisos d
   expect([formatSets(3), formatSets(1.5)]).toEqual(['3', '1.5']);
 });
 
-test('Inicio muestra la dona de la semana con leyenda, totales y aviso; tocarla lleva a Progreso', async () => {
+test('Inicio con programa: "Hoy te toca" sale del programa y EMPEZAR abre la sesión del día', async () => {
+  mockRepository.listPrograms.mockResolvedValueOnce([program]);
   const screen = await render(<HomeScreen/>);
-  await waitFor(() => expect(screen.getByLabelText('16 series')).toBeTruthy());
-  expect(screen.getByText('Pecho')).toBeTruthy();
+  await waitFor(() => expect(screen.getByText('Hola, Gabo')).toBeTruthy());
+  await waitFor(() => expect(screen.getByText('HOY TE TOCA')).toBeTruthy());
+  expect(screen.getAllByText('Fuerza A').length).toBeGreaterThan(0);
+  expect(screen.getByText('60 MIN')).toBeTruthy();
   expect(screen.getByLabelText('Racha de 5 días')).toBeTruthy();
-  expect(screen.getByText('5.5')).toBeTruthy();
-  expect(screen.getByText('140')).toBeTruthy();
-  expect(screen.getByText('Por debajo de la referencia: Hombros, Espalda, Bíceps y 2 más')).toBeTruthy();
-  await fireEvent.press(screen.getByLabelText('Ver detalle de tu semana en Progreso'));
+  await fireEvent.press(screen.getByText('Empezar  →'));
+  await waitFor(() => expect(mockRepository.startProgramDay).toHaveBeenCalledWith('d1'));
+  await waitFor(() => expect(mockRouter.push).toHaveBeenCalledWith('/workout/s-programa'));
+  await fireEvent.press(screen.getByLabelText('Tu semana: ver progreso'));
   expect(mockRouter.push).toHaveBeenCalledWith('/progress');
+});
+
+test('Inicio sin programa: entrenamiento libre', async () => {
+  const screen = await render(<HomeScreen/>);
+  await waitFor(() => expect(screen.getByText('ENTRENA HOY')).toBeTruthy());
+  await fireEvent.press(screen.getByText('Empezar  →'));
+  expect(mockRouter.push).toHaveBeenCalledWith('/workout/new');
+});
+
+test('Inicio con sesión en curso: el botón es Continuar y no crea otra', async () => {
+  mockRepository.getOverview.mockResolvedValueOnce({ sessionsThisWeek: 1, strengthSessionsThisWeek: 1, cardioSessionsThisWeek: 0, activityMinutesThisWeek: 0, pendingSyncCount: 0, latestWorkout: { id: 's-activa', state: 'active', exerciseCount: 6, setCount: 3 } });
+  const screen = await render(<HomeScreen/>);
+  await waitFor(() => expect(screen.getByText('SESIÓN EN CURSO')).toBeTruthy());
+  await fireEvent.press(screen.getByText('Continuar  →'));
+  expect(mockRouter.push).toHaveBeenCalledWith('/workout/s-activa');
+  expect(mockRepository.startWorkout).not.toHaveBeenCalled();
 });

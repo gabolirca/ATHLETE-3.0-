@@ -16,14 +16,14 @@ jest.mock('expo-router', () => {
   const { useEffect } = jest.requireActual('react');
   return { useRouter: () => mockRouter, useLocalSearchParams: () => mockParams, useFocusEffect: (cb: () => void) => useEffect(cb, [cb]) };
 });
-jest.mock('@expo/vector-icons', () => ({ Ionicons: () => null }));
+jest.mock('@expo/vector-icons', () => ({ Ionicons: () => null, MaterialCommunityIcons: () => null }));
 jest.mock('expo-secure-store', () => ({
   getItemAsync: jest.fn(async (k: string) => mockStore.get(k) ?? null),
   setItemAsync: jest.fn(async (k: string, v: string) => { mockStore.set(k, v); }),
 }));
 jest.mock('@/nutrition/mobileNutrition', () => ({ useNutrition: () => mockNutrition }));
 
-import NutritionScreen from '../../app/(tabs)/nutrition';
+import NutritionScreen from '../../app/nutrition/index';
 import EstimatePlanScreen from '../../app/nutrition/estimate';
 import NutritionTargetScreen from '../../app/nutrition/target';
 import PlanEditorScreen from '../../app/nutrition/plan-editor';
@@ -93,17 +93,16 @@ test('con meta, Nutrición muestra el avance contra la meta y su origen', async 
   expect(screen.queryByText('Carbos')).toBeNull(); // sin meta de carbos no se inventa barra
 });
 
-test('sin meta muestra las tres opciones de plan', async () => {
+test('ATHLETE: sin meta ofrece «Plan que calcula la app» y «Cargar mi plan» (sin nutriólogo)', async () => {
   mockNutrition.loadDay.mockResolvedValue({ meals: [], summary: { localDate: today, entryCount: 0, energyKcal: null, proteinG: null, carbsG: null, fatG: null, entriesMissingEnergy: 0 } });
   mockNutrition.getTarget.mockResolvedValue(null);
   const screen = await render(<NutritionScreen />);
   await waitFor(() => expect(screen.getByText('ELIGE TU PLAN DE NUTRICIÓN')).toBeTruthy());
   await fireEvent.press(screen.getByLabelText('Cargar mi plan'));
   expect(mockRouter.push).toHaveBeenCalledWith('/nutrition/plan-editor');
-  await fireEvent.press(screen.getByLabelText('Con mi nutriólogo'));
-  expect(mockRouter.push).toHaveBeenCalledWith('/nutrition/pro');
   await fireEvent.press(screen.getByLabelText('Plan que calcula la app'));
   expect(mockRouter.push).toHaveBeenCalledWith('/nutrition/estimate');
+  expect(screen.queryByLabelText('Con mi nutriólogo')).toBeNull();
 });
 
 test('con plan, Nutrición lo muestra por tiempos con su origen', async () => {

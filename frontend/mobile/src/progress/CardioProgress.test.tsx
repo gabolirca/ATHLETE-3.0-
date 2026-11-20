@@ -10,7 +10,7 @@ const mockRepository = {
   getPreferences: jest.fn().mockResolvedValue({ unitSystem: 'metric' }),
 };
 jest.mock('expo-router', () => { const R = require('react'); return { useFocusEffect: (cb: () => void) => R.useEffect(cb, [cb]) }; });
-jest.mock('@expo/vector-icons', () => ({ Ionicons: () => null }));
+jest.mock('@expo/vector-icons', () => ({ Ionicons: () => null, MaterialCommunityIcons: () => null }));
 jest.mock('@/data/MobileTrainingContext', () => ({ useTrainingRepository: () => mockRepository }));
 
 import { CardioProgress } from './CardioProgress';

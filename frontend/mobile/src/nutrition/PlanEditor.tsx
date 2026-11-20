@@ -8,7 +8,7 @@ import { AppInput } from '@/components/AppInput';
 import { Card } from '@/components/Card';
 import { DateField } from '@/components/DatePicker';
 import { Eyebrow, Label } from '@/components/Typography';
-import { colors } from '@/theme/colors';
+import { colors, themed } from '@/theme/colors';
 import {
   STEP, emptyMeal, groupLabel, groupsIn, groupsMissing, mealMacros, planTotals, stepPortion, validatePlan,
   type EditableMeal, type PlanDraft, type PlanErrors,
@@ -107,7 +107,7 @@ export function PlanEditor({ initial, submitLabel, onSubmit, saving, error }: {
   </>;
 }
 
-const s = StyleSheet.create({
+const s = themed(() => StyleSheet.create({
   head: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   row: { flexDirection: 'row', gap: 10 },
   flex1: { flex: 1 },
@@ -124,4 +124,4 @@ const s = StyleSheet.create({
   total: { color: colors.text, fontSize: 28, fontWeight: '800', letterSpacing: -0.5 },
   hint: { color: colors.secondary, fontSize: 11, lineHeight: 16 },
   error: { color: colors.red, fontSize: 12, lineHeight: 18 },
-});
+}));

@@ -1,6 +1,6 @@
 import { forwardRef } from 'react';
 import { StyleSheet, Text, TextInput, TextInputInstance, TextInputProps, View } from 'react-native';
-import { colors } from '@/theme/colors';
+import { colors, themed } from '@/theme/colors';
 import { notifyInputFocus } from './keyboardReveal';
 
 export const AppInput = forwardRef<TextInputInstance, TextInputProps & { label: string; error?: string }>(function AppInput(
@@ -8,7 +8,7 @@ export const AppInput = forwardRef<TextInputInstance, TextInputProps & { label: 
 ) {
   return (
     <View style={styles.wrap}>
-      <Text style={styles.label}>{label}</Text>
+      {label ? <Text style={styles.label}>{label}</Text> : null}
       <TextInput
         ref={ref}
         accessibilityLabel={accessibilityLabel ?? label}
@@ -23,10 +23,10 @@ export const AppInput = forwardRef<TextInputInstance, TextInputProps & { label: 
   );
 });
 
-const styles = StyleSheet.create({
+const styles = themed(() => StyleSheet.create({
   wrap: { gap: 7 },
   label: { color: colors.secondary, fontSize: 11, fontWeight: '700' },
   input: { minHeight: 46, borderRadius: 12, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surfaceRaised, paddingHorizontal: 13, color: colors.text, fontSize: 14 },
   invalid: { borderColor: colors.red },
   error: { color: colors.red, fontSize: 11 },
-});
+}));

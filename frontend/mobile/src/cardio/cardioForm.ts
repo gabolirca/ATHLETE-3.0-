@@ -16,10 +16,8 @@ export const ACTIVITIES: ReadonlyArray<{ key: CardioActivity; label: string; ico
   { key: 'run', label: 'Correr', icon: 'walk-outline' },
   { key: 'walk', label: 'Caminar', icon: 'footsteps-outline' },
   { key: 'bike', label: 'Bici', icon: 'bicycle-outline' },
-  { key: 'swim', label: 'Nadar', icon: 'water-outline' },
   { key: 'row', label: 'Remo', icon: 'boat-outline' },
   { key: 'circuit', label: 'Circuito', icon: 'repeat-outline' },
-  { key: 'hybrid', label: 'Híbrido', icon: 'flash-outline' },
 ];
 
 export const STROKES: ReadonlyArray<{ key: SwimStroke; label: string }> = [

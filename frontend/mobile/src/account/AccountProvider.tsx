@@ -4,6 +4,7 @@ import type { AuthState, SyncStatus } from '@athlete/contracts';
 import { useAthleteData } from '@/data/AthleteDataProvider';
 import { cloudUnavailableReason, getCloud } from './cloud';
 import { linkAccountIfNeeded } from './linkAccount';
+import { forgetGoogleAccount, signInWithApple, signInWithGoogle } from './socialSignIn';
 import { emitRemoteChange, onLocalChange } from '@/data/localChanges';
 import { DEFAULT_SCHEDULER_OPTIONS, SyncScheduler, type SyncOutcome, type SyncSchedulerOptions } from './syncScheduler';
 
@@ -18,7 +19,14 @@ export type AccountContextValue = {
   sync: { status: SyncStatus | null; syncing: boolean; error: string | null };
   /** Devuelven un mensaje de error para mostrar, o null si salió bien. */
   requestCode: (email: string) => Promise<string | null>;
-  verifyCode: (email: string, code: string) => Promise<string | null>;
+  /** Tras el código: `needsPassword` = todavía no crea su contraseña (se le lleva a crearla). */
+  verifyCode: (email: string, code: string) => Promise<{ ok: true; needsPassword: boolean } | { ok: false; message: string }>;
+  /** Correo + contraseña. Devuelve el mensaje de error o null. */
+  signInWithPassword: (email: string, password: string) => Promise<string | null>;
+  /** Crear o cambiar la contraseña de la cuenta con sesión abierta. Devuelve el mensaje de error o null. */
+  setPassword: (password: string) => Promise<string | null>;
+  /** Apple / Google nativo. `message: null` = el usuario canceló (no mostrar error). */
+  signInWithProvider: (provider: 'apple' | 'google') => Promise<{ ok: true } | { ok: false; message: string | null }>;
   signOut: () => Promise<void>;
   syncNow: () => Promise<void>;
 };
@@ -143,16 +151,45 @@ export function AccountProvider({ children, syncOptions = DEFAULT_SCHEDULER_OPTI
   }, [cloud]);
 
   const verifyCode = useCallback(async (email: string, code: string) => {
-    if (!cloud) return 'La nube no está configurada en esta compilación.';
+    if (!cloud) return { ok: false as const, message: 'La nube no está configurada en esta compilación.' };
     const r = await cloud.auth.verifyEmailCode({ email, code });
+    if (!r.ok) return { ok: false as const, message: r.error.message };
+    setAuth(r.value);
+    return { ok: true as const, needsPassword: r.value.status === 'signed_in' && r.value.user.hasPassword !== true };
+  }, [cloud]);
+
+  const signInWithPassword = useCallback(async (email: string, password: string) => {
+    if (!cloud) return 'La nube no está configurada en esta compilación.';
+    const r = await cloud.auth.signIn({ email, password });
     if (!r.ok) return r.error.message;
     setAuth(r.value);
     return null;
   }, [cloud]);
 
+  const setPassword = useCallback(async (password: string) => {
+    if (!cloud) return 'La nube no está configurada en esta compilación.';
+    const r = await cloud.auth.updatePassword({ newPassword: password });
+    if (!r.ok) return r.error.details && typeof r.error.details === 'object' && 'issues' in r.error.details
+      ? 'La contraseña debe tener al menos 8 caracteres, con letras y números.' : r.error.message;
+    setAuth(await cloud.auth.getState());
+    return null;
+  }, [cloud]);
+
+  const signInWithProvider = useCallback(async (provider: 'apple' | 'google') => {
+    if (!cloud) return { ok: false as const, message: 'La nube no está configurada en esta compilación.' };
+    const got = provider === 'apple' ? await signInWithApple() : await signInWithGoogle();
+    if (got.kind === 'cancelled') return { ok: false as const, message: null };
+    if (got.kind === 'error') return { ok: false as const, message: got.message };
+    const r = await cloud.auth.signInWithIdToken(got.token);
+    if (!r.ok) return { ok: false as const, message: r.error.message };
+    setAuth(r.value);
+    return { ok: true as const };
+  }, [cloud]);
+
   const signOut = useCallback(async () => {
     if (!cloud) return;
     await cloud.auth.signOut();
+    await forgetGoogleAccount();
     linkingFor.current = null;
     setLink('none');
     setAuth({ status: 'signed_out', reason: 'signed_out' });
@@ -163,8 +200,8 @@ export function AccountProvider({ children, syncOptions = DEFAULT_SCHEDULER_OPTI
     unavailableReason: cloud ? null : cloudUnavailableReason(),
     auth, link,
     sync: { status, syncing, error: syncError },
-    requestCode, verifyCode, signOut, syncNow,
-  }), [cloud, auth, link, status, syncing, syncError, requestCode, verifyCode, signOut, syncNow]);
+    requestCode, verifyCode, signInWithPassword, setPassword, signInWithProvider, signOut, syncNow,
+  }), [cloud, auth, link, status, syncing, syncError, requestCode, verifyCode, signInWithPassword, setPassword, signInWithProvider, signOut, syncNow]);
 
   return <AccountContext.Provider value={value}>{children}</AccountContext.Provider>;
 }
@@ -173,4 +210,9 @@ export function useAccount(): AccountContextValue {
   const value = useContext(AccountContext);
   if (!value) throw new Error('useAccount debe usarse dentro de AccountProvider.');
   return value;
+}
+
+/** Igual que useAccount, pero null fuera de AccountProvider (pantallas sueltas en pruebas o sin nube). */
+export function useOptionalAccount(): AccountContextValue | null {
+  return useContext(AccountContext);
 }

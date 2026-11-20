@@ -11,7 +11,7 @@ import { ACTIVITIES, describeCardio, type UnitSystem } from '@/cardio/cardioForm
 import { mergeHistory } from '@/data/history';
 import { useTrainingRepository } from '@/data/MobileTrainingContext';
 import type { HistoryItem } from '@/data/trainingTypes';
-import { colors } from '@/theme/colors';
+import { colors, themed } from '@/theme/colors';
 
 const when = (iso: string) => new Date(iso).toLocaleString('es-MX', { dateStyle: 'medium', timeStyle: 'short' });
 
@@ -49,4 +49,4 @@ function CardioRow({ item, unitSystem, onPress }: { item: Extract<HistoryItem, {
   </Pressable>;
 }
 
-const s=StyleSheet.create({heading:{flexDirection:'row',alignItems:'center',gap:11},icon:{width:40,height:40,borderRadius:13,backgroundColor:colors.accentSoft,alignItems:'center',justifyContent:'center'},cardioIcon:{backgroundColor:colors.greenSoft},detail:{color:colors.secondary,fontSize:11,marginTop:4}});
+const s=themed(() => StyleSheet.create({heading:{flexDirection:'row',alignItems:'center',gap:11},icon:{width:40,height:40,borderRadius:13,backgroundColor:colors.accentSoft,alignItems:'center',justifyContent:'center'},cardioIcon:{backgroundColor:colors.greenSoft},detail:{color:colors.secondary,fontSize:11,marginTop:4}}));

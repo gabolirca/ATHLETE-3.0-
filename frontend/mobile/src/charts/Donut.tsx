@@ -1,6 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, G } from 'react-native-svg';
-import { colors } from '@/theme/colors';
+import { colors, themed } from '@/theme/colors';
 
 export type DonutSegment = { key: string; value: number; color: string };
 
@@ -50,8 +50,8 @@ export function Donut({ segments, size = 112, thickness = 13, center, caption, o
   </View>;
 }
 
-const s = StyleSheet.create({
+const s = themed(() => StyleSheet.create({
   center: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center' },
   value: { color: colors.text, fontSize: 22, fontWeight: '800', letterSpacing: -0.5 },
   caption: { color: colors.secondary, fontSize: 10, fontWeight: '700' },
-});
+}));
