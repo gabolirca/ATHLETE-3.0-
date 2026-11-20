@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>ATHLETE · Panel de rutinas</title>
+  <link rel="icon" href="a-mark.png">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@mdi/font@7.4.47/css/materialdesignicons.min.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="top">
+    <img src="lockup.png" alt="ATHLETE" class="logo">
+    <nav id="nav" hidden>
+      <button data-view="routines" class="tab">Rutinas</button>
+      <button data-view="programs" class="tab">Programas</button>
+      <button data-view="team" class="tab" id="teamTab" hidden>Equipo</button>
+    </nav>
+    <div id="who" class="who"></div>
+  </header>
+  <main id="app"><p class="muted">Cargando…</p></main>
+  <div id="toast" class="toast" hidden></div>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
