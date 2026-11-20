@@ -29,6 +29,12 @@ const MUSCLE_NAMES: Record<string, string> = {
   biceps: 'Bíceps', triceps: 'Tríceps', calves: 'Pantorrillas', core: 'Core', traps: 'Trapecio',
 };
 
+/** Músculo (slug) con más series de la rutina, para sugerir su ícono. */
+export function topMuscle(items: readonly PlannedItem[]): string | null {
+  const trained = diagnoseRoutine(items, 1).trained;
+  return trained.length ? trained.reduce((a, b) => (b.sets > a.sets ? b : a)).muscle : null;
+}
+
 /** "Pecho 8 · Tríceps 4 · Hombros 4": los músculos con más series de una rutina (por sesión). */
 export function routineFocus(items: readonly PlannedItem[], top = 3): string {
   return diagnoseRoutine(items, 1).trained.slice(0, top).map((m) => `${m.name} ${formatSets(m.sets)}`).join(' · ');

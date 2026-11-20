@@ -13,7 +13,8 @@ import { useLocalDataReady, useTrainingRepository } from '@/data/MobileTrainingC
 import { RoutineInputSchema } from '@/data/trainingSchemas';
 import type { Exercise } from '@/data/trainingTypes';
 import { colors, themed } from '@/theme/colors';
-import { RoutineDiagnosisCard } from '@/routines/diagnosis';
+import { RoutineDiagnosisCard, topMuscle } from '@/routines/diagnosis';
+import { RoutineBadge, RoutineStylePicker, setRoutineStyle, suggestRoutineStyle, type RoutineStyle } from '@/routines/routineStyle';
 
 type PlannedExercise = Exercise & { sets: string; reps: string; restSeconds: string; version: number };
 
@@ -32,6 +33,8 @@ export default function NewRoutineScreen() {
   const repository = useTrainingRepository();
   const { ready, error: dataError } = useLocalDataReady();
   const [name, setName] = useState('');
+  const [chosenStyle, setChosenStyle] = useState<RoutineStyle | null>(null);
+  const [showStyle, setShowStyle] = useState(false);
   const [selected, setSelected] = useState<PlannedExercise[]>([]);
   const [showPicker, setShowPicker] = useState(true);
   const [error, setError] = useState('');
@@ -64,18 +67,28 @@ export default function NewRoutineScreen() {
     if (!parsed.success) { setError(parsed.error.issues[0]?.message ?? 'Revisa los datos de la rutina.'); return; }
     setSaving(true); setError('');
     try {
-      await repository.createRoutine(parsed.data);
+      const id = await repository.createRoutine(parsed.data);
+      if (typeof id === 'string') await setRoutineStyle(id, style).catch(() => undefined);
       router.replace('/train');
     } catch (cause) {
       setError(cause instanceof Error && cause.message.startsWith('EXERCISE') ? 'Uno de los ejercicios ya no está disponible.' : 'No pudimos guardar la rutina en este dispositivo. Intenta de nuevo.');
     } finally { setSaving(false); }
   }
 
+  const style = chosenStyle ?? suggestRoutineStyle(name, topMuscle(selected.map((item) => ({ exercise: item, sets: Number(item.sets) || 0 }))));
   if (dataError) return <Screen><Title>Nueva rutina</Title><Text style={s.error}>No se pudo preparar el almacenamiento local.</Text></Screen>;
   const num = { keyboardType: 'number-pad' as const, autoCorrect: false, spellCheck: false };
   return <Screen>
     <View><Eyebrow>FUNCIONA SIN CONEXIÓN</Eyebrow><Title>Nueva rutina</Title></View>
     <Card><AppInput label="Nombre de la rutina" defaultValue="" onChangeText={(value) => { setName(value); setError(''); }} placeholder="Ej. Torso A" maxLength={60} autoCapitalize="sentences" /></Card>
+    <Card>
+      <Pressable accessibilityRole="button" accessibilityLabel="Elegir ícono de la rutina" onPress={() => setShowStyle((v) => !v)} style={s.styleRow}>
+        <RoutineBadge style={style} size={46}/>
+        <View style={s.flex}><Label>Ícono</Label><Text style={s.styleHint}>{chosenStyle ? 'Elegido por ti' : 'Sugerido por el nombre y los ejercicios · toca para cambiar'}</Text></View>
+        <Ionicons name={showStyle ? 'chevron-up' : 'chevron-down'} size={18} color={colors.secondary}/>
+      </Pressable>
+      {showStyle ? <RoutineStylePicker value={style} onChange={setChosenStyle}/> : null}
+    </Card>
 
     {selected.length > 0 ? <View style={s.selected}>
       <Eyebrow>TUS EJERCICIOS ({selected.length})</Eyebrow>
@@ -118,5 +131,7 @@ const s = themed(() => StyleSheet.create({
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
   configRow: { flexDirection: 'row', gap: 9 },
   pickerHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 4 },
+  styleRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  styleHint: { color: colors.secondary, fontSize: 11, lineHeight: 15 },
   error: { color: colors.red, fontSize: 12, lineHeight: 18 },
 }));

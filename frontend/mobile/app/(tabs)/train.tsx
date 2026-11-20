@@ -11,14 +11,15 @@ import { useTrainingRepository } from '@/data/MobileTrainingContext';
 import type { Exercise, Routine, TrainingOverview } from '@/data/trainingTypes';
 import { HybridCard } from '@/program/HybridCard';
 import { useProgram } from '@/program/useProgram';
-import { routineFocus } from '@/routines/diagnosis';
+import { routineFocus, topMuscle } from '@/routines/diagnosis';
+import { RoutineBadge, RoutineStyleSheet, suggestRoutineStyle, useRoutineStyles, type RoutineStyle } from '@/routines/routineStyle';
 import { useAppRefresh } from '@/brand/useAppRefresh';
 import { colors, themed } from '@/theme/colors';
 import { displayBold } from '@/theme/fonts';
 
-function RowCard({ title, detail, tag, onPress, label, icon, children }: { title: string; detail: string; tag?: string; onPress: () => void; label?: string; icon?: string; children?: ReactNode }) {
+function RowCard({ title, detail, tag, onPress, label, icon, leading, children }: { title: string; detail: string; tag?: string; onPress: () => void; label?: string; icon?: string; leading?: ReactNode; children?: ReactNode }) {
   return <Pressable accessibilityRole="button" accessibilityLabel={label ?? title} onPress={onPress} style={({ pressed }) => [s.row, pressed && s.pressed]}>
-    {icon ? <View style={s.iconBubble}><MaterialCommunityIcons name={icon as never} size={22} color={colors.blue}/></View> : null}
+    {leading ?? (icon ? <View style={s.iconBubble}><MaterialCommunityIcons name={icon as never} size={22} color={colors.blue}/></View> : null)}
     <View style={s.flex}><Text style={s.rowTitle}>{title}</Text><Text style={s.rowDetail}>{detail}</Text>{children}</View>
     {tag ? <Text style={s.tag}>{tag}</Text> : null}
     <Ionicons name="chevron-forward" size={18} color={colors.secondary}/>
@@ -38,6 +39,8 @@ export default function TrainScreen() {
   const [catalog, setCatalog] = useState<Map<string, Exercise>>(new Map());
   const [loadError, setLoadError] = useState(false);
   const [showCatalog, setShowCatalog] = useState(false);
+  const [styles, setStyle] = useRoutineStyles(routines.map((r) => r.id));
+  const [styling, setStyling] = useState<{ routine: Routine; style: RoutineStyle } | null>(null);
   const load = useCallback((isActive: () => boolean = () => true) => {
     if (!repository) return Promise.resolve();
     return Promise.all([repository.listRoutines(), repository.getOverview(), repository.searchExercises('').catch(() => [])]).then(([items, summary, exercises]) => {
@@ -71,8 +74,11 @@ export default function TrainScreen() {
       <Text style={s.heading}>MIS RUTINAS</Text>
       {loadError ? <EmptyState icon="alert-circle-outline" title="No pudimos cargar tus rutinas" detail="Tus registros siguen guardados. Vuelve a intentar." action="Reintentar" onAction={() => void load()}/> : null}
       {routines.map((r) => {
-        const focus = routineFocus(r.exercises.flatMap((e) => { const ex = catalog.get(e.exerciseId); return ex ? [{ exercise: ex, sets: e.sets }] : []; }));
-        return <RowCard key={r.id} icon="clipboard-text-outline" title={r.name} detail={`${r.exercises.length} ejercicios${focus ? ` · ${focus}` : ''}`} label={`Empezar ${r.name}`} onPress={() => void openRoutine(r)}/>;
+        const planned = r.exercises.flatMap((e) => { const ex = catalog.get(e.exerciseId); return ex ? [{ exercise: ex, sets: e.sets }] : []; });
+        const focus = routineFocus(planned);
+        const style = styles[r.id] ?? suggestRoutineStyle(r.name, topMuscle(planned));
+        return <RowCard key={r.id} title={r.name} detail={`${r.exercises.length} ejercicios${focus ? ` · ${focus}` : ''}`} label={`Empezar ${r.name}`} onPress={() => void openRoutine(r)}
+          leading={<Pressable accessibilityRole="button" accessibilityLabel={`Cambiar ícono de ${r.name}`} hitSlop={6} onPress={() => setStyling({ routine: r, style })}><RoutineBadge style={style}/></Pressable>}/>;
       })}
       <RowCard icon="plus-circle-outline" title="Crear rutina" detail="Elige ejercicios, series y descansos" onPress={() => router.push('/routines/new')}/>
       <RowCard icon="lightning-bolt" title="Sesión libre" detail="Sin rutina: agrega ejercicios sobre la marcha" onPress={() => router.push('/workout/new')}/>
@@ -89,6 +95,7 @@ export default function TrainScreen() {
       <Ionicons name={showCatalog ? 'chevron-up' : 'chevron-down'} size={16} color={colors.secondary}/>
     </Pressable>
     {showCatalog ? <ExercisePicker onSelect={(exercise) => router.push(`/exercises/${exercise.id}`)}/> : null}
+    {styling ? <RoutineStyleSheet visible title={styling.routine.name} value={styling.style} onSave={(st) => setStyle(styling.routine.id, st)} onClose={() => setStyling(null)}/> : null}
   </Screen>;
 }
 
